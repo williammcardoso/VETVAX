@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import type { Profile } from "@/types/vetvax";
@@ -35,11 +35,20 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
   });
 }
 
-async function safeFetchProfile(userId: string) {
+async function safeFetchProfile(userId: string, previous: Profile | null): Promise<Profile | null> {
   try {
-    return await withTimeout(fetchMyProfile(userId), 6000, null);
+    // undefined = timeout (distinguish from null = row not found)
+    const result = await withTimeout(fetchMyProfile(userId), 6000, undefined as unknown as Profile | null);
+
+    // If we timed out, keep the previous profile for the same user (prevents false onboarding redirects).
+    if (result === (undefined as unknown as Profile | null)) {
+      return previous?.id === userId ? previous : null;
+    }
+
+    return result;
   } catch {
-    return null;
+    // On transient failures, keep the last known profile for the same user.
+    return previous?.id === userId ? previous : null;
   }
 }
 
@@ -47,6 +56,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const profileRef = useRef<Profile | null>(null);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   const user = session?.user ?? null;
 
@@ -56,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const p = await safeFetchProfile(user.id);
+    const p = await safeFetchProfile(user.id, profileRef.current);
     setProfile(p);
   };
 
@@ -74,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(data.session);
 
         if (data.session?.user) {
-          const p = await safeFetchProfile(data.session.user.id);
+          const p = await safeFetchProfile(data.session.user.id, profileRef.current);
           if (!mounted) return;
           setProfile(p);
         } else {
@@ -90,7 +104,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
       if (!mounted) return;
 
-      // Evita travar a UI em refresh/token events: sempre finalizamos loading via timeouts.
       setSession(nextSession);
 
       if (!nextSession?.user) {
@@ -99,9 +112,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Para SIGNED_IN e refresh de token, buscamos profile mas com timeout.
+      // For refresh events, don't blank profile—keep last known if profile fetch is slow.
       setLoading(event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "INITIAL_SESSION");
-      const p = await safeFetchProfile(nextSession.user.id);
+      const p = await safeFetchProfile(nextSession.user.id, profileRef.current);
       if (!mounted) return;
       setProfile(p);
       setLoading(false);
@@ -109,7 +122,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const onVis = () => {
       if (document.visibilityState !== "visible") return;
-      // Ao voltar para a aba, re-sincroniza sem bloquear indefinidamente.
       loadSession();
     };
 
