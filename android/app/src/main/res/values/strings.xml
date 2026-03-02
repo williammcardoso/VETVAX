@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">wise-kookaburra-wiggle</string>
+    <string name="title_activity_main">wise-kookaburra-wiggle</string>
+    <string name="package_name">com.example.wisekookaburrawiggle</string>
+    <string name="custom_url_scheme">com.example.wisekookaburrawiggle</string>
+</resources>
