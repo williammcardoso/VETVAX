@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const schema = z.object({
   name: z.string().min(1, "Informe o nome"),
@@ -37,6 +38,8 @@ export default function PetUpsertDialog({
   initial: Pet | null;
   onSaved: () => void;
 }) {
+  const { profile } = useAuth();
+
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -52,7 +55,10 @@ export default function PetUpsertDialog({
 
   const save = useMutation({
     mutationFn: async (values: Values) => {
+      if (!profile?.org_id) throw new Error("Sem organização no perfil (faça onboarding)");
+
       const payload = {
+        org_id: profile.org_id,
         tutor_id: tutorId,
         name: values.name,
         species: values.species,
@@ -64,7 +70,9 @@ export default function PetUpsertDialog({
       };
 
       if (initial?.id) {
-        const { error } = await supabase.from("pets").update(payload).eq("id", initial.id);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { org_id, ...updatePayload } = payload;
+        const { error } = await supabase.from("pets").update(updatePayload).eq("id", initial.id);
         if (error) throw error;
         return;
       }

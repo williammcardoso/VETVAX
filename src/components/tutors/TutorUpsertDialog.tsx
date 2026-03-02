@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const schema = z.object({
   name: z.string().min(2, "Informe o nome"),
@@ -42,6 +43,8 @@ export default function TutorUpsertDialog({
   initial: Tutor | null;
   onSaved: (id: string) => void;
 }) {
+  const { profile, user } = useAuth();
+
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -62,7 +65,13 @@ export default function TutorUpsertDialog({
 
   const save = useMutation({
     mutationFn: async (values: Values) => {
+      if (!profile?.org_id) throw new Error("Sem organização no perfil (faça onboarding)");
+
       const payload = {
+        org_id: profile.org_id,
+        branch_id: profile.branch_id,
+        created_by: user?.id ?? null,
+
         name: values.name,
         phone1: values.phone1 ? normalizeBrPhone(values.phone1) : null,
         phone2: values.phone2 ? normalizeBrPhone(values.phone2) : null,
@@ -81,7 +90,15 @@ export default function TutorUpsertDialog({
       };
 
       if (initial?.id) {
-        const { data, error } = await supabase.from("tutors").update(payload).eq("id", initial.id).select("id").single();
+        // Não atualize org_id/created_by em updates (mantemos o dado original).
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { org_id, created_by, ...updatePayload } = payload;
+        const { data, error } = await supabase
+          .from("tutors")
+          .update(updatePayload)
+          .eq("id", initial.id)
+          .select("id")
+          .single();
         if (error) throw error;
         return data.id as string;
       }
