@@ -26,24 +26,20 @@ export function RequireOnboarding({ children }: PropsWithChildren) {
   const { user, profile, loading, refreshProfile } = useAuth();
   const location = useLocation();
 
-  // Só decide onboarding quando a auth/profile foram resolvidos.
-  if (loading) return null;
-
-  // Se já tem organização, segue normalmente.
-  if (profile?.org_id) return <>{children}</>;
-
-  // Sem org: cria automaticamente em background (remove necessidade de onboarding manual).
-  // Evita loop de criação.
-  const [creating, setCreating] = useState(false);
+  const [attempting, setAttempting] = useState(false);
+  const [attempted, setAttempted] = useState(false);
   const attemptedRef = useRef(false);
 
   useEffect(() => {
+    if (loading) return;
     if (!user) return;
+    if (profile?.org_id) return;
     if (attemptedRef.current) return;
+
     attemptedRef.current = true;
+    setAttempting(true);
 
     (async () => {
-      setCreating(true);
       const { error } = await supabase.rpc("onboard_create_org", {
         payload: {
           store_name: "VetVAX",
@@ -59,14 +55,21 @@ export function RequireOnboarding({ children }: PropsWithChildren) {
         await refreshProfile();
       }
 
-      setCreating(false);
+      setAttempting(false);
+      setAttempted(true);
     })();
-  }, [user, profile?.display_name, refreshProfile]);
+  }, [loading, user, profile?.org_id, profile?.display_name, refreshProfile]);
 
-  // Durante criação automática, não renderiza nem redireciona.
-  if (creating) return null;
+  // Só decide onboarding quando a auth/profile foram resolvidos.
+  if (loading) return null;
 
-  // Se falhou por algum motivo, ainda permite onboarding manual como fallback.
+  // Se já tem organização, segue normalmente.
+  if (profile?.org_id) return <>{children}</>;
+
+  // Enquanto tenta criar automaticamente, não redireciona.
+  if (!attempted || attempting) return null;
+
+  // Se a tentativa automática falhou (por exemplo, RPC inexistente ou bloqueada), cai no onboarding manual.
   return <Navigate to="/onboarding" replace state={{ from: location.pathname }} />;
 }
 
