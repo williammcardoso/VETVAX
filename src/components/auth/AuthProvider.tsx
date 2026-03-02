@@ -25,6 +25,12 @@ async function fetchMyProfile(userId: string): Promise<Profile | null> {
   return data as Profile | null;
 }
 
+function timeout(ms: number) {
+  return new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error("Auth init timeout")), ms);
+  });
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -46,16 +52,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!mounted) return;
-      setSession(data.session);
       setLoading(true);
       try {
+        const { data } = await Promise.race([supabase.auth.getSession(), timeout(6000)]);
+        if (!mounted) return;
+        setSession(data.session);
+
         if (data.session?.user) {
-          const p = await fetchMyProfile(data.session.user.id);
-          if (!mounted) return;
-          setProfile(p);
+          try {
+            const p = await fetchMyProfile(data.session.user.id);
+            if (!mounted) return;
+            setProfile(p);
+          } catch {
+            // Profile pode falhar por RLS/migração; ainda assim não travamos a UI.
+            if (mounted) setProfile(null);
+          }
+        } else {
+          setProfile(null);
         }
+      } catch {
+        if (!mounted) return;
+        setSession(null);
+        setProfile(null);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -66,8 +84,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       try {
         if (nextSession?.user) {
-          const p = await fetchMyProfile(nextSession.user.id);
-          setProfile(p);
+          try {
+            const p = await fetchMyProfile(nextSession.user.id);
+            setProfile(p);
+          } catch {
+            setProfile(null);
+          }
         } else {
           setProfile(null);
         }
