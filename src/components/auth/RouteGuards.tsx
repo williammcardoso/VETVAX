@@ -6,9 +6,8 @@ export function RequireAuth({ children }: PropsWithChildren) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  // Nunca mostrar tela de "carregando". Se ainda estiver sincronizando a sessão,
-  // apenas não renderiza nada por um instante.
-  if (loading && !user) return null;
+  // Nunca mostrar tela de "carregando" e nunca redirecionar durante sincronização inicial.
+  if (loading) return null;
 
   if (!user) {
     return (
@@ -26,7 +25,8 @@ export function RequireOnboarding({ children }: PropsWithChildren) {
   const { profile, loading } = useAuth();
   const location = useLocation();
 
-  if (loading && !profile) return null;
+  // Só decide onboarding quando o profile já foi resolvido.
+  if (loading) return null;
 
   if (!profile?.org_id) {
     return <Navigate to="/onboarding" replace state={{ from: location.pathname }} />;
@@ -41,7 +41,7 @@ export function RequireRole({
 }: PropsWithChildren<{ allow: Array<"admin" | "manager" | "staff" | "viewer"> }>) {
   const { profile, loading } = useAuth();
 
-  if (loading && !profile) return null;
+  if (loading) return null;
   if (!profile || !allow.includes(profile.role)) return <Navigate to="/dashboard" replace />;
 
   return <>{children}</>;

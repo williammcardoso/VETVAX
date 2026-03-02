@@ -7,6 +7,7 @@ type AuthState = {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  /** Mantido para compatibilidade com guards. Não exibimos UI de loading. */
   loading: boolean;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -35,19 +36,23 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
   });
 }
 
-async function safeFetchProfile(userId: string, previous: Profile | null): Promise<Profile | null> {
+async function fetchProfileResolved(
+  userId: string,
+  previous: Profile | null,
+): Promise<{ profile: Profile | null; resolved: boolean }> {
   try {
     // undefined = timeout (distinguish from null = row not found)
     const result = await withTimeout(fetchMyProfile(userId), 6000, undefined as unknown as Profile | null);
 
-    // If we timed out, keep the previous profile for the same user.
+    // Timeout: não conclui decisão; preserva profile anterior se for do mesmo usuário.
     if (result === (undefined as unknown as Profile | null)) {
-      return previous?.id === userId ? previous : null;
+      return { profile: previous?.id === userId ? previous : null, resolved: previous?.id === userId };
     }
 
-    return result;
+    return { profile: result, resolved: true };
   } catch {
-    return previous?.id === userId ? previous : null;
+    // Erro transitório: idem timeout.
+    return { profile: previous?.id === userId ? previous : null, resolved: previous?.id === userId };
   }
 }
 
@@ -55,8 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
 
-  // Mantido apenas para compatibilidade com os guards. Nunca mostramos UI de loading.
-  const [loading, setLoading] = useState(false);
+  // Flags internas para evitar redirecionamentos prematuros (ex.: onboarding) antes de resolver o profile.
+  const [initialized, setInitialized] = useState(false);
+  const [profileResolved, setProfileResolved] = useState(false);
 
   const profileRef = useRef<Profile | null>(null);
   useEffect(() => {
@@ -68,15 +74,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshProfile = async () => {
     if (!user) {
       setProfile(null);
+      setProfileResolved(true);
       return;
     }
 
-    const p = await safeFetchProfile(user.id, profileRef.current);
-    setProfile(p);
+    const { profile: p, resolved } = await fetchProfileResolved(user.id, profileRef.current);
+    if (resolved) setProfileResolved(true);
+    if (resolved) setProfile(p);
   };
 
   useEffect(() => {
     let mounted = true;
+
+    const sync = async (nextSession: Session | null) => {
+      if (!mounted) return;
+
+      setSession(nextSession);
+
+      if (!nextSession?.user) {
+        setProfile(null);
+        setProfileResolved(true);
+        return;
+      }
+
+      const { profile: p, resolved } = await fetchProfileResolved(nextSession.user.id, profileRef.current);
+      if (!mounted) return;
+
+      if (resolved) {
+        setProfile(p);
+        setProfileResolved(true);
+      }
+      // Se não resolveu, não força onboarding; mantém estado anterior (sem UI de loading).
+    };
 
     const loadSession = async () => {
       const fallback = { data: { session: null as Session | null } };
@@ -84,37 +113,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data } = await withTimeout(supabase.auth.getSession(), 6000, fallback);
         if (!mounted) return;
-
-        setSession(data.session);
-
-        if (data.session?.user) {
-          const p = await safeFetchProfile(data.session.user.id, profileRef.current);
-          if (!mounted) return;
-          setProfile(p);
-        } else {
-          setProfile(null);
-        }
+        await sync(data.session);
       } catch {
-        // Se falhar, não bloqueia UI; mantém estado atual.
+        // Se falhar, não bloqueia UI; apenas marca init para não travar a navegação.
+      } finally {
+        if (mounted) setInitialized(true);
       }
     };
 
-    // Boot: carrega sessão sem tela de loading.
     loadSession();
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      if (!mounted) return;
-
-      setSession(nextSession);
-
-      if (!nextSession?.user) {
-        setProfile(null);
-        return;
-      }
-
-      const p = await safeFetchProfile(nextSession.user.id, profileRef.current);
-      if (!mounted) return;
-      setProfile(p);
+      await sync(nextSession);
+      if (mounted) setInitialized(true);
     });
 
     const onVis = () => {
@@ -134,6 +145,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
   };
+
+  // Não mostramos loader. "loading" serve apenas para os guards NÃO decidirem redirects antes da hora.
+  const loading = !initialized || (!!user && !profileResolved);
 
   const value = useMemo<AuthState>(
     () => ({
