@@ -18,6 +18,7 @@ import Reports from "@/pages/Reports";
 import Catalog from "@/pages/Catalog";
 import Settings from "@/pages/Settings";
 import Access from "@/pages/Access";
+import Reminders from "@/pages/Reminders";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="tutors" element={<Tutors />} />
               <Route path="tutors/:id" element={<TutorDetail />} />
               <Route path="appointments/new" element={<AppointmentNew />} />
+              <Route path="reminders" element={<Reminders />} />
               <Route path="reports" element={<Reports />} />
 
               <Route

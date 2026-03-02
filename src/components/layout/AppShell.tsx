@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
+  Bell,
   CalendarDays,
   ClipboardList,
   FileDown,
@@ -97,6 +98,7 @@ export default function AppShell() {
                 <NavItem to="/dashboard" icon={CalendarDays} label="Dashboard" />
                 <NavItem to="/tutors" icon={Users} label="Tutores" />
                 <NavItem to="/appointments/new" icon={ClipboardList} label="Novo agendamento" />
+                <NavItem to="/reminders" icon={Bell} label="Lembretes" />
                 <NavItem to="/reports" icon={FileDown} label="Relatórios" />
               </SidebarMenu>
             </SidebarGroupContent>
