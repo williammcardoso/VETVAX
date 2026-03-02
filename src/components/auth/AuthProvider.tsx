@@ -40,14 +40,13 @@ async function safeFetchProfile(userId: string, previous: Profile | null): Promi
     // undefined = timeout (distinguish from null = row not found)
     const result = await withTimeout(fetchMyProfile(userId), 6000, undefined as unknown as Profile | null);
 
-    // If we timed out, keep the previous profile for the same user (prevents false onboarding redirects).
+    // If we timed out, keep the previous profile for the same user.
     if (result === (undefined as unknown as Profile | null)) {
       return previous?.id === userId ? previous : null;
     }
 
     return result;
   } catch {
-    // On transient failures, keep the last known profile for the same user.
     return previous?.id === userId ? previous : null;
   }
 }
@@ -77,8 +76,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    const loadSession = async () => {
-      setLoading(true);
+    const loadSession = async ({ silent }: { silent: boolean }) => {
+      // "silent" evita o full-screen loader em trocas de aba.
+      if (!silent) setLoading(true);
+
       const fallback = { data: { session: null as Session | null } };
 
       try {
@@ -95,11 +96,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null);
         }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted && !silent) setLoading(false);
       }
     };
 
-    loadSession();
+    loadSession({ silent: false });
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
       if (!mounted) return;
@@ -112,17 +113,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // For refresh events, don't blank profile—keep last known if profile fetch is slow.
-      setLoading(event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "INITIAL_SESSION");
+      // Não queremos spinner de tela cheia em TOKEN_REFRESHED.
+      const shouldBlock = event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "INITIAL_SESSION";
+      if (shouldBlock) setLoading(true);
+
       const p = await safeFetchProfile(nextSession.user.id, profileRef.current);
       if (!mounted) return;
       setProfile(p);
-      setLoading(false);
+
+      if (shouldBlock) setLoading(false);
     });
 
     const onVis = () => {
       if (document.visibilityState !== "visible") return;
-      loadSession();
+      // Ao voltar para a aba, resincroniza sem bloquear a tela.
+      loadSession({ silent: true });
     };
 
     document.addEventListener("visibilitychange", onVis);

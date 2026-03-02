@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Clock, Filter, MessageCircle, Sparkles } from "lucide-react";
+import { CalendarClock, Clock, Filter, MessageCircle, ShieldAlert, Syringe, XCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { DashboardKpis, DueReminderRow, UpcomingAppointmentRow } from "@/types/vetvax";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import UpcomingAppointmentsTable from "@/components/dashboard/UpcomingAppointmentsTable";
 import DueRemindersTable from "@/components/dashboard/DueRemindersTable";
 import { dayjs } from "@/lib/datetime";
+import KpiCard from "@/components/dashboard/KpiCard";
 
 type DatePreset = "today" | "tomorrow" | "7d" | "month";
 
@@ -131,24 +132,24 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-10">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5" />
-            Dashboard • agenda e lembretes
+            <Syringe className="h-3.5 w-3.5 text-primary" />
+            VetVAX • agenda e lembretes
           </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Hoje, o que precisa acontecer?</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Agendamentos pendentes aparecem aqui até a baixa. Lembretes nascem na baixa e ficam visíveis até feito/arquivado.
+          <h1 className="mt-3 text-[28px] font-semibold tracking-tight text-foreground">Dashboard</h1>
+          <p className="mt-2 text-sm text-muted-foreground max-w-[80ch]">
+            Agendamentos pendentes ficam visíveis até a baixa. Lembretes nascem na baixa e ficam no radar até feito/arquivado.
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative sm:w-[340px]">
             <MessageCircle className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="pl-9 rounded-2xl"
+              className="pl-9 rounded-md border-border bg-card focus-visible:ring-primary/25"
               placeholder="Buscar tutor / telefone…"
               value={filters.q}
               onChange={(e) => persist({ ...filters, q: e.target.value })}
@@ -156,14 +157,11 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Select
-              value={filters.preset}
-              onValueChange={(v) => persist({ ...filters, preset: v as DatePreset })}
-            >
-              <SelectTrigger className="w-[160px] rounded-2xl">
+            <Select value={filters.preset} onValueChange={(v) => persist({ ...filters, preset: v as DatePreset })}>
+              <SelectTrigger className="w-[170px] rounded-md bg-card">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent className="rounded-md">
                 <SelectItem value="today">Hoje</SelectItem>
                 <SelectItem value="tomorrow">Amanhã</SelectItem>
                 <SelectItem value="7d">Próximos 7 dias</SelectItem>
@@ -175,11 +173,11 @@ export default function Dashboard() {
               value={filters.channel}
               onValueChange={(v) => persist({ ...filters, channel: v as Filters["channel"] })}
             >
-              <SelectTrigger className="w-[150px] rounded-2xl">
+              <SelectTrigger className="w-[160px] rounded-md bg-card">
                 <Filter className="mr-2 h-4 w-4 opacity-70" />
                 <SelectValue placeholder="Canal" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent className="rounded-md">
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="store">Loja</SelectItem>
                 <SelectItem value="phone">Telefone</SelectItem>
@@ -188,83 +186,52 @@ export default function Dashboard() {
               </SelectContent>
             </Select>
 
-            <Button variant="secondary" className="rounded-2xl" onClick={onRefetch}>
+            <Button variant="outline" className="rounded-md" onClick={onRefetch}>
               Atualizar
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Card className="rounded-3xl p-4">
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">Pendentes hoje</div>
-            <Badge className="rounded-full" variant="secondary">
-              <Clock className="mr-1 h-3 w-3" />
-              Hoje
-            </Badge>
-          </div>
-          <div className="mt-2 text-2xl font-semibold">{kpis.data?.pending_today ?? "–"}</div>
-        </Card>
-        <Card className="rounded-3xl p-4">
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">Pendentes (7d)</div>
-            <Badge className="rounded-full" variant="secondary">
-              <CalendarClock className="mr-1 h-3 w-3" />
-              7 dias
-            </Badge>
-          </div>
-          <div className="mt-2 text-2xl font-semibold">{kpis.data?.pending_7d ?? "–"}</div>
-        </Card>
-        <Card className="rounded-3xl p-4">
-          <div className="text-xs text-muted-foreground">Aplicados (mês)</div>
-          <div className="mt-2 text-2xl font-semibold">{kpis.data?.applied_month ?? "–"}</div>
-        </Card>
-        <Card className="rounded-3xl p-4">
-          <div className="text-xs text-muted-foreground">Cancelados (mês)</div>
-          <div className="mt-2 text-2xl font-semibold">{kpis.data?.cancelled_month ?? "–"}</div>
-        </Card>
-        <Card className="rounded-3xl p-4">
-          <div className="text-xs text-muted-foreground">Lembretes vencidos</div>
-          <div className="mt-2 text-2xl font-semibold">{kpis.data?.overdue_reminders ?? "–"}</div>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <KpiCard icon={Clock} badge="Hoje" label="Pendentes hoje" value={kpis.data?.pending_today ?? "–"} tone="blue" />
+        <KpiCard icon={CalendarClock} badge="7 dias" label="Pendentes (7d)" value={kpis.data?.pending_7d ?? "–"} tone="blue" />
+        <KpiCard icon={Syringe} badge="Mês" label="Aplicados (mês)" value={kpis.data?.applied_month ?? "–"} tone="green" />
+        <KpiCard icon={XCircle} badge="Mês" label="Cancelados (mês)" value={kpis.data?.cancelled_month ?? "–"} tone="amber" />
+        <KpiCard icon={ShieldAlert} badge="Hoje" label="Lembretes vencidos" value={kpis.data?.overdue_reminders ?? "–"} tone="red" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="rounded-3xl p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-2">
+      <div className="grid gap-8 lg:grid-cols-2">
+        <Card className="rounded-lg border bg-card p-6 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold">Próximos agendamentos</div>
+              <div className="text-base font-semibold tracking-tight">Próximos agendamentos</div>
               <div className="mt-1 text-xs text-muted-foreground">
                 {range.from.format("DD/MM")} → {range.to.format("DD/MM")}
               </div>
             </div>
-            <Badge variant="secondary" className="rounded-full">
+            <Badge variant="secondary" className="rounded-full bg-blue-600/10 text-blue-700">
               PENDENTE
             </Badge>
           </div>
 
-          <div className="mt-4">
-            <UpcomingAppointmentsTable
-              loading={upcoming.isLoading}
-              rows={upcoming.data ?? []}
-              onChanged={onRefetch}
-            />
+          <div className="mt-5">
+            <UpcomingAppointmentsTable loading={upcoming.isLoading} rows={upcoming.data ?? []} onChanged={onRefetch} />
           </div>
         </Card>
 
-        <Card className="rounded-3xl p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-2">
+        <Card className="rounded-lg border bg-card p-6 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold">Lembretes de próximas aplicações</div>
+              <div className="text-base font-semibold tracking-tight">Lembretes de próximas aplicações</div>
               <div className="mt-1 text-xs text-muted-foreground">Ativos (até 200 mais próximos)</div>
             </div>
-            <Badge variant="secondary" className="rounded-full">
+            <Badge variant="secondary" className="rounded-full bg-blue-600/10 text-blue-700">
               ATIVO
             </Badge>
           </div>
 
-          <div className="mt-4">
+          <div className="mt-5">
             <DueRemindersTable loading={reminders.isLoading} rows={reminders.data ?? []} onChanged={onRefetch} />
           </div>
         </Card>

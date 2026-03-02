@@ -29,7 +29,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import GlobalCommandPalette from "@/components/command/GlobalCommandPalette";
@@ -50,14 +49,15 @@ function NavItem({
           to={to}
           className={({ isActive }) =>
             cn(
-              "rounded-xl",
+              "group relative flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+              "hover:bg-[hsl(var(--primary))]/[0.05]",
               isActive &&
-                "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-sidebar-border",
+                "bg-[hsl(var(--primary))]/[0.06] text-foreground before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[3px] before:bg-primary before:rounded-r-sm",
             )
           }
         >
-          <Icon className="opacity-80" />
-          <span>{label}</span>
+          <Icon className="h-4 w-4 text-muted-foreground group-[.active]:text-foreground" />
+          <span className="truncate">{label}</span>
         </NavLink>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -74,27 +74,29 @@ export default function AppShell() {
 
   return (
     <SidebarProvider defaultOpen>
-      <Sidebar variant="inset" collapsible="icon" className="border-sidebar-border">
-        <SidebarHeader className="gap-2">
-          <div className="flex items-center justify-between gap-2 px-2">
-            <div className="flex items-center gap-2">
-              <div className="size-9 rounded-2xl bg-[hsl(var(--brand))] text-white grid place-items-center font-semibold">
+      <Sidebar variant="inset" collapsible="icon" className="border-sidebar-border bg-sidebar">
+        <SidebarHeader className="gap-3 px-3 py-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="size-9 rounded-md bg-primary text-primary-foreground grid place-items-center font-semibold">
                 V
               </div>
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">VetVAX</div>
-                <div className="truncate text-xs text-sidebar-foreground/70">Agenda • Baixa • Lembretes</div>
+                <div className="truncate text-sm font-semibold tracking-tight">VetVAX</div>
+                <div className="truncate text-xs text-muted-foreground">Agenda • Baixa • Lembretes</div>
               </div>
             </div>
           </div>
           <SidebarSeparator />
         </SidebarHeader>
 
-        <SidebarContent>
+        <SidebarContent className="px-2 pb-3">
           <SidebarGroup>
-            <SidebarGroupLabel>Operação</SidebarGroupLabel>
+            <SidebarGroupLabel className="px-2 text-[11px] font-medium text-muted-foreground tracking-wider">
+              OPERAÇÃO
+            </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-1">
                 <NavItem to="/dashboard" icon={CalendarDays} label="Dashboard" />
                 <NavItem to="/tutors" icon={Users} label="Tutores" />
                 <NavItem to="/appointments/new" icon={ClipboardList} label="Novo agendamento" />
@@ -105,10 +107,13 @@ export default function AppShell() {
           </SidebarGroup>
 
           {canManage && (
-            <SidebarGroup>
-              <SidebarGroupLabel>Admin</SidebarGroupLabel>
+            <SidebarGroup className="mt-4">
+              <SidebarSeparator />
+              <SidebarGroupLabel className="px-2 pt-4 text-[11px] font-medium text-muted-foreground tracking-wider">
+                ADMIN
+              </SidebarGroupLabel>
               <SidebarGroupContent>
-                <SidebarMenu>
+                <SidebarMenu className="gap-1">
                   {isAdmin && <NavItem to="/access" icon={UserCog} label="Acessos" />}
                   {isAdmin && <NavItem to="/catalog" icon={Shield} label="Catálogo" />}
                   <NavItem to="/settings" icon={Settings} label="Configurações" />
@@ -118,39 +123,33 @@ export default function AppShell() {
           )}
         </SidebarContent>
 
-        <SidebarFooter className="pb-3">
-          <div className="flex items-center justify-between gap-2 rounded-2xl border border-sidebar-border bg-sidebar-accent/50 px-2 py-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <Avatar className="h-8 w-8 rounded-2xl">
-                <AvatarFallback className="rounded-2xl bg-sidebar-primary text-sidebar-primary-foreground">
+        <SidebarFooter className="pb-4 px-3">
+          <div className="flex items-center justify-between gap-2 rounded-md border border-sidebar-border bg-background px-3 py-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar className="h-9 w-9 rounded-full">
+                <AvatarFallback className="rounded-full bg-primary/10 text-primary font-semibold">
                   {(profile?.display_name?.[0] ?? "U").toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <div className="truncate text-xs font-medium">
-                  {profile?.display_name ?? "Usuário"}
-                </div>
-                <div className="truncate text-[11px] text-sidebar-foreground/70">
-                  <Badge variant="secondary" className="rounded-xl px-2 py-0 text-[10px]">
-                    {profile?.role ?? "viewer"}
-                  </Badge>
-                </div>
+                <div className="truncate text-sm font-medium">{profile?.display_name ?? "Usuário"}</div>
+                <div className="truncate text-xs text-muted-foreground">{profile?.role ?? "viewer"}</div>
               </div>
             </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-2xl">
+                <Button variant="outline" size="icon" className="h-9 w-9 rounded-md">
                   <LogOut className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-2xl">
+              <DropdownMenuContent align="end" className="rounded-md">
                 <DropdownMenuItem
                   onClick={async () => {
                     await signOut();
                     nav("/login", { replace: true });
                   }}
-                  className="rounded-xl"
+                  className="rounded-sm"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   Sair
@@ -162,27 +161,23 @@ export default function AppShell() {
       </Sidebar>
 
       <SidebarInset className="bg-background">
-        <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex h-14 items-center gap-2 px-3 sm:px-6">
-            <SidebarTrigger className="rounded-xl" />
+        <header className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+          <div className="flex h-14 items-center gap-3 px-6">
+            <SidebarTrigger className="rounded-md" />
             <div className="min-w-0">
-              <div className="text-sm font-semibold">VetVAX</div>
-              <div className="text-[11px] text-muted-foreground">Multi-tenant • RBAC • Auditoria</div>
+              <div className="text-sm font-semibold tracking-tight">VetVAX</div>
+              <div className="text-[11px] text-muted-foreground">Clínico • Profissional • Auditável</div>
             </div>
             <div className="ml-auto flex items-center gap-2">
               <GlobalCommandPalette />
-              <Button
-                variant="secondary"
-                className="hidden sm:inline-flex rounded-2xl"
-                onClick={() => nav("/appointments/new")}
-              >
+              <Button className="hidden sm:inline-flex rounded-md" onClick={() => nav("/appointments/new")}>
                 Novo agendamento
               </Button>
             </div>
           </div>
         </header>
 
-        <div className="p-4 sm:p-6">
+        <div className="px-6 py-8">
           <Outlet />
         </div>
       </SidebarInset>

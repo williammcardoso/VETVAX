@@ -22,6 +22,13 @@ function channelLabel(c: UpcomingAppointmentRow["channel"]) {
   return "Outro";
 }
 
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const a = parts[0]?.[0] ?? "T";
+  const b = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (a + b).toUpperCase();
+}
+
 export default function UpcomingAppointmentsTable({
   rows,
   loading,
@@ -73,22 +80,22 @@ export default function UpcomingAppointmentsTable({
       {summary.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1">
-            <Syringe className="h-3.5 w-3.5" />
+            <Syringe className="h-3.5 w-3.5 text-primary" />
             Top itens no período:
           </span>
           {summary.map(([name, qty]) => (
-            <Badge key={name} variant="secondary" className="rounded-full">
+            <Badge key={name} variant="secondary" className="rounded-full bg-muted text-muted-foreground">
               {name} • {qty}
             </Badge>
           ))}
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border">
+      <div className="overflow-hidden rounded-lg border bg-card">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/40">
-              <TableHead className="w-[120px]">Quando</TableHead>
+            <TableRow className="bg-muted/30">
+              <TableHead className="w-[130px]">Quando</TableHead>
               <TableHead>Tutor</TableHead>
               <TableHead className="hidden sm:table-cell">Itens</TableHead>
               <TableHead className="hidden md:table-cell">Canal</TableHead>
@@ -100,34 +107,32 @@ export default function UpcomingAppointmentsTable({
               Array.from({ length: 4 }).map((_, i) => (
                 <TableRow key={i}>
                   <TableCell colSpan={5}>
-                    <Skeleton className="h-9 w-full rounded-xl" />
+                    <Skeleton className="h-10 w-full rounded-md" />
                   </TableCell>
                 </TableRow>
               ))}
 
             {rows.map((row) => (
-              <TableRow key={row.id} className="hover:bg-muted/30">
+              <TableRow key={row.id} className="transition-colors hover:bg-muted/20">
                 <TableCell className="align-top">
-                  <div className="text-xs font-medium">
-                    {formatDateBr(row.scheduled_date)}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">{formatTimeBr(row.scheduled_time)}</div>
+                  <div className="text-xs font-medium text-foreground">{formatDateBr(row.scheduled_date)}</div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">{formatTimeBr(row.scheduled_time)}</div>
                 </TableCell>
+
                 <TableCell className="align-top">
-                  <div className="text-sm font-medium leading-tight">{row.tutor_name}</div>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {row.tutor_phone1 && (
-                      <Badge variant="secondary" className="rounded-full text-[11px]">
-                        {row.tutor_phone1}
-                      </Badge>
-                    )}
-                    {!row.tutor_phone1 && row.tutor_phone2 && (
-                      <Badge variant="secondary" className="rounded-full text-[11px]">
-                        {row.tutor_phone2}
-                      </Badge>
-                    )}
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                      {initials(row.tutor_name)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium leading-tight text-foreground">{row.tutor_name}</div>
+                      <div className="mt-1 text-[11px] text-muted-foreground">
+                        {row.tutor_phone1 || row.tutor_phone2 ? row.tutor_phone1 ?? row.tutor_phone2 : "—"}
+                      </div>
+                    </div>
                   </div>
                 </TableCell>
+
                 <TableCell className="hidden sm:table-cell align-top">
                   <div className="text-xs text-muted-foreground">
                     {row.items?.length
@@ -136,41 +141,41 @@ export default function UpcomingAppointmentsTable({
                           .map((it) => `${it.quantity}× ${it.item}`)
                           .join(" • ")
                       : "—"}
-                    {(row.items?.length ?? 0) > 3 && (
-                      <span className="ml-2 text-[11px]">+{(row.items?.length ?? 0) - 3}</span>
-                    )}
+                    {(row.items?.length ?? 0) > 3 && <span className="ml-2 text-[11px]">+{(row.items?.length ?? 0) - 3}</span>}
                   </div>
                 </TableCell>
+
                 <TableCell className="hidden md:table-cell align-top">
-                  <Badge variant="secondary" className="rounded-full">
+                  <Badge variant="secondary" className="rounded-full bg-muted text-muted-foreground">
                     {channelLabel(row.channel)}
                   </Badge>
                 </TableCell>
+
                 <TableCell className="text-right align-top">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-xl">
+                      <Button variant="ghost" size="icon" className="rounded-md">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-2xl">
-                      <DropdownMenuItem className="rounded-xl" onClick={() => setCheckoutId(row.id)}>
+                    <DropdownMenuContent align="end" className="rounded-md">
+                      <DropdownMenuItem className="rounded-sm" onClick={() => setCheckoutId(row.id)}>
                         <Syringe className="mr-2 h-4 w-4" />
                         Dar baixa
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="rounded-xl" onClick={() => setRescheduleId(row.id)}>
+                      <DropdownMenuItem className="rounded-sm" onClick={() => setRescheduleId(row.id)}>
                         <RotateCcw className="mr-2 h-4 w-4" />
                         Reagendar (duplicar)
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        className="rounded-xl"
+                        className="rounded-sm"
                         onClick={() => openWhats.mutate(row)}
                         disabled={openWhats.isPending}
                       >
                         <Phone className="mr-2 h-4 w-4" />
                         Whats
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="rounded-xl" onClick={() => nav(`/tutors/${row.tutor_id}`)}>
+                      <DropdownMenuItem className="rounded-sm" onClick={() => nav(`/tutors/${row.tutor_id}`)}>
                         Ver tutor
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -183,14 +188,14 @@ export default function UpcomingAppointmentsTable({
               <TableRow>
                 <TableCell colSpan={5} className="py-10">
                   <div className="mx-auto max-w-sm text-center">
-                    <div className="mx-auto grid h-10 w-10 place-items-center rounded-2xl bg-muted">
+                    <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-muted">
                       <XCircle className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="mt-3 text-sm font-medium">Nenhum agendamento pendente</div>
                     <p className="mt-1 text-xs text-muted-foreground">
                       Ajuste os filtros, ou crie um novo agendamento para começar.
                     </p>
-                    <Button className="mt-4 rounded-2xl" onClick={() => nav("/appointments/new")}>
+                    <Button className="mt-4 rounded-md" onClick={() => nav("/appointments/new")}>
                       Novo agendamento
                     </Button>
                   </div>

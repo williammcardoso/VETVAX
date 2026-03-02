@@ -4,89 +4,88 @@
 
 @layer base {
   :root {
-    /* Color system (sem preto como primário) */
-    --brand: 262 83% 58%; /* violet */
-    --brand-2: 188 92% 42%; /* teal */
+    /* VetVAX — visual clínico (Linear/Stripe/Cliniko) */
+    --brand: 221 83% 53%; /* #2563EB */
 
-    --background: 0 0% 100%;
-    --foreground: 224 25% 16%;
+    --background: 210 40% 98%; /* #F8FAFC */
+    --foreground: 222 47% 11%; /* slate-900 */
 
     --card: 0 0% 100%;
-    --card-foreground: 224 25% 16%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 224 25% 16%;
+    --popover-foreground: 222 47% 11%;
 
     --primary: var(--brand);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 12% 96%;
-    --secondary-foreground: 224 25% 16%;
+    --secondary: 210 40% 96%; /* slate-100 */
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 240 12% 96%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%; /* #64748B */
 
-    --accent: 262 83% 96%;
-    --accent-foreground: 262 60% 22%;
+    --accent: 221 83% 96%; /* blue tint */
+    --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 72% 51%; /* #DC2626 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 10% 90%;
-    --input: 240 10% 90%;
+    --border: 214 32% 91%; /* slate-200 */
+    --input: 214 32% 91%;
     --ring: var(--brand);
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    --sidebar-background: 250 30% 98%;
-    --sidebar-foreground: 224 20% 20%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
     --sidebar-primary: var(--brand);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 262 50% 95%;
-    --sidebar-accent-foreground: 262 55% 22%;
-    --sidebar-border: 240 10% 90%;
+    --sidebar-accent: 221 83% 97%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
     --sidebar-ring: var(--brand);
   }
 
+  /* Mantemos dark mode disponível, mas com sobriedade */
   .dark {
-    --brand: 262 83% 66%;
-    --brand-2: 188 92% 46%;
+    --brand: 221 83% 60%;
 
-    --background: 230 22% 10%;
+    --background: 222 47% 6%;
     --foreground: 0 0% 98%;
 
-    --card: 230 22% 12%;
+    --card: 222 47% 8%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 230 22% 12%;
+    --popover: 222 47% 8%;
     --popover-foreground: 0 0% 98%;
 
     --primary: var(--brand);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 230 18% 18%;
+    --secondary: 222 28% 14%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 230 18% 18%;
-    --muted-foreground: 215 18% 70%;
+    --muted: 222 28% 14%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 262 35% 20%;
+    --accent: 221 50% 16%;
     --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 62.8% 42%;
+    --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 230 18% 22%;
-    --input: 230 18% 22%;
+    --border: 222 28% 18%;
+    --input: 222 28% 18%;
     --ring: var(--brand);
 
-    --sidebar-background: 230 22% 12%;
+    --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 0 0% 96%;
     --sidebar-primary: var(--brand);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 230 18% 18%;
+    --sidebar-accent: 222 28% 14%;
     --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 230 18% 22%;
+    --sidebar-border: 222 28% 18%;
     --sidebar-ring: var(--brand);
   }
 }
@@ -96,7 +95,23 @@
     @apply border-border;
   }
 
+  html {
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
+  }
+
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* Micro-interações: elevação sutil padrão */
+  .vetvax-elevate {
+    @apply transition-all duration-150 ease-out hover:shadow-md hover:-translate-y-[1px];
+  }
+
+  .vetvax-kpi {
+    @apply vetvax-elevate;
   }
 }

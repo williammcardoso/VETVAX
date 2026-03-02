@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Archive, CheckCircle2, MessageCircle, ShieldAlert } from "lucide-react";
+import { Archive, CheckCircle2, Clock, MessageCircle, ShieldAlert } from "lucide-react";
 import type { DueReminderRow } from "@/types/vetvax";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -15,9 +15,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 function dueLabel(dueDateISO: string) {
   const diff = daysDiffFromToday(dueDateISO);
-  if (diff === 0) return "vence hoje";
-  if (diff < 0) return `vencido há ${Math.abs(diff)}d`;
-  return `faltam ${diff}d`;
+  if (diff === 0) return "Vence hoje";
+  if (diff < 0) return `Vencido há ${Math.abs(diff)} dias`;
+  return `Faltam ${diff} dias`;
 }
 
 function lastAppliedLabel(lastAppliedAt: string | null) {
@@ -57,7 +57,6 @@ export default function DueRemindersTable({
 
       const msg = await buildReminderMessage(row);
 
-      // Atualiza counters como "intenção" de envio (fase MVP wa.me)
       await supabase
         .from("reminders")
         .update({
@@ -95,20 +94,22 @@ export default function DueRemindersTable({
 
   const rowsWithMeta = useMemo(() => {
     return rows.map((r) => {
+      const diff = daysDiffFromToday(r.due_date);
+      const overdue = diff < 0;
       const dueText = dueLabel(r.due_date);
       const lastText = lastAppliedLabel(r.last_applied_at);
-      return { r, dueText, lastText };
+      return { r, dueText, lastText, overdue };
     });
   }, [rows]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border">
+    <div className="overflow-hidden rounded-lg border bg-card">
       <Table>
         <TableHeader>
-          <TableRow className="bg-muted/40">
+          <TableRow className="bg-muted/30">
             <TableHead>Vencimento</TableHead>
             <TableHead>Tutor</TableHead>
-            <TableHead className="hidden md:table-cell">Detalhe</TableHead>
+            <TableHead className="hidden md:table-cell">Notas</TableHead>
             <TableHead className="w-[140px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -117,12 +118,12 @@ export default function DueRemindersTable({
             Array.from({ length: 4 }).map((_, i) => (
               <TableRow key={i}>
                 <TableCell colSpan={4}>
-                  <Skeleton className="h-9 w-full rounded-xl" />
+                  <Skeleton className="h-10 w-full rounded-md" />
                 </TableCell>
               </TableRow>
             ))}
 
-          {rowsWithMeta.map(({ r, dueText, lastText }) => {
+          {rowsWithMeta.map(({ r, dueText, lastText, overdue }) => {
             const diff = daysDiffFromToday(r.due_date);
             const urgent = diff <= 0;
             const lastSentRecently = r.last_sent_at
@@ -130,10 +131,16 @@ export default function DueRemindersTable({
               : false;
 
             return (
-              <TableRow key={r.id} className="hover:bg-muted/30">
+              <TableRow
+                key={r.id}
+                className={
+                  "transition-colors hover:bg-muted/20 " +
+                  (overdue ? "border-l-2 border-l-destructive" : "")
+                }
+              >
                 <TableCell className="align-top">
-                  <div className="text-xs font-medium">{formatDateBr(r.due_date)}</div>
-                  <div className="mt-1">
+                  <div className="text-xs font-medium text-foreground">{formatDateBr(r.due_date)}</div>
+                  <div className="mt-1 flex items-center gap-2">
                     <Badge
                       className="rounded-full"
                       variant={urgent ? "destructive" : "secondary"}
@@ -141,6 +148,10 @@ export default function DueRemindersTable({
                       {urgent && <ShieldAlert className="mr-1 h-3 w-3" />}
                       {dueText}
                     </Badge>
+                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Clock className="h-3.5 w-3.5" />
+                      {r.status}
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell className="align-top">
@@ -149,11 +160,11 @@ export default function DueRemindersTable({
                     {r.pet_name ? <span className="text-muted-foreground"> • {r.pet_name}</span> : null}
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1">
-                    <Badge variant="secondary" className="rounded-full text-[11px]">
+                    <Badge variant="secondary" className="rounded-full bg-muted text-muted-foreground text-[11px]">
                       {r.reminder_type}
                     </Badge>
                     {lastText && (
-                      <Badge variant="secondary" className="rounded-full text-[11px]">
+                      <Badge variant="secondary" className="rounded-full bg-muted text-muted-foreground text-[11px]">
                         {lastText}
                       </Badge>
                     )}
@@ -175,9 +186,9 @@ export default function DueRemindersTable({
                       <TooltipTrigger asChild>
                         <span>
                           <Button
-                            variant="secondary"
+                            variant="outline"
                             size="icon"
-                            className="rounded-2xl"
+                            className="h-9 w-9 rounded-md"
                             onClick={() => openWhats.mutate(r)}
                             disabled={openWhats.isPending || lastSentRecently}
                           >
@@ -185,28 +196,28 @@ export default function DueRemindersTable({
                           </Button>
                         </span>
                       </TooltipTrigger>
-                      <TooltipContent className="rounded-2xl">
-                        {lastSentRecently
-                          ? "Envio recente (menos de 24h)."
-                          : "Abrir WhatsApp com mensagem pronta"}
+                      <TooltipContent className="rounded-md">
+                        {lastSentRecently ? "Envio recente (menos de 24h)." : "Abrir WhatsApp"}
                       </TooltipContent>
                     </Tooltip>
 
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="rounded-2xl"
+                      className="h-9 w-9 rounded-md"
                       onClick={() => setStatus.mutate({ id: r.id, status: "FEITO" })}
                       disabled={setStatus.isPending}
+                      title="Marcar como feito"
                     >
                       <CheckCircle2 className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="rounded-2xl"
+                      className="h-9 w-9 rounded-md"
                       onClick={() => setStatus.mutate({ id: r.id, status: "ARQUIVADO" })}
                       disabled={setStatus.isPending}
+                      title="Arquivar"
                     >
                       <Archive className="h-4 w-4" />
                     </Button>
@@ -220,12 +231,12 @@ export default function DueRemindersTable({
             <TableRow>
               <TableCell colSpan={4} className="py-10">
                 <div className="mx-auto max-w-sm text-center">
-                  <div className="mx-auto grid h-10 w-10 place-items-center rounded-2xl bg-muted">
+                  <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-muted">
                     <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <div className="mt-3 text-sm font-medium">Nada pendente por aqui</div>
+                  <div className="mt-3 text-sm font-medium">Tudo em dia</div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Lembretes são criados na baixa de um agendamento (próxima aplicação).
+                    Lembretes são criados na baixa de um agendamento quando você informa uma próxima aplicação.
                   </p>
                 </div>
               </TableCell>
