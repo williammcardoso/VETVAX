@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Clock, Filter, MessageCircle, ShieldAlert, Syringe, XCircle } from "lucide-react";
+import { Filter, MessageCircle, ShieldAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { DashboardKpis, DueReminderRow, UpcomingAppointmentRow } from "@/types/vetvax";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,7 @@ import DueRemindersTable from "@/components/dashboard/DueRemindersTable";
 import { dayjs } from "@/lib/datetime";
 import KpiCard from "@/components/dashboard/KpiCard";
 
-type DatePreset = "today" | "tomorrow" | "7d" | "month";
-
 type Filters = {
-  preset: DatePreset;
   channel: "all" | "store" | "phone" | "whatsapp" | "other";
   q: string;
 };
@@ -23,20 +20,7 @@ type Filters = {
 const LS_KEY = "vetvax.dashboard.filters";
 
 function defaultFilters(): Filters {
-  return { preset: "7d", channel: "all", q: "" };
-}
-
-function presetToRange(preset: DatePreset) {
-  const start = dayjs().startOf("day");
-  if (preset === "today") return { from: start, to: start };
-  if (preset === "tomorrow") {
-    const d = start.add(1, "day");
-    return { from: d, to: d };
-  }
-  if (preset === "month") {
-    return { from: start, to: start.endOf("month") };
-  }
-  return { from: start, to: start.add(6, "day") };
+  return { channel: "all", q: "" };
 }
 
 async function fetchKpis() {
@@ -58,25 +42,41 @@ export default function Dashboard() {
     }
   });
 
-  const range = useMemo(() => presetToRange(filters.preset), [filters.preset]);
+  const today = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
+  const end7 = useMemo(() => dayjs().add(6, "day").format("YYYY-MM-DD"), []);
 
   const kpis = useQuery({ queryKey: ["dashboard", "kpis"], queryFn: fetchKpis });
 
-  const upcoming = useQuery({
-    queryKey: [
-      "dashboard",
-      "upcoming",
-      range.from.format("YYYY-MM-DD"),
-      range.to.format("YYYY-MM-DD"),
-      filters.channel,
-      filters.q,
-    ],
+  const todayAppointments = useQuery({
+    queryKey: ["dashboard", "today", today, filters.channel, filters.q],
     queryFn: async () => {
       let q = supabase
         .from("vw_upcoming_appointments")
         .select("*")
-        .gte("scheduled_date", range.from.format("YYYY-MM-DD"))
-        .lte("scheduled_date", range.to.format("YYYY-MM-DD"))
+        .eq("scheduled_date", today)
+        .order("scheduled_time", { ascending: true });
+
+      if (filters.channel !== "all") q = q.eq("channel", filters.channel);
+
+      const term = filters.q.trim();
+      if (term) {
+        q = q.or(`tutor_name.ilike.%${term}%,tutor_phone1.ilike.%${term}%,tutor_phone2.ilike.%${term}%`);
+      }
+
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as UpcomingAppointmentRow[];
+    },
+  });
+
+  const next7Appointments = useQuery({
+    queryKey: ["dashboard", "next7", today, end7, filters.channel, filters.q],
+    queryFn: async () => {
+      let q = supabase
+        .from("vw_upcoming_appointments")
+        .select("*")
+        .gt("scheduled_date", today)
+        .lte("scheduled_date", end7)
         .order("scheduled_date", { ascending: true })
         .order("scheduled_time", { ascending: true });
 
@@ -94,11 +94,12 @@ export default function Dashboard() {
   });
 
   const reminders = useQuery({
-    queryKey: ["dashboard", "reminders", filters.q],
+    queryKey: ["dashboard", "reminders", today, end7, filters.q],
     queryFn: async () => {
       let q = supabase
         .from("vw_due_reminders")
         .select("*")
+        .lte("due_date", end7)
         .order("due_date", { ascending: true })
         .limit(200);
 
@@ -113,9 +114,20 @@ export default function Dashboard() {
     },
   });
 
+  const overdueReminders = useMemo(() => {
+    const list = reminders.data ?? [];
+    return list.filter((r) => r.due_date < today);
+  }, [reminders.data, today]);
+
+  const upcomingReminders7 = useMemo(() => {
+    const list = reminders.data ?? [];
+    return list.filter((r) => r.due_date >= today && r.due_date <= end7);
+  }, [reminders.data, today, end7]);
+
   const onRefetch = async () => {
     await Promise.all([
-      qc.invalidateQueries({ queryKey: ["dashboard", "upcoming"] }),
+      qc.invalidateQueries({ queryKey: ["dashboard", "today"] }),
+      qc.invalidateQueries({ queryKey: ["dashboard", "next7"] }),
       qc.invalidateQueries({ queryKey: ["dashboard", "reminders"] }),
       qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] }),
     ]);
@@ -131,16 +143,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-card px-3 py-1 text-xs text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-            <Syringe className="h-3.5 w-3.5 text-primary" />
-            VetVAX • agenda e lembretes
-          </div>
-          <h1 className="mt-4 text-[28px] font-semibold tracking-tight text-foreground">Dashboard</h1>
+          <h1 className="text-[30px] font-semibold tracking-tight text-foreground">Hoje</h1>
           <p className="mt-2 text-sm text-muted-foreground max-w-[82ch] leading-relaxed">
-            Acompanhe pendências, baixe aplicações e mantenha lembretes organizados — com histórico auditável.
+            O que precisa acontecer hoje: agendamentos do dia e lembretes críticos.
           </p>
         </div>
 
@@ -156,18 +164,6 @@ export default function Dashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={filters.preset} onValueChange={(v) => persist({ ...filters, preset: v as DatePreset })}>
-              <SelectTrigger className="w-[180px] rounded-md bg-card">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent className="rounded-md">
-                <SelectItem value="today">Hoje</SelectItem>
-                <SelectItem value="tomorrow">Amanhã</SelectItem>
-                <SelectItem value="7d">Próximos 7 dias</SelectItem>
-                <SelectItem value="month">Até o fim do mês</SelectItem>
-              </SelectContent>
-            </Select>
-
             <Select
               value={filters.channel}
               onValueChange={(v) => persist({ ...filters, channel: v as Filters["channel"] })}
@@ -192,48 +188,110 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <KpiCard icon={Clock} badge="Hoje" label="Pendentes hoje" value={kpis.data?.pending_today ?? "–"} tone="blue" />
-        <KpiCard icon={CalendarClock} badge="7 dias" label="Pendentes (7d)" value={kpis.data?.pending_7d ?? "–"} tone="blue" />
-        <KpiCard icon={Syringe} badge="Mês" label="Aplicados (mês)" value={kpis.data?.applied_month ?? "–"} tone="green" />
-        <KpiCard icon={XCircle} badge="Mês" label="Cancelados (mês)" value={kpis.data?.cancelled_month ?? "–"} tone="amber" />
-        <KpiCard icon={ShieldAlert} badge="Hoje" label="Lembretes vencidos" value={kpis.data?.overdue_reminders ?? "–"} tone="red" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <KpiCard
+          icon={MessageCircle}
+          badge="Hoje"
+          label="Agendamentos hoje"
+          value={kpis.data?.pending_today ?? "–"}
+          tone="blue"
+        />
+        <KpiCard
+          icon={ShieldAlert}
+          badge="Hoje"
+          label="Lembretes vencidos"
+          value={kpis.data?.overdue_reminders ?? "–"}
+          tone="red"
+        />
       </div>
 
-      <div className="grid gap-10 lg:grid-cols-2">
-        <section className="rounded-lg bg-card p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-          <div className="flex items-start justify-between gap-3">
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-base font-semibold tracking-tight">Agendamentos de hoje</div>
+            <div className="mt-1 text-xs text-muted-foreground">{dayjs().format("DD/MM/YYYY")}</div>
+          </div>
+          <Badge variant="secondary" className="rounded-full bg-primary/10 text-primary">
+            FOCO
+          </Badge>
+        </div>
+
+        <UpcomingAppointmentsTable
+          loading={todayAppointments.isLoading}
+          rows={todayAppointments.data ?? []}
+          onChanged={onRefetch}
+          variant="today"
+        />
+      </section>
+
+      <div className="grid gap-10 lg:grid-cols-[1.35fr_0.65fr]">
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-base font-semibold tracking-tight">Próximos agendamentos</div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                {range.from.format("DD/MM")} → {range.to.format("DD/MM")}
+              <div className="text-base font-semibold tracking-tight">Próximos 7 dias</div>
+              <div className="mt-1 text-xs text-muted-foreground">Amanhã → {dayjs().add(6, "day").format("DD/MM")}</div>
+            </div>
+            <Badge variant="secondary" className="rounded-full bg-muted text-muted-foreground">
+              COMPACTO
+            </Badge>
+          </div>
+
+          <UpcomingAppointmentsTable
+            loading={next7Appointments.isLoading}
+            rows={next7Appointments.data ?? []}
+            onChanged={onRefetch}
+            variant="compact"
+          />
+        </section>
+
+        <aside className="space-y-6">
+          <div className="rounded-lg bg-card p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold tracking-tight">Lembretes vencidos</div>
+                <div className="mt-1 text-xs text-muted-foreground">Somente críticos</div>
               </div>
+              <Badge
+                variant="secondary"
+                className="rounded-full bg-red-600/10 text-red-700"
+              >
+                {overdueReminders.length}
+              </Badge>
             </div>
-            <Badge variant="secondary" className="rounded-full bg-primary/10 text-primary">
-              PENDENTE
-            </Badge>
-          </div>
 
-          <div className="mt-6">
-            <UpcomingAppointmentsTable loading={upcoming.isLoading} rows={upcoming.data ?? []} onChanged={onRefetch} />
-          </div>
-        </section>
-
-        <section className="rounded-lg bg-card p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-base font-semibold tracking-tight">Lembretes de próximas aplicações</div>
-              <div className="mt-1 text-xs text-muted-foreground">Ativos (até 200 mais próximos)</div>
+            <div className="mt-4">
+              {overdueReminders.length === 0 ? (
+                <div className="text-xs text-muted-foreground">Nenhum vencido. Tudo em dia.</div>
+              ) : (
+                <DueRemindersTable loading={reminders.isLoading} rows={overdueReminders} onChanged={onRefetch} />
+              )}
             </div>
-            <Badge variant="secondary" className="rounded-full bg-primary/10 text-primary">
-              ATIVO
-            </Badge>
           </div>
 
-          <div className="mt-6">
-            <DueRemindersTable loading={reminders.isLoading} rows={reminders.data ?? []} onChanged={onRefetch} />
+          <div className="rounded-lg bg-card p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold tracking-tight">Próximos 7 dias</div>
+                <div className="mt-1 text-xs text-muted-foreground">Para antecipar contato</div>
+              </div>
+              <Badge variant="secondary" className="rounded-full bg-muted text-muted-foreground">
+                {upcomingReminders7.length}
+              </Badge>
+            </div>
+
+            <div className="mt-4">
+              {upcomingReminders7.length === 0 ? (
+                <div className="text-xs text-muted-foreground">Sem lembretes próximos.</div>
+              ) : (
+                <DueRemindersTable
+                  loading={reminders.isLoading}
+                  rows={upcomingReminders7}
+                  onChanged={onRefetch}
+                />
+              )}
+            </div>
           </div>
-        </section>
+        </aside>
       </div>
     </div>
   );
