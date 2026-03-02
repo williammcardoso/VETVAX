@@ -54,7 +54,9 @@ async function safeFetchProfile(userId: string, previous: Profile | null): Promi
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  // Mantido apenas para compatibilidade com os guards. Nunca mostramos UI de loading.
+  const [loading, setLoading] = useState(false);
 
   const profileRef = useRef<Profile | null>(null);
   useEffect(() => {
@@ -76,10 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    const loadSession = async ({ silent }: { silent: boolean }) => {
-      // "silent" evita o full-screen loader em trocas de aba.
-      if (!silent) setLoading(true);
-
+    const loadSession = async () => {
       const fallback = { data: { session: null as Session | null } };
 
       try {
@@ -95,39 +94,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setProfile(null);
         }
-      } finally {
-        if (mounted && !silent) setLoading(false);
+      } catch {
+        // Se falhar, não bloqueia UI; mantém estado atual.
       }
     };
 
-    loadSession({ silent: false });
+    // Boot: carrega sessão sem tela de loading.
+    loadSession();
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
       if (!mounted) return;
 
       setSession(nextSession);
 
       if (!nextSession?.user) {
         setProfile(null);
-        setLoading(false);
         return;
       }
-
-      // Não queremos spinner de tela cheia em TOKEN_REFRESHED.
-      const shouldBlock = event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "INITIAL_SESSION";
-      if (shouldBlock) setLoading(true);
 
       const p = await safeFetchProfile(nextSession.user.id, profileRef.current);
       if (!mounted) return;
       setProfile(p);
-
-      if (shouldBlock) setLoading(false);
     });
 
     const onVis = () => {
       if (document.visibilityState !== "visible") return;
-      // Ao voltar para a aba, resincroniza sem bloquear a tela.
-      loadSession({ silent: true });
+      loadSession();
     };
 
     document.addEventListener("visibilitychange", onVis);
