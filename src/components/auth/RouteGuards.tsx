@@ -21,7 +21,15 @@ export function RequireAuth({ children }: PropsWithChildren) {
   const location = useLocation();
 
   if (loading) return <FullPageLoader title="Carregando sua sessão…" />;
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location.pathname + location.search }}
+      />
+    );
+  }
   return <>{children}</>;
 }
 

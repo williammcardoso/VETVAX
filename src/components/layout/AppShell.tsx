@@ -6,6 +6,7 @@ import {
   LogOut,
   Settings,
   Shield,
+  UserCog,
   Users,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -66,6 +67,10 @@ export default function AppShell() {
   const { profile, signOut } = useAuth();
   const nav = useNavigate();
 
+  const role = profile?.role ?? "viewer";
+  const isAdmin = role === "admin";
+  const canManage = role === "admin" || role === "manager";
+
   return (
     <SidebarProvider defaultOpen>
       <Sidebar variant="inset" collapsible="icon" className="border-sidebar-border">
@@ -97,15 +102,18 @@ export default function AppShell() {
             </SidebarGroupContent>
           </SidebarGroup>
 
-          <SidebarGroup>
-            <SidebarGroupLabel>Admin</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <NavItem to="/catalog" icon={Shield} label="Catálogo" />
-                <NavItem to="/settings" icon={Settings} label="Configurações" />
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {canManage && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Admin</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {isAdmin && <NavItem to="/access" icon={UserCog} label="Acessos" />}
+                  {isAdmin && <NavItem to="/catalog" icon={Shield} label="Catálogo" />}
+                  <NavItem to="/settings" icon={Settings} label="Configurações" />
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
         </SidebarContent>
 
         <SidebarFooter className="pb-3">

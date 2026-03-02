@@ -7,6 +7,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { RequireAuth, RequireOnboarding, RequireRole } from "@/components/auth/RouteGuards";
 import Login from "@/pages/Login";
 import Onboarding from "@/pages/Onboarding";
+import InviteAccept from "@/pages/InviteAccept";
 import NotFound from "@/pages/NotFound";
 import AppShell from "@/components/layout/AppShell";
 import Dashboard from "@/pages/Dashboard";
@@ -16,6 +17,7 @@ import AppointmentNew from "@/pages/AppointmentNew";
 import Reports from "@/pages/Reports";
 import Catalog from "@/pages/Catalog";
 import Settings from "@/pages/Settings";
+import Access from "@/pages/Access";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +30,14 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route
+              path="/invite"
+              element={
+                <RequireAuth>
+                  <InviteAccept />
+                </RequireAuth>
+              }
+            />
             <Route
               path="/onboarding"
               element={
@@ -67,6 +77,14 @@ const App = () => (
                 element={
                   <RequireRole allow={["admin", "manager"]}>
                     <Settings />
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="access"
+                element={
+                  <RequireRole allow={["admin"]}>
+                    <Access />
                   </RequireRole>
                 }
               />

@@ -1,8 +1,11 @@
+import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,6 +45,18 @@ function BrandPanel() {
 }
 
 export default function Login() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  const nav = useNavigate();
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) return;
+
+    const from = (location.state as any)?.from as string | undefined;
+    nav(from ?? "/dashboard", { replace: true });
+  }, [loading, user, location.state, nav]);
+
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: { email: "", password: "" },
