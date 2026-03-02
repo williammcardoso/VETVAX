@@ -50,13 +50,13 @@ function NavItem({
           className={({ isActive }) =>
             cn(
               "group relative flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-              "hover:bg-muted/40",
+              "hover:bg-muted",
               isActive &&
-                "bg-[hsl(var(--primary))]/[0.03] text-foreground before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[2px] before:bg-primary",
+                "bg-primary/10 text-primary before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[3px] before:bg-primary",
             )
           }
         >
-          <Icon className="h-4 w-4 text-muted-foreground/80" />
+          <Icon className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
           <span className="truncate">{label}</span>
         </NavLink>
       </SidebarMenuButton>
@@ -74,11 +74,15 @@ export default function AppShell() {
 
   return (
     <SidebarProvider defaultOpen>
-      <Sidebar variant="inset" collapsible="icon" className="bg-sidebar">
+      <Sidebar
+        variant="inset"
+        collapsible="icon"
+        className="bg-sidebar border-r border-sidebar-border"
+      >
         <SidebarHeader className="gap-3 px-3 py-5">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="size-9 rounded-md bg-primary text-primary-foreground grid place-items-center font-semibold">
+              <div className="size-9 rounded-[10px] bg-primary text-primary-foreground grid place-items-center font-semibold">
                 V
               </div>
               <div className="min-w-0">
@@ -87,7 +91,7 @@ export default function AppShell() {
               </div>
             </div>
           </div>
-          <SidebarSeparator className="opacity-60" />
+          <SidebarSeparator />
         </SidebarHeader>
 
         <SidebarContent className="px-2 pb-4">
@@ -108,7 +112,7 @@ export default function AppShell() {
 
           {canManage && (
             <SidebarGroup className="mt-6">
-              <SidebarSeparator className="opacity-60" />
+              <SidebarSeparator />
               <SidebarGroupLabel className="px-2 pt-5 text-[11px] font-medium text-muted-foreground tracking-wider">
                 ADMIN
               </SidebarGroupLabel>
@@ -124,7 +128,7 @@ export default function AppShell() {
         </SidebarContent>
 
         <SidebarFooter className="pb-5 px-3">
-          <div className="vetvax-elevate flex items-center justify-between gap-2 rounded-lg bg-background px-3 py-3">
+          <div className="vetvax-elevate flex items-center justify-between gap-2 rounded-[10px] bg-background px-3 py-3 border-[1.5px]">
             <div className="flex items-center gap-3 min-w-0">
               <Avatar className="h-9 w-9 rounded-full">
                 <AvatarFallback className="rounded-full bg-primary/10 text-primary font-semibold">
@@ -161,16 +165,19 @@ export default function AppShell() {
       </Sidebar>
 
       <SidebarInset className="bg-background">
-        <header className="sticky top-0 z-20 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+        <header className="sticky top-0 z-20 bg-background border-b border-border">
           <div className="flex h-14 items-center gap-3 px-6">
             <SidebarTrigger className="rounded-md" />
             <div className="min-w-0">
               <div className="text-sm font-semibold tracking-tight">VetVAX</div>
-              <div className="text-[11px] text-muted-foreground">Clínico • Profissional • Auditável</div>
+              <div className="text-[11px] text-muted-foreground">Robusto • Seguro • Operacional</div>
             </div>
             <div className="ml-auto flex items-center gap-2">
               <GlobalCommandPalette />
-              <Button className="hidden sm:inline-flex rounded-md" onClick={() => nav("/appointments/new")}>
+              <Button
+                className="hidden sm:inline-flex rounded-md bg-primary hover:bg-[#1E40AF]"
+                onClick={() => nav("/appointments/new")}
+              >
                 Novo agendamento
               </Button>
             </div>

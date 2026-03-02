@@ -4,10 +4,10 @@
 
 @layer base {
   :root {
-    /* VetVAX — visual clínico (Linear/Stripe/Cliniko) */
-    --brand: 221 83% 53%; /* #2563EB */
+    /* VetVAX — identidade mais forte (alto contraste) */
+    --brand: 221 83% 47%; /* #1D4ED8 */
 
-    --background: 210 20% 98%; /* #F9FAFB (mais neutro, menos azulado) */
+    --background: 214 33% 95%; /* #EEF2F7 */
     --foreground: 222 47% 11%; /* slate-900 */
 
     --card: 0 0% 100%;
@@ -25,29 +25,28 @@
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%; /* #64748B */
 
-    --accent: 221 83% 96%; /* blue tint */
+    --accent: 221 83% 96%;
     --accent-foreground: 222 47% 11%;
 
     --destructive: 0 72% 51%; /* #DC2626 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%; /* slate-200 */
-    --input: 214 32% 91%;
+    --border: 214 32% 84%; /* #CBD5E1 */
+    --input: 214 32% 84%;
     --ring: var(--brand);
 
-    --radius: 0.5rem; /* 8px */
+    --radius: 0.625rem; /* 10px */
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
     --sidebar-primary: var(--brand);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 221 83% 97%;
+    --sidebar-accent: 221 83% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 91%;
+    --sidebar-border: 214 32% 84%;
     --sidebar-ring: var(--brand);
   }
 
-  /* Mantemos dark mode disponível, mas com sobriedade */
   .dark {
     --brand: 221 83% 60%;
 
@@ -106,17 +105,34 @@
 }
 
 @layer components {
-  /* Micro-interações: elevação ultra sutil (premium, sem "template") */
   .vetvax-elevate {
     @apply transition-shadow duration-150 ease-out;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
   }
 
   .vetvax-elevate:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.1);
   }
 
-  .vetvax-kpi {
-    @apply vetvax-elevate;
+  .vetvax-scroll {
+    scrollbar-gutter: stable;
+  }
+
+  .vetvax-scroll::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .vetvax-scroll::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.35);
+    border-radius: 999px;
+    border: 3px solid rgba(255, 255, 255, 0);
+    background-clip: padding-box;
+  }
+
+  .vetvax-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.5);
+    border: 3px solid rgba(255, 255, 255, 0);
+    background-clip: padding-box;
   }
 }

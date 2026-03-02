@@ -1,5 +1,4 @@
 import type { LucideIcon } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -16,32 +15,31 @@ export default function KpiCard({
   badge: string;
   tone?: "blue" | "green" | "red" | "amber";
 }) {
-  const toneClasses =
+  const palette =
     tone === "green"
-      ? "bg-green-600/10 text-green-700"
+      ? { num: "text-green-600", chip: "bg-green-600 text-white" }
       : tone === "red"
-        ? "bg-red-600/10 text-red-700"
+        ? { num: "text-red-600", chip: "bg-red-600 text-white" }
         : tone === "amber"
-          ? "bg-amber-600/10 text-amber-700"
-          : "bg-primary/10 text-primary";
+          ? { num: "text-amber-600", chip: "bg-amber-500 text-white" }
+          : { num: "text-primary", chip: "bg-primary text-primary-foreground" };
 
   return (
-    <Card className="vetvax-kpi relative rounded-lg border-0 bg-card p-6">
-      <Badge
-        variant="secondary"
-        className="absolute right-4 top-4 rounded-full bg-muted text-muted-foreground"
-      >
+    <div className="vetvax-elevate relative rounded-[10px] bg-card border-[1.5px] p-6">
+      <Badge className={cn("absolute right-4 top-4 rounded-full border-0", palette.chip)}>
         {badge}
       </Badge>
 
-      <div className={cn("grid h-8 w-8 place-items-center rounded-full", toneClasses)}>
-        <Icon className="h-4 w-4 opacity-90" />
+      <div className="grid h-10 w-10 place-items-center rounded-full bg-muted">
+        <Icon className="h-5 w-5 text-foreground" strokeWidth={2} />
       </div>
 
       <div className="mt-5">
-        <div className="text-[32px] font-bold tracking-tight leading-none text-foreground">{value}</div>
-        <div className="mt-2 text-sm font-medium text-muted-foreground">{label}</div>
+        <div className={cn("text-[38px] font-semibold leading-none tracking-tight", palette.num)}>
+          {value}
+        </div>
+        <div className="mt-2 text-sm text-muted-foreground">{label}</div>
       </div>
-    </Card>
+    </div>
   );
 }

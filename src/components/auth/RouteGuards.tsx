@@ -24,12 +24,12 @@ export function RequireAuth({ children }: PropsWithChildren) {
 
 export function RequireOnboarding({ children }: PropsWithChildren) {
   const { user, profile, loading, refreshProfile } = useAuth();
-  const location = useLocation();
 
-  const [attempting, setAttempting] = useState(false);
-  const [attempted, setAttempted] = useState(false);
   const attemptedRef = useRef(false);
+  const [attempting, setAttempting] = useState(false);
 
+  // Política do VetVAX: nunca bloquear o uso do sistema com onboarding.
+  // Se o usuário ainda não tiver org_id, tentamos criar automaticamente em background.
   useEffect(() => {
     if (loading) return;
     if (!user) return;
@@ -56,21 +56,14 @@ export function RequireOnboarding({ children }: PropsWithChildren) {
       }
 
       setAttempting(false);
-      setAttempted(true);
     })();
   }, [loading, user, profile?.org_id, profile?.display_name, refreshProfile]);
 
-  // Só decide onboarding quando a auth/profile foram resolvidos.
-  if (loading) return null;
+  // Não bloqueia a navegação. Caso não exista org_id, as telas podem ficar vazias por RLS,
+  // mas o usuário não fica preso em uma rota de onboarding.
+  void attempting;
 
-  // Se já tem organização, segue normalmente.
-  if (profile?.org_id) return <>{children}</>;
-
-  // Enquanto tenta criar automaticamente, não redireciona.
-  if (!attempted || attempting) return null;
-
-  // Se a tentativa automática falhou (por exemplo, RPC inexistente ou bloqueada), cai no onboarding manual.
-  return <Navigate to="/onboarding" replace state={{ from: location.pathname }} />;
+  return <>{children}</>;
 }
 
 export function RequireRole({
