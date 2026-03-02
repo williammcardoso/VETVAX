@@ -35,7 +35,7 @@
     --input: 214 32% 91%;
     --ring: var(--brand);
 
-    --radius: 0.5rem;
+    --radius: 0.5rem; /* 8px */
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
@@ -106,9 +106,14 @@
 }
 
 @layer components {
-  /* Micro-interações: elevação sutil padrão */
+  /* Micro-interações: elevação ultra sutil (premium, sem "template") */
   .vetvax-elevate {
-    @apply transition-all duration-150 ease-out hover:shadow-md hover:-translate-y-[1px];
+    @apply transition-shadow duration-150 ease-out;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .vetvax-elevate:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 
   .vetvax-kpi {

@@ -98,7 +98,7 @@ export default function DueRemindersTable({
       const overdue = diff < 0;
       const dueText = dueLabel(r.due_date);
       const lastText = lastAppliedLabel(r.last_applied_at);
-      return { r, dueText, lastText, overdue };
+      return { r, dueText, lastText, overdue, diff };
     });
   }, [rows]);
 
@@ -106,14 +106,14 @@ export default function DueRemindersTable({
     <div className="overflow-hidden rounded-lg border bg-card">
       <Table>
         <TableHeader>
-          <TableRow className="bg-muted/30">
+          <TableRow className="bg-muted/20">
             <TableHead>Vencimento</TableHead>
             <TableHead>Tutor</TableHead>
             <TableHead className="hidden md:table-cell">Notas</TableHead>
             <TableHead className="w-[140px]"></TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className="[&_tr]:border-0">
           {loading &&
             Array.from({ length: 4 }).map((_, i) => (
               <TableRow key={i}>
@@ -123,8 +123,7 @@ export default function DueRemindersTable({
               </TableRow>
             ))}
 
-          {rowsWithMeta.map(({ r, dueText, lastText, overdue }) => {
-            const diff = daysDiffFromToday(r.due_date);
+          {rowsWithMeta.map(({ r, dueText, lastText, overdue, diff }) => {
             const urgent = diff <= 0;
             const lastSentRecently = r.last_sent_at
               ? (Date.now() - new Date(r.last_sent_at).getTime()) / (1000 * 60 * 60) < 24
@@ -138,13 +137,10 @@ export default function DueRemindersTable({
                   (overdue ? "border-l-2 border-l-destructive" : "")
                 }
               >
-                <TableCell className="align-top">
+                <TableCell className="align-top py-5">
                   <div className="text-xs font-medium text-foreground">{formatDateBr(r.due_date)}</div>
-                  <div className="mt-1 flex items-center gap-2">
-                    <Badge
-                      className="rounded-full"
-                      variant={urgent ? "destructive" : "secondary"}
-                    >
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge className="rounded-full" variant={urgent ? "destructive" : "secondary"}>
                       {urgent && <ShieldAlert className="mr-1 h-3 w-3" />}
                       {dueText}
                     </Badge>
@@ -154,12 +150,12 @@ export default function DueRemindersTable({
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="align-top">
+                <TableCell className="align-top py-5">
                   <div className="text-sm font-medium leading-tight">
                     {r.tutor_name}
                     {r.pet_name ? <span className="text-muted-foreground"> • {r.pet_name}</span> : null}
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-1">
+                  <div className="mt-2 flex flex-wrap gap-1">
                     <Badge variant="secondary" className="rounded-full bg-muted text-muted-foreground text-[11px]">
                       {r.reminder_type}
                     </Badge>
@@ -170,7 +166,7 @@ export default function DueRemindersTable({
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="hidden md:table-cell align-top">
+                <TableCell className="hidden md:table-cell align-top py-5">
                   <div className="text-xs text-muted-foreground">
                     {r.notes ? r.notes : "—"}
                     {r.last_sent_at && (
@@ -180,7 +176,7 @@ export default function DueRemindersTable({
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-right align-top">
+                <TableCell className="text-right align-top py-5">
                   <div className="flex items-center justify-end gap-2">
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -229,9 +225,9 @@ export default function DueRemindersTable({
 
           {empty && (
             <TableRow>
-              <TableCell colSpan={4} className="py-10">
+              <TableCell colSpan={4} className="py-12">
                 <div className="mx-auto max-w-sm text-center">
-                  <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-muted">
+                  <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-muted/60">
                     <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div className="mt-3 text-sm font-medium">Tudo em dia</div>

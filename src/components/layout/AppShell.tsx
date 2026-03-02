@@ -50,13 +50,13 @@ function NavItem({
           className={({ isActive }) =>
             cn(
               "group relative flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-              "hover:bg-[hsl(var(--primary))]/[0.05]",
+              "hover:bg-muted/40",
               isActive &&
-                "bg-[hsl(var(--primary))]/[0.06] text-foreground before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[3px] before:bg-primary before:rounded-r-sm",
+                "bg-[hsl(var(--primary))]/[0.03] text-foreground before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[2px] before:bg-primary",
             )
           }
         >
-          <Icon className="h-4 w-4 text-muted-foreground group-[.active]:text-foreground" />
+          <Icon className="h-4 w-4 text-muted-foreground/80" />
           <span className="truncate">{label}</span>
         </NavLink>
       </SidebarMenuButton>
@@ -74,8 +74,8 @@ export default function AppShell() {
 
   return (
     <SidebarProvider defaultOpen>
-      <Sidebar variant="inset" collapsible="icon" className="border-sidebar-border bg-sidebar">
-        <SidebarHeader className="gap-3 px-3 py-4">
+      <Sidebar variant="inset" collapsible="icon" className="bg-sidebar">
+        <SidebarHeader className="gap-3 px-3 py-5">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0">
               <div className="size-9 rounded-md bg-primary text-primary-foreground grid place-items-center font-semibold">
@@ -87,16 +87,16 @@ export default function AppShell() {
               </div>
             </div>
           </div>
-          <SidebarSeparator />
+          <SidebarSeparator className="opacity-60" />
         </SidebarHeader>
 
-        <SidebarContent className="px-2 pb-3">
+        <SidebarContent className="px-2 pb-4">
           <SidebarGroup>
             <SidebarGroupLabel className="px-2 text-[11px] font-medium text-muted-foreground tracking-wider">
               OPERAÇÃO
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu className="gap-1">
+              <SidebarMenu className="gap-1.5">
                 <NavItem to="/dashboard" icon={CalendarDays} label="Dashboard" />
                 <NavItem to="/tutors" icon={Users} label="Tutores" />
                 <NavItem to="/appointments/new" icon={ClipboardList} label="Novo agendamento" />
@@ -107,13 +107,13 @@ export default function AppShell() {
           </SidebarGroup>
 
           {canManage && (
-            <SidebarGroup className="mt-4">
-              <SidebarSeparator />
-              <SidebarGroupLabel className="px-2 pt-4 text-[11px] font-medium text-muted-foreground tracking-wider">
+            <SidebarGroup className="mt-6">
+              <SidebarSeparator className="opacity-60" />
+              <SidebarGroupLabel className="px-2 pt-5 text-[11px] font-medium text-muted-foreground tracking-wider">
                 ADMIN
               </SidebarGroupLabel>
               <SidebarGroupContent>
-                <SidebarMenu className="gap-1">
+                <SidebarMenu className="gap-1.5">
                   {isAdmin && <NavItem to="/access" icon={UserCog} label="Acessos" />}
                   {isAdmin && <NavItem to="/catalog" icon={Shield} label="Catálogo" />}
                   <NavItem to="/settings" icon={Settings} label="Configurações" />
@@ -123,8 +123,8 @@ export default function AppShell() {
           )}
         </SidebarContent>
 
-        <SidebarFooter className="pb-4 px-3">
-          <div className="flex items-center justify-between gap-2 rounded-md border border-sidebar-border bg-background px-3 py-3">
+        <SidebarFooter className="pb-5 px-3">
+          <div className="vetvax-elevate flex items-center justify-between gap-2 rounded-lg bg-background px-3 py-3">
             <div className="flex items-center gap-3 min-w-0">
               <Avatar className="h-9 w-9 rounded-full">
                 <AvatarFallback className="rounded-full bg-primary/10 text-primary font-semibold">
@@ -139,7 +139,7 @@ export default function AppShell() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 rounded-md">
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md">
                   <LogOut className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -161,7 +161,7 @@ export default function AppShell() {
       </Sidebar>
 
       <SidebarInset className="bg-background">
-        <header className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+        <header className="sticky top-0 z-20 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           <div className="flex h-14 items-center gap-3 px-6">
             <SidebarTrigger className="rounded-md" />
             <div className="min-w-0">
@@ -177,7 +177,7 @@ export default function AppShell() {
           </div>
         </header>
 
-        <div className="px-6 py-8">
+        <div className="px-6 py-10">
           <Outlet />
         </div>
       </SidebarInset>

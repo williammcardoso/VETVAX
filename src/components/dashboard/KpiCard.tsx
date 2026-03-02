@@ -26,18 +26,20 @@ export default function KpiCard({
           : "bg-primary/10 text-primary";
 
   return (
-    <Card className="vetvax-kpi rounded-lg border bg-card p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className={cn("grid h-9 w-9 place-items-center rounded-full", toneClasses)}>
-          <Icon className="h-4 w-4" />
-        </div>
-        <Badge variant="secondary" className="rounded-full bg-muted text-muted-foreground">
-          {badge}
-        </Badge>
+    <Card className="vetvax-kpi relative rounded-lg border-0 bg-card p-6">
+      <Badge
+        variant="secondary"
+        className="absolute right-4 top-4 rounded-full bg-muted text-muted-foreground"
+      >
+        {badge}
+      </Badge>
+
+      <div className={cn("grid h-8 w-8 place-items-center rounded-full", toneClasses)}>
+        <Icon className="h-4 w-4 opacity-90" />
       </div>
 
-      <div className="mt-4">
-        <div className="text-[30px] font-bold tracking-tight leading-none">{value}</div>
+      <div className="mt-5">
+        <div className="text-[32px] font-bold tracking-tight leading-none text-foreground">{value}</div>
         <div className="mt-2 text-sm font-medium text-muted-foreground">{label}</div>
       </div>
     </Card>
