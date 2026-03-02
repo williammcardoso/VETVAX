@@ -25,10 +25,22 @@ async function fetchMyProfile(userId: string): Promise<Profile | null> {
   return data as Profile | null;
 }
 
-function timeout(ms: number) {
-  return new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error("Auth init timeout")), ms);
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let id: number | undefined;
+  const t = new Promise<T>((resolve) => {
+    id = window.setTimeout(() => resolve(fallback), ms);
   });
+  return Promise.race([promise, t]).finally(() => {
+    if (id) window.clearTimeout(id);
+  });
+}
+
+async function safeFetchProfile(userId: string) {
+  try {
+    return await withTimeout(fetchMyProfile(userId), 6000, null);
+  } catch {
+    return null;
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -44,63 +56,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const p = await fetchMyProfile(user.id);
+    const p = await safeFetchProfile(user.id);
     setProfile(p);
   };
 
   useEffect(() => {
     let mounted = true;
 
-    (async () => {
+    const loadSession = async () => {
       setLoading(true);
+      const fallback = { data: { session: null as Session | null } };
+
       try {
-        const { data } = await Promise.race([supabase.auth.getSession(), timeout(6000)]);
+        const { data } = await withTimeout(supabase.auth.getSession(), 6000, fallback);
         if (!mounted) return;
+
         setSession(data.session);
 
         if (data.session?.user) {
-          try {
-            const p = await fetchMyProfile(data.session.user.id);
-            if (!mounted) return;
-            setProfile(p);
-          } catch {
-            // Profile pode falhar por RLS/migração; ainda assim não travamos a UI.
-            if (mounted) setProfile(null);
-          }
+          const p = await safeFetchProfile(data.session.user.id);
+          if (!mounted) return;
+          setProfile(p);
         } else {
           setProfile(null);
         }
-      } catch {
-        if (!mounted) return;
-        setSession(null);
-        setProfile(null);
       } finally {
         if (mounted) setLoading(false);
       }
-    })();
+    };
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    loadSession();
+
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
+      if (!mounted) return;
+
+      // Evita travar a UI em refresh/token events: sempre finalizamos loading via timeouts.
       setSession(nextSession);
-      setLoading(true);
-      try {
-        if (nextSession?.user) {
-          try {
-            const p = await fetchMyProfile(nextSession.user.id);
-            setProfile(p);
-          } catch {
-            setProfile(null);
-          }
-        } else {
-          setProfile(null);
-        }
-      } finally {
+
+      if (!nextSession?.user) {
+        setProfile(null);
         setLoading(false);
+        return;
       }
+
+      // Para SIGNED_IN e refresh de token, buscamos profile mas com timeout.
+      setLoading(event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "INITIAL_SESSION");
+      const p = await safeFetchProfile(nextSession.user.id);
+      if (!mounted) return;
+      setProfile(p);
+      setLoading(false);
     });
+
+    const onVis = () => {
+      if (document.visibilityState !== "visible") return;
+      // Ao voltar para a aba, re-sincroniza sem bloquear indefinidamente.
+      loadSession();
+    };
+
+    document.addEventListener("visibilitychange", onVis);
 
     return () => {
       mounted = false;
       sub.subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", onVis);
     };
   }, []);
 
