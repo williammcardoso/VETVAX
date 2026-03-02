@@ -10,6 +10,27 @@ export type Profile = {
   updated_at: string;
 };
 
+export type Invite = {
+  id: string;
+  org_id: string;
+  email: string;
+  role: Role;
+  branch_id: string | null;
+  token: string;
+  expires_at: string;
+  accepted_at: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Branch = {
+  id: string;
+  org_id: string;
+  name: string;
+  is_active: boolean;
+};
+
 export type OrgSettings = {
   id: string;
   org_id: string;
