@@ -1,0 +1,225 @@
+import { useMemo, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { MoreHorizontal, Phone, RotateCcw, Syringe, XCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import type { UpcomingAppointmentRow } from "@/types/vetvax";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatDateBr, formatTimeBr } from "@/lib/datetime";
+import CheckoutDialog from "@/components/dashboard/CheckoutDialog";
+import RescheduleDialog from "@/components/dashboard/RescheduleDialog";
+import { buildWhatsAppLink } from "@/lib/phone";
+import { toast } from "@/hooks/use-toast";
+import { useWhatsMessage } from "@/components/dashboard/useWhatsMessage";
+
+function channelLabel(c: UpcomingAppointmentRow["channel"]) {
+  if (c === "store") return "Loja";
+  if (c === "phone") return "Telefone";
+  if (c === "whatsapp") return "Whats";
+  return "Outro";
+}
+
+export default function UpcomingAppointmentsTable({
+  rows,
+  loading,
+  onChanged,
+}: {
+  rows: UpcomingAppointmentRow[];
+  loading: boolean;
+  onChanged: () => void;
+}) {
+  const nav = useNavigate();
+
+  const [checkoutId, setCheckoutId] = useState<string | null>(null);
+  const [rescheduleId, setRescheduleId] = useState<string | null>(null);
+
+  const { buildAppointmentMessage, pickPhone } = useWhatsMessage();
+
+  const empty = !loading && rows.length === 0;
+
+  const summary = useMemo(() => {
+    const map = new Map<string, number>();
+    rows.forEach((r) => {
+      r.items?.forEach((it) => {
+        map.set(it.item, (map.get(it.item) ?? 0) + (it.quantity ?? 0));
+      });
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+  }, [rows]);
+
+  const openWhats = useMutation({
+    mutationFn: async (row: UpcomingAppointmentRow) => {
+      const phone = pickPhone(row.tutor_phone1, row.tutor_phone2);
+      if (!phone) throw new Error("Tutor sem telefone");
+      const msg = await buildAppointmentMessage(row);
+      window.open(buildWhatsAppLink(phone, msg), "_blank", "noopener,noreferrer");
+    },
+    onError: (e: any) => {
+      toast({
+        title: "Não foi possível abrir o WhatsApp",
+        description: e?.message ?? "Verifique telefone do tutor.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  return (
+    <div className="space-y-3">
+      {summary.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1">
+            <Syringe className="h-3.5 w-3.5" />
+            Top itens no período:
+          </span>
+          {summary.map(([name, qty]) => (
+            <Badge key={name} variant="secondary" className="rounded-full">
+              {name} • {qty}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      <div className="overflow-hidden rounded-2xl border">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40">
+              <TableHead className="w-[120px]">Quando</TableHead>
+              <TableHead>Tutor</TableHead>
+              <TableHead className="hidden sm:table-cell">Itens</TableHead>
+              <TableHead className="hidden md:table-cell">Canal</TableHead>
+              <TableHead className="w-[56px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading &&
+              Array.from({ length: 4 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell colSpan={5}>
+                    <Skeleton className="h-9 w-full rounded-xl" />
+                  </TableCell>
+                </TableRow>
+              ))}
+
+            {rows.map((row) => (
+              <TableRow key={row.id} className="hover:bg-muted/30">
+                <TableCell className="align-top">
+                  <div className="text-xs font-medium">
+                    {formatDateBr(row.scheduled_date)}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">{formatTimeBr(row.scheduled_time)}</div>
+                </TableCell>
+                <TableCell className="align-top">
+                  <div className="text-sm font-medium leading-tight">{row.tutor_name}</div>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {row.tutor_phone1 && (
+                      <Badge variant="secondary" className="rounded-full text-[11px]">
+                        {row.tutor_phone1}
+                      </Badge>
+                    )}
+                    {!row.tutor_phone1 && row.tutor_phone2 && (
+                      <Badge variant="secondary" className="rounded-full text-[11px]">
+                        {row.tutor_phone2}
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="hidden sm:table-cell align-top">
+                  <div className="text-xs text-muted-foreground">
+                    {row.items?.length
+                      ? row.items
+                          .slice(0, 3)
+                          .map((it) => `${it.quantity}× ${it.item}`)
+                          .join(" • ")
+                      : "—"}
+                    {(row.items?.length ?? 0) > 3 && (
+                      <span className="ml-2 text-[11px]">+{(row.items?.length ?? 0) - 3}</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="hidden md:table-cell align-top">
+                  <Badge variant="secondary" className="rounded-full">
+                    {channelLabel(row.channel)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right align-top">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="rounded-xl">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="rounded-2xl">
+                      <DropdownMenuItem className="rounded-xl" onClick={() => setCheckoutId(row.id)}>
+                        <Syringe className="mr-2 h-4 w-4" />
+                        Dar baixa
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="rounded-xl" onClick={() => setRescheduleId(row.id)}>
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                        Reagendar (duplicar)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="rounded-xl"
+                        onClick={() => openWhats.mutate(row)}
+                        disabled={openWhats.isPending}
+                      >
+                        <Phone className="mr-2 h-4 w-4" />
+                        Whats
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="rounded-xl" onClick={() => nav(`/tutors/${row.tutor_id}`)}>
+                        Ver tutor
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+
+            {empty && (
+              <TableRow>
+                <TableCell colSpan={5} className="py-10">
+                  <div className="mx-auto max-w-sm text-center">
+                    <div className="mx-auto grid h-10 w-10 place-items-center rounded-2xl bg-muted">
+                      <XCircle className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div className="mt-3 text-sm font-medium">Nenhum agendamento pendente</div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Ajuste os filtros, ou crie um novo agendamento para começar.
+                    </p>
+                    <Button className="mt-4 rounded-2xl" onClick={() => nav("/appointments/new")}>
+                      Novo agendamento
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <CheckoutDialog
+        open={!!checkoutId}
+        appointmentId={checkoutId}
+        onOpenChange={(v) => !v && setCheckoutId(null)}
+        onChanged={() => {
+          setCheckoutId(null);
+          onChanged();
+        }}
+      />
+
+      <RescheduleDialog
+        open={!!rescheduleId}
+        appointmentId={rescheduleId}
+        onOpenChange={(v) => !v && setRescheduleId(null)}
+        onChanged={() => {
+          setRescheduleId(null);
+          onChanged();
+        }}
+      />
+    </div>
+  );
+}
