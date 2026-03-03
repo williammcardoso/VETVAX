@@ -107,11 +107,11 @@
 @layer components {
   .vetvax-elevate {
     @apply transition-shadow duration-150 ease-out;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
   }
 
   .vetvax-elevate:hover {
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
   }
 
   .vetvax-scroll {

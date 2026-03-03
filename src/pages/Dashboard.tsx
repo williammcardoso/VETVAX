@@ -1,16 +1,16 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { CalendarClock, Clock, ShieldAlert, Syringe } from "lucide-react";
+import { CalendarClock, ShieldAlert, Syringe, CheckCircle2, Search } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { DashboardKpis, DueReminderRow, UpcomingAppointmentRow } from "@/types/vetvax";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import UpcomingAppointmentsTable from "@/components/dashboard/UpcomingAppointmentsTable";
-import DueRemindersTable from "@/components/dashboard/DueRemindersTable";
 import { dayjs } from "@/lib/datetime";
 import KpiCard from "@/components/dashboard/KpiCard";
+import PaginationBar from "@/components/vetvax/PaginationBar";
+import DueRemindersList from "@/components/dashboard/DueRemindersList";
+import { Button } from "@/components/ui/button";
 
 type Filters = {
   q: string;
@@ -30,7 +30,6 @@ async function fetchKpis() {
 
 export default function Dashboard() {
   const qc = useQueryClient();
-  const nav = useNavigate();
 
   const [filters, setFilters] = useState<Filters>(() => {
     try {
@@ -68,11 +67,7 @@ export default function Dashboard() {
   const reminders = useQuery({
     queryKey: ["dashboard", "reminders", filters.q],
     queryFn: async () => {
-      let q = supabase
-        .from("vw_due_reminders")
-        .select("*")
-        .order("due_date", { ascending: true })
-        .limit(500);
+      let q = supabase.from("vw_due_reminders").select("*").order("due_date", { ascending: true }).limit(500);
 
       const term = filters.q.trim();
       if (term) {
@@ -114,7 +109,7 @@ export default function Dashboard() {
   };
 
   const upcomingPageSize = 14;
-  const remindersPageSize = 12;
+  const remindersPageSize = 8;
   const [upcomingPage, setUpcomingPage] = useState(1);
   const [remindersPage, setRemindersPage] = useState(1);
 
@@ -135,83 +130,76 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Topo */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-[30px] font-semibold tracking-tight">Dashboard</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Agendamentos futuros e lembretes ativos — ordenados e prontos para ação.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative sm:w-[420px]">
-            <Input
-              className="h-10 rounded-[12px] border-[1.5px] bg-card"
-              placeholder="Busca global: tutor, telefone, pet…"
-              value={filters.q}
-              onChange={(e) => {
-                setUpcomingPage(1);
-                setRemindersPage(1);
-                persist({ ...filters, q: e.target.value });
-              }}
-            />
-          </div>
-          <Button className="h-10 rounded-[12px] bg-primary hover:bg-[#1E40AF]" onClick={() => nav("/appointments/new")}>
-            Novo agendamento
-          </Button>
-          <Button variant="outline" className="h-10 rounded-[12px] border-[1.5px]" onClick={onRefetch}>
-            Atualizar
-          </Button>
-        </div>
+      {/* Título */}
+      <div className="space-y-1">
+        <h1 className="text-[28px] font-semibold tracking-tight text-foreground">Hoje, o que precisa acontecer?</h1>
+        <p className="text-sm text-muted-foreground">
+          Os próximos agendamentos e lembretes importantes aparecem aqui. <span aria-hidden>⚠️</span> Fique de olho no resumo do mês.
+        </p>
       </div>
 
       {/* KPI */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           icon={CalendarClock}
-          badge="Futuro"
+          badge="Total"
           label="Agendamentos futuros"
           value={upcoming.data?.length ?? "–"}
           tone="blue"
         />
         <KpiCard
           icon={Syringe}
-          badge="Ativo"
+          badge="Total"
           label="Lembretes ativos"
           value={reminders.data?.length ?? "–"}
           tone="amber"
         />
         <KpiCard
           icon={ShieldAlert}
-          badge="Crítico"
+          badge="Vencidos"
           label="Lembretes vencidos"
           value={kpis.data?.overdue_reminders ?? "–"}
           tone="red"
         />
         <KpiCard
-          icon={Clock}
+          icon={CheckCircle2}
           badge="Mês"
-          label="Aplicações realizadas"
+          label="Aplicados (mês)"
           value={kpis.data?.applied_month ?? "–"}
           tone="green"
         />
       </div>
 
       {/* Layout 2 colunas */}
-      <div className="grid gap-5 lg:grid-cols-[0.65fr_0.35fr]">
-        <section className="vetvax-elevate rounded-[12px] bg-card border-[1.5px] p-[18px]">
-          <div className="flex items-start justify-between gap-3">
+      <div className="grid gap-5 lg:grid-cols-[0.66fr_0.34fr]">
+        <section className="rounded-[14px] bg-card border border-border p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-base font-semibold">Próximos agendamentos</div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                Ordenado por data/hora • total {upcoming.data?.length ?? 0}
-              </div>
+              <div className="mt-1 text-xs text-muted-foreground">Ordenado por data/hora • total {upcoming.data?.length ?? 0}</div>
             </div>
-            <Badge className="rounded-full border-0 bg-primary text-primary-foreground">PENDENTE</Badge>
+
+            <div className="flex items-center gap-2">
+              <div className="relative w-full sm:w-[280px]">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="h-10 rounded-[12px] border bg-background pl-9"
+                  placeholder="Buscar tutor / telefone..."
+                  value={filters.q}
+                  onChange={(e) => {
+                    setUpcomingPage(1);
+                    setRemindersPage(1);
+                    persist({ ...filters, q: e.target.value });
+                  }}
+                />
+              </div>
+              <Button variant="outline" className="h-10 rounded-[12px] border" onClick={onRefetch}>
+                Atualizar
+              </Button>
+            </div>
           </div>
 
-          <div className="mt-3">
+          <div className="mt-4">
             <UpcomingAppointmentsTable
               loading={upcoming.isLoading}
               rows={upcomingPaged}
@@ -220,76 +208,26 @@ export default function Dashboard() {
             />
           </div>
 
-          <div className="mt-3 flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              Página {upcomingPage} de {upcomingTotalPages}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={upcomingPage <= 1 ? "outline" : "outline"}
-                className="h-9 rounded-[12px] border-[1.5px]"
-                disabled={upcomingPage <= 1}
-                onClick={() => setUpcomingPage((p) => Math.max(1, p - 1))}
-              >
-                Anterior
-              </Button>
-              <Button
-                className={
-                  "h-9 rounded-[12px] border-[1.5px] " +
-                  (upcomingPage >= upcomingTotalPages
-                    ? "bg-transparent text-muted-foreground"
-                    : "bg-primary text-primary-foreground hover:bg-[#1E40AF]")
-                }
-                variant={upcomingPage >= upcomingTotalPages ? "outline" : "default"}
-                disabled={upcomingPage >= upcomingTotalPages}
-                onClick={() => setUpcomingPage((p) => Math.min(upcomingTotalPages, p + 1))}
-              >
-                Próxima
-              </Button>
-            </div>
+          <div className="mt-4">
+            <PaginationBar page={upcomingPage} totalPages={upcomingTotalPages} onPageChange={setUpcomingPage} />
           </div>
         </section>
 
-        <section className="vetvax-elevate rounded-[12px] bg-card border-[1.5px] p-[18px]">
-          <div className="flex items-start justify-between gap-3">
+        <section className="rounded-[14px] bg-card border border-border p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-base font-semibold">Lembretes</div>
               <div className="mt-1 text-xs text-muted-foreground">Vencidos primeiro • total {reminders.data?.length ?? 0}</div>
             </div>
-            <Badge className="rounded-full border-0 bg-muted text-foreground">ATIVO</Badge>
+            <Badge className="rounded-full border bg-muted text-foreground">Total</Badge>
           </div>
 
-          <div className="mt-3 max-h-[560px] overflow-auto vetvax-scroll">
-            <DueRemindersTable loading={reminders.isLoading} rows={remindersPaged} onChanged={onRefetch} />
+          <div className="mt-4 overflow-hidden rounded-[12px] border border-border bg-background">
+            <DueRemindersList loading={reminders.isLoading} rows={remindersPaged} onChanged={onRefetch} />
           </div>
 
-          <div className="mt-3 flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              Página {remindersPage} de {remindersTotalPages}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                className="h-9 rounded-[12px] border-[1.5px]"
-                disabled={remindersPage <= 1}
-                onClick={() => setRemindersPage((p) => Math.max(1, p - 1))}
-              >
-                Anterior
-              </Button>
-              <Button
-                variant={remindersPage >= remindersTotalPages ? "outline" : "default"}
-                className={
-                  "h-9 rounded-[12px] border-[1.5px] " +
-                  (remindersPage >= remindersTotalPages
-                    ? "bg-transparent text-muted-foreground"
-                    : "bg-primary text-primary-foreground hover:bg-[#1E40AF]")
-                }
-                disabled={remindersPage >= remindersTotalPages}
-                onClick={() => setRemindersPage((p) => Math.min(remindersTotalPages, p + 1))}
-              >
-                Próxima
-              </Button>
-            </div>
+          <div className="mt-4">
+            <PaginationBar page={remindersPage} totalPages={remindersTotalPages} onPageChange={setRemindersPage} />
           </div>
         </section>
       </div>
