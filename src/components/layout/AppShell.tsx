@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import {
   Bell,
   CalendarDays,
@@ -34,35 +34,32 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import GlobalCommandPalette from "@/components/command/GlobalCommandPalette";
 
+type NavKey = "dashboard" | "tutors" | "new" | "reminders" | "reports" | "access" | "catalog" | "settings";
+
 function NavItem({
-  to,
+  active,
+  onClick,
   icon: Icon,
   label,
 }: {
-  to: string;
+  active: boolean;
+  onClick: () => void;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
 }) {
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild>
-        <NavLink
-          to={to}
-          className={({ isActive }) =>
-            cn(
-              "flex items-center gap-2 rounded-[12px] px-3 py-2 text-sm transition-colors",
-              "text-foreground hover:bg-muted/60",
-              isActive && "bg-primary text-primary-foreground shadow-sm",
-            )
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <Icon className={cn("h-4 w-4", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
-              <span className={cn("truncate", isActive && "text-primary-foreground")}>{label}</span>
-            </>
-          )}
-        </NavLink>
+      <SidebarMenuButton
+        isActive={active}
+        onClick={onClick}
+        className={cn(
+          "h-10 rounded-[12px] px-3",
+          "!text-foreground",
+          active && "bg-primary !text-primary-foreground",
+        )}
+      >
+        <Icon className={cn("h-4 w-4", active ? "!text-primary-foreground" : "!text-muted-foreground")} />
+        <span className={cn("truncate", active ? "!text-primary-foreground" : "!text-foreground")}>{label}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
@@ -76,12 +73,24 @@ export default function AppShell() {
   const isAdmin = role === "admin";
   const canManage = role === "admin" || role === "manager";
 
+  const current = ((): NavKey => {
+    const p = window.location.pathname;
+    if (p.startsWith("/tutors")) return "tutors";
+    if (p.startsWith("/appointments/new")) return "new";
+    if (p.startsWith("/reminders")) return "reminders";
+    if (p.startsWith("/reports")) return "reports";
+    if (p.startsWith("/access")) return "access";
+    if (p.startsWith("/catalog")) return "catalog";
+    if (p.startsWith("/settings")) return "settings";
+    return "dashboard";
+  })();
+
   return (
     <SidebarProvider defaultOpen className="bg-background">
       <Sidebar
         variant="inset"
-        collapsible="icon"
-        className="bg-sidebar text-foreground border-r border-sidebar-border"
+        collapsible="offcanvas"
+        className="bg-sidebar border-r border-sidebar-border"
       >
         <SidebarHeader className="gap-3 px-3 py-5">
           <div className="flex items-center justify-between gap-2">
@@ -105,11 +114,16 @@ export default function AppShell() {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-1.5">
-                <NavItem to="/dashboard" icon={CalendarDays} label="Dashboard" />
-                <NavItem to="/tutors" icon={Users} label="Tutores" />
-                <NavItem to="/appointments/new" icon={ClipboardList} label="Novo agendamento" />
-                <NavItem to="/reminders" icon={Bell} label="Lembretes" />
-                <NavItem to="/reports" icon={FileDown} label="Relatórios" />
+                <NavItem active={current === "dashboard"} onClick={() => nav("/dashboard")} icon={CalendarDays} label="Dashboard" />
+                <NavItem active={current === "tutors"} onClick={() => nav("/tutors")} icon={Users} label="Tutores" />
+                <NavItem
+                  active={current === "new"}
+                  onClick={() => nav("/appointments/new")}
+                  icon={ClipboardList}
+                  label="Novo agendamento"
+                />
+                <NavItem active={current === "reminders"} onClick={() => nav("/reminders")} icon={Bell} label="Lembretes" />
+                <NavItem active={current === "reports"} onClick={() => nav("/reports")} icon={FileDown} label="Relatórios" />
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -122,9 +136,13 @@ export default function AppShell() {
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu className="gap-1.5">
-                  {isAdmin && <NavItem to="/access" icon={UserCog} label="Acessos" />}
-                  {isAdmin && <NavItem to="/catalog" icon={Shield} label="Catálogo" />}
-                  <NavItem to="/settings" icon={Settings} label="Configurações" />
+                  {isAdmin && (
+                    <NavItem active={current === "access"} onClick={() => nav("/access")} icon={UserCog} label="Acessos" />
+                  )}
+                  {isAdmin && (
+                    <NavItem active={current === "catalog"} onClick={() => nav("/catalog")} icon={Shield} label="Catálogo" />
+                  )}
+                  <NavItem active={current === "settings"} onClick={() => nav("/settings")} icon={Settings} label="Configurações" />
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -171,7 +189,7 @@ export default function AppShell() {
       <SidebarInset className="bg-background">
         <div className="px-4 py-4 lg:px-6 lg:py-6">
           <div className="mx-auto max-w-6xl rounded-[20px] border border-border bg-card shadow-sm">
-            <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-3 sm:px-5">
+            <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-card/95 px-4 py-3 backdrop-blur sm:px-5">
               <SidebarTrigger className="rounded-[10px]" />
 
               <div className="min-w-0">
