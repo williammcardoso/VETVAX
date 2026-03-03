@@ -103,21 +103,21 @@ export default function DueRemindersTable({
   }, [rows]);
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
+    <div className="overflow-hidden rounded-[12px] border-[1.5px] bg-card">
       <Table>
         <TableHeader>
-          <TableRow className="bg-muted/20">
+          <TableRow className="bg-muted/30">
             <TableHead>Vencimento</TableHead>
             <TableHead>Tutor</TableHead>
-            <TableHead className="hidden md:table-cell">Notas</TableHead>
-            <TableHead className="w-[140px]"></TableHead>
+            <TableHead className="w-[132px]"></TableHead>
           </TableRow>
         </TableHeader>
+
         <TableBody className="[&_tr]:border-0">
           {loading &&
-            Array.from({ length: 4 }).map((_, i) => (
+            Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={i}>
-                <TableCell colSpan={4}>
+                <TableCell colSpan={3}>
                   <Skeleton className="h-10 w-full rounded-md" />
                 </TableCell>
               </TableRow>
@@ -133,50 +133,47 @@ export default function DueRemindersTable({
               <TableRow
                 key={r.id}
                 className={
-                  "transition-colors hover:bg-muted/20 " +
-                  (overdue ? "border-l-2 border-l-destructive" : "")
+                  "group transition-colors hover:bg-slate-50 " +
+                  (overdue ? "border-l-[4px] border-l-destructive" : "")
                 }
               >
-                <TableCell className="align-top py-5">
-                  <div className="text-xs font-medium text-foreground">{formatDateBr(r.due_date)}</div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Badge className="rounded-full" variant={urgent ? "destructive" : "secondary"}>
-                      {urgent && <ShieldAlert className="mr-1 h-3 w-3" />}
+                <TableCell className="align-top py-4">
+                  <div className="text-xs font-semibold text-foreground">{formatDateBr(r.due_date)}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge
+                      className={
+                        "rounded-full border-0 " +
+                        (urgent ? "bg-destructive text-destructive-foreground" : "bg-slate-800 text-white")
+                      }
+                    >
+                      {urgent && <ShieldAlert className="mr-1 h-3 w-3" strokeWidth={2} />}
                       {dueText}
                     </Badge>
                     <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Clock className="h-3.5 w-3.5" />
+                      <Clock className="h-3.5 w-3.5" strokeWidth={2} />
                       {r.status}
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="align-top py-5">
-                  <div className="text-sm font-medium leading-tight">
+
+                <TableCell className="align-top py-4">
+                  <div className="text-sm font-semibold leading-tight">
                     {r.tutor_name}
                     {r.pet_name ? <span className="text-muted-foreground"> • {r.pet_name}</span> : null}
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    <Badge variant="secondary" className="rounded-full bg-muted text-muted-foreground text-[11px]">
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    <Badge className="rounded-full border-0 bg-slate-100 text-slate-700 text-[11px]">
                       {r.reminder_type}
                     </Badge>
                     {lastText && (
-                      <Badge variant="secondary" className="rounded-full bg-muted text-muted-foreground text-[11px]">
+                      <Badge className="rounded-full border-0 bg-slate-200 text-slate-800 text-[11px]">
                         {lastText}
                       </Badge>
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="hidden md:table-cell align-top py-5">
-                  <div className="text-xs text-muted-foreground">
-                    {r.notes ? r.notes : "—"}
-                    {r.last_sent_at && (
-                      <div className="mt-1 text-[11px]">
-                        último envio: {new Date(r.last_sent_at).toLocaleString("pt-BR")}
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right align-top py-5">
+
+                <TableCell className="text-right align-top py-4">
                   <div className="flex items-center justify-end gap-2">
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -184,11 +181,11 @@ export default function DueRemindersTable({
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-9 w-9 rounded-md"
+                            className="h-8 w-8 rounded-[10px] border-[1.5px]"
                             onClick={() => openWhats.mutate(r)}
                             disabled={openWhats.isPending || lastSentRecently}
                           >
-                            <MessageCircle className="h-4 w-4" />
+                            <MessageCircle className="h-4 w-4" strokeWidth={2} />
                           </Button>
                         </span>
                       </TooltipTrigger>
@@ -198,24 +195,23 @@ export default function DueRemindersTable({
                     </Tooltip>
 
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 rounded-md"
+                      className="h-8 rounded-[10px] bg-primary text-primary-foreground hover:bg-[#1E40AF]"
                       onClick={() => setStatus.mutate({ id: r.id, status: "FEITO" })}
                       disabled={setStatus.isPending}
-                      title="Marcar como feito"
                     >
-                      <CheckCircle2 className="h-4 w-4" />
+                      <CheckCircle2 className="mr-1.5 h-4 w-4" strokeWidth={2} />
+                      Resolvido
                     </Button>
+
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="icon"
-                      className="h-9 w-9 rounded-md"
+                      className="h-8 w-8 rounded-[10px] border-[1.5px]"
                       onClick={() => setStatus.mutate({ id: r.id, status: "ARQUIVADO" })}
                       disabled={setStatus.isPending}
                       title="Arquivar"
                     >
-                      <Archive className="h-4 w-4" />
+                      <Archive className="h-4 w-4" strokeWidth={2} />
                     </Button>
                   </div>
                 </TableCell>
@@ -225,14 +221,14 @@ export default function DueRemindersTable({
 
           {empty && (
             <TableRow>
-              <TableCell colSpan={4} className="py-12">
+              <TableCell colSpan={3} className="py-10">
                 <div className="mx-auto max-w-sm text-center">
-                  <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-muted/60">
-                    <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+                  <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-muted">
+                    <CheckCircle2 className="h-5 w-5 text-muted-foreground" strokeWidth={2} />
                   </div>
-                  <div className="mt-3 text-sm font-medium">Tudo em dia</div>
+                  <div className="mt-3 text-sm font-semibold">Tudo em dia</div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Lembretes são criados na baixa de um agendamento quando você informa uma próxima aplicação.
+                    Lembretes aparecem aqui quando você define uma próxima aplicação na baixa.
                   </p>
                 </div>
               </TableCell>

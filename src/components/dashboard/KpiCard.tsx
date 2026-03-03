@@ -25,20 +25,20 @@ export default function KpiCard({
           : { num: "text-primary", chip: "bg-primary text-primary-foreground" };
 
   return (
-    <div className="vetvax-elevate relative rounded-[10px] bg-card border-[1.5px] p-6">
-      <Badge className={cn("absolute right-4 top-4 rounded-full border-0", palette.chip)}>
+    <div className="vetvax-elevate relative rounded-[12px] bg-card border-[1.5px] p-[18px]">
+      <Badge className={cn("absolute right-3 top-3 rounded-full border-0 px-2.5 py-1 text-[11px]", palette.chip)}>
         {badge}
       </Badge>
 
-      <div className="grid h-10 w-10 place-items-center rounded-full bg-muted">
-        <Icon className="h-5 w-5 text-foreground" strokeWidth={2} />
+      <div className="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground">
+        <Icon className="h-4.5 w-4.5 text-primary-foreground" strokeWidth={2} />
       </div>
 
-      <div className="mt-5">
-        <div className={cn("text-[38px] font-semibold leading-none tracking-tight", palette.num)}>
+      <div className="mt-4">
+        <div className={cn("text-[40px] font-bold leading-none tracking-tight", palette.num)}>
           {value}
         </div>
-        <div className="mt-2 text-sm text-muted-foreground">{label}</div>
+        <div className="mt-1.5 text-sm text-muted-foreground">{label}</div>
       </div>
     </div>
   );

@@ -134,20 +134,20 @@ export default function Dashboard() {
   const remindersTotalPages = Math.max(1, Math.ceil(remindersSorted.length / remindersPageSize));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Topo */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight">Dashboard</h1>
-          <p className="mt-2 text-[16px] text-muted-foreground">
+          <h1 className="text-[30px] font-semibold tracking-tight">Dashboard</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
             Agendamentos futuros e lembretes ativos — ordenados e prontos para ação.
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative sm:w-[420px]">
             <Input
-              className="rounded-[10px] border-[1.5px] bg-card"
+              className="h-10 rounded-[12px] border-[1.5px] bg-card"
               placeholder="Busca global: tutor, telefone, pet…"
               value={filters.q}
               onChange={(e) => {
@@ -157,10 +157,10 @@ export default function Dashboard() {
               }}
             />
           </div>
-          <Button className="rounded-[10px] bg-primary hover:bg-[#1E40AF]" onClick={() => nav("/appointments/new")}>
+          <Button className="h-10 rounded-[12px] bg-primary hover:bg-[#1E40AF]" onClick={() => nav("/appointments/new")}>
             Novo agendamento
           </Button>
-          <Button variant="outline" className="rounded-[10px] border-[1.5px]" onClick={onRefetch}>
+          <Button variant="outline" className="h-10 rounded-[12px] border-[1.5px]" onClick={onRefetch}>
             Atualizar
           </Button>
         </div>
@@ -199,8 +199,8 @@ export default function Dashboard() {
       </div>
 
       {/* Layout 2 colunas */}
-      <div className="grid gap-6 lg:grid-cols-[0.6fr_0.4fr]">
-        <section className="vetvax-elevate rounded-[10px] bg-card border-[1.5px] p-5">
+      <div className="grid gap-5 lg:grid-cols-[0.65fr_0.35fr]">
+        <section className="vetvax-elevate rounded-[12px] bg-card border-[1.5px] p-[18px]">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-base font-semibold">Próximos agendamentos</div>
@@ -211,7 +211,7 @@ export default function Dashboard() {
             <Badge className="rounded-full border-0 bg-primary text-primary-foreground">PENDENTE</Badge>
           </div>
 
-          <div className="mt-4">
+          <div className="mt-3">
             <UpcomingAppointmentsTable
               loading={upcoming.isLoading}
               rows={upcomingPaged}
@@ -220,22 +220,27 @@ export default function Dashboard() {
             />
           </div>
 
-          <div className="mt-4 flex items-center justify-between">
+          <div className="mt-3 flex items-center justify-between">
             <div className="text-xs text-muted-foreground">
               Página {upcomingPage} de {upcomingTotalPages}
             </div>
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
-                className="rounded-[10px] border-[1.5px]"
+                variant={upcomingPage <= 1 ? "outline" : "outline"}
+                className="h-9 rounded-[12px] border-[1.5px]"
                 disabled={upcomingPage <= 1}
                 onClick={() => setUpcomingPage((p) => Math.max(1, p - 1))}
               >
                 Anterior
               </Button>
               <Button
-                variant="outline"
-                className="rounded-[10px] border-[1.5px]"
+                className={
+                  "h-9 rounded-[12px] border-[1.5px] " +
+                  (upcomingPage >= upcomingTotalPages
+                    ? "bg-transparent text-muted-foreground"
+                    : "bg-primary text-primary-foreground hover:bg-[#1E40AF]")
+                }
+                variant={upcomingPage >= upcomingTotalPages ? "outline" : "default"}
                 disabled={upcomingPage >= upcomingTotalPages}
                 onClick={() => setUpcomingPage((p) => Math.min(upcomingTotalPages, p + 1))}
               >
@@ -245,7 +250,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="vetvax-elevate rounded-[10px] bg-card border-[1.5px] p-5">
+        <section className="vetvax-elevate rounded-[12px] bg-card border-[1.5px] p-[18px]">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-base font-semibold">Lembretes</div>
@@ -254,26 +259,31 @@ export default function Dashboard() {
             <Badge className="rounded-full border-0 bg-muted text-foreground">ATIVO</Badge>
           </div>
 
-          <div className="mt-4 max-h-[560px] overflow-auto vetvax-scroll">
+          <div className="mt-3 max-h-[560px] overflow-auto vetvax-scroll">
             <DueRemindersTable loading={reminders.isLoading} rows={remindersPaged} onChanged={onRefetch} />
           </div>
 
-          <div className="mt-4 flex items-center justify-between">
+          <div className="mt-3 flex items-center justify-between">
             <div className="text-xs text-muted-foreground">
               Página {remindersPage} de {remindersTotalPages}
             </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                className="rounded-[10px] border-[1.5px]"
+                className="h-9 rounded-[12px] border-[1.5px]"
                 disabled={remindersPage <= 1}
                 onClick={() => setRemindersPage((p) => Math.max(1, p - 1))}
               >
                 Anterior
               </Button>
               <Button
-                variant="outline"
-                className="rounded-[10px] border-[1.5px]"
+                variant={remindersPage >= remindersTotalPages ? "outline" : "default"}
+                className={
+                  "h-9 rounded-[12px] border-[1.5px] " +
+                  (remindersPage >= remindersTotalPages
+                    ? "bg-transparent text-muted-foreground"
+                    : "bg-primary text-primary-foreground hover:bg-[#1E40AF]")
+                }
                 disabled={remindersPage >= remindersTotalPages}
                 onClick={() => setRemindersPage((p) => Math.min(remindersTotalPages, p + 1))}
               >

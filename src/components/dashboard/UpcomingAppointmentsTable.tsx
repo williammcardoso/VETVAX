@@ -76,7 +76,7 @@ export default function UpcomingAppointmentsTable({
   });
 
   return (
-    <div className="overflow-hidden rounded-[10px] border-[1.5px] bg-card">
+    <div className="overflow-hidden rounded-[12px] border-[1.5px] bg-card">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/30">
@@ -101,19 +101,19 @@ export default function UpcomingAppointmentsTable({
             ))}
 
           {rows.map((row) => (
-            <TableRow key={row.id} className="group transition-colors hover:bg-slate-50">
-              <TableCell className="align-top py-5">
+            <TableRow key={row.id} className="group transition-colors hover:bg-slate-50 hover:shadow-sm">
+              <TableCell className="align-top py-4">
                 <div className="text-xs font-semibold text-foreground">{formatDateBr(row.scheduled_date)}</div>
-                <div className="mt-1 text-[12px] font-semibold text-primary">{formatTimeBr(row.scheduled_time)}</div>
+                <div className="mt-1 text-[12px] font-bold text-primary">{formatTimeBr(row.scheduled_time)}</div>
               </TableCell>
 
-              <TableCell className="align-top py-5">
+              <TableCell className="align-top py-4">
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+                  <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground text-[11px] font-semibold">
                     {initials(row.tutor_name)}
                   </div>
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold leading-tight text-foreground">{row.tutor_name}</div>
+                    <div className="truncate text-sm font-bold leading-tight text-foreground">{row.tutor_name}</div>
                     <div className="mt-1 text-[11px] text-muted-foreground">
                       {row.tutor_phone1 || row.tutor_phone2 ? row.tutor_phone1 ?? row.tutor_phone2 : "—"}
                     </div>
@@ -121,20 +121,20 @@ export default function UpcomingAppointmentsTable({
                 </div>
               </TableCell>
 
-              <TableCell className="hidden sm:table-cell align-top py-5">
+              <TableCell className="hidden sm:table-cell align-top py-4">
                 {row.items?.length ? (
                   <div className="flex flex-wrap gap-1.5">
                     {row.items.slice(0, 4).map((it, idx) => (
                       <Badge
                         key={idx}
                         variant="secondary"
-                        className="rounded-full border-0 bg-slate-100 text-slate-700"
+                        className="rounded-full border-[1.5px] border-slate-300 bg-white text-slate-800"
                       >
                         {it.quantity}× {it.item}
                       </Badge>
                     ))}
                     {(row.items?.length ?? 0) > 4 && (
-                      <Badge variant="secondary" className="rounded-full border-0 bg-slate-200 text-slate-700">
+                      <Badge className="rounded-full border-[1.5px] border-slate-300 bg-white text-slate-800">
                         +{(row.items?.length ?? 0) - 4}
                       </Badge>
                     )}
@@ -144,27 +144,27 @@ export default function UpcomingAppointmentsTable({
                 )}
               </TableCell>
 
-              <TableCell className="hidden md:table-cell align-top py-5">
+              <TableCell className="hidden md:table-cell align-top py-4">
                 <Badge className={"rounded-full border-0 " + channelTone(row.channel)}>
                   {channelLabel(row.channel)}
                 </Badge>
               </TableCell>
 
-              <TableCell className="text-right align-top py-5">
+              <TableCell className="text-right align-top py-4">
                 <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="rounded-md">
-                        <MoreHorizontal className="h-4 w-4" />
+                        <MoreHorizontal className="h-4 w-4" strokeWidth={2} />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="rounded-md">
                       <DropdownMenuItem className="rounded-sm" onClick={() => setCheckoutId(row.id)}>
-                        <Syringe className="mr-2 h-4 w-4" />
+                        <Syringe className="mr-2 h-4 w-4" strokeWidth={2} />
                         Dar baixa
                       </DropdownMenuItem>
                       <DropdownMenuItem className="rounded-sm" onClick={() => setRescheduleId(row.id)}>
-                        <RotateCcw className="mr-2 h-4 w-4" />
+                        <RotateCcw className="mr-2 h-4 w-4" strokeWidth={2} />
                         Reagendar (duplicar)
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -172,7 +172,7 @@ export default function UpcomingAppointmentsTable({
                         onClick={() => openWhats.mutate(row)}
                         disabled={openWhats.isPending}
                       >
-                        <Phone className="mr-2 h-4 w-4" />
+                        <Phone className="mr-2 h-4 w-4" strokeWidth={2} />
                         Whats
                       </DropdownMenuItem>
                       <DropdownMenuItem className="rounded-sm" onClick={() => nav(`/tutors/${row.tutor_id}`)}>
@@ -187,10 +187,10 @@ export default function UpcomingAppointmentsTable({
 
           {empty && (
             <TableRow>
-              <TableCell colSpan={5} className="py-14">
+              <TableCell colSpan={5} className="py-12">
                 <div className="mx-auto max-w-sm text-center">
                   <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-muted">
-                    <XCircle className="h-5 w-5 text-muted-foreground" />
+                    <XCircle className="h-5 w-5 text-muted-foreground" strokeWidth={2} />
                   </div>
                   <div className="mt-3 text-sm font-semibold">
                     {variant === "today" ? "Nenhum agendamento hoje" : "Nenhum agendamento futuro"}
