@@ -5,6 +5,7 @@ import {
   ClipboardList,
   FileDown,
   LogOut,
+  Plus,
   Settings,
   Shield,
   UserCog,
@@ -50,7 +51,7 @@ function NavItem({
           className={({ isActive }) =>
             cn(
               "flex items-center gap-2 rounded-[12px] px-3 py-2 text-sm transition-colors",
-              "hover:bg-muted/60",
+              "text-foreground hover:bg-muted/60",
               isActive && "bg-primary text-primary-foreground shadow-sm",
             )
           }
@@ -85,7 +86,7 @@ export default function AppShell() {
                 V
               </div>
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold tracking-tight">VetVAX</div>
+                <div className="truncate text-sm font-semibold tracking-tight text-foreground">VetVAX</div>
                 <div className="truncate text-xs text-muted-foreground">Chines • Profissional • Auditável</div>
               </div>
             </div>
@@ -135,7 +136,7 @@ export default function AppShell() {
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <div className="truncate text-sm font-medium">{profile?.display_name ?? "Usuário"}</div>
+                <div className="truncate text-sm font-medium text-foreground">{profile?.display_name ?? "Usuário"}</div>
                 <div className="truncate text-xs text-muted-foreground">{profile?.role ?? "viewer"}</div>
               </div>
             </div>
@@ -165,8 +166,8 @@ export default function AppShell() {
 
       <SidebarInset className="bg-background">
         <div className="px-4 py-4 lg:px-6 lg:py-6">
-          <div className="mx-auto max-w-6xl rounded-[20px] border border-border bg-card shadow-sm">
-            <header className="flex items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
+          <div className="mx-auto max-w-6xl overflow-hidden rounded-[20px] border border-border bg-card shadow-sm">
+            <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-card/90 px-4 py-3 backdrop-blur sm:px-5">
               <SidebarTrigger className="rounded-[10px]" />
 
               <div className="min-w-0">
@@ -176,6 +177,14 @@ export default function AppShell() {
 
               <div className="ml-auto flex items-center gap-2">
                 <GlobalCommandPalette />
+
+                <Button
+                  size="icon"
+                  className="inline-flex rounded-[12px] bg-primary hover:bg-[#1E40AF] sm:hidden"
+                  onClick={() => nav("/appointments/new")}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
                 <Button
                   className="hidden sm:inline-flex rounded-[12px] bg-primary hover:bg-[#1E40AF]"
                   onClick={() => nav("/appointments/new")}

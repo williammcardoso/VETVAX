@@ -80,13 +80,16 @@ export default function GlobalCommandPalette() {
   return (
     <>
       <button
-        className="hidden sm:flex items-center gap-2 rounded-2xl border bg-muted/20 px-3 py-2 text-xs text-muted-foreground hover:bg-muted/30"
+        className={
+          "flex items-center gap-2 rounded-[12px] border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground " +
+          "hover:bg-muted/30"
+        }
         onClick={() => setOpen(true)}
         type="button"
       >
         <Search className="h-4 w-4" />
-        <span>Buscar…</span>
-        <Badge variant="secondary" className="ml-2 rounded-full text-[10px]">
+        <span className="hidden sm:inline">Buscar…</span>
+        <Badge variant="secondary" className="ml-1 hidden sm:inline-flex rounded-full text-[10px]">
           ⌘K
         </Badge>
       </button>
