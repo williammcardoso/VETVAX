@@ -47,44 +47,49 @@
     --sidebar-ring: var(--brand);
   }
 
+  /*
+    O VetVAX foi desenhado como SaaS claro.
+    Para evitar inconsistências (ex.: classe .dark aplicada por extensão/ambiente),
+    mantemos o mesmo sistema de cores no modo "dark".
+  */
   .dark {
-    --brand: 221 83% 60%;
+    --brand: 221 83% 47%;
 
-    --background: 222 47% 6%;
-    --foreground: 0 0% 98%;
+    --background: 214 33% 95%;
+    --foreground: 222 47% 11%;
 
-    --card: 222 47% 8%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
-    --popover: 222 47% 8%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
     --primary: var(--brand);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 28% 14%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 222 28% 14%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 221 50% 16%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 221 83% 96%;
+    --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 62% 45%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 222 28% 18%;
-    --input: 222 28% 18%;
+    --border: 214 32% 84%;
+    --input: 214 32% 84%;
     --ring: var(--brand);
 
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 0 0% 96%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
     --sidebar-primary: var(--brand);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 28% 14%;
-    --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 222 28% 18%;
+    --sidebar-accent: 221 83% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 84%;
     --sidebar-ring: var(--brand);
   }
 }

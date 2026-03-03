@@ -78,7 +78,11 @@ export default function AppShell() {
 
   return (
     <SidebarProvider defaultOpen className="bg-background">
-      <Sidebar variant="inset" collapsible="icon" className="bg-sidebar border-r border-sidebar-border">
+      <Sidebar
+        variant="inset"
+        collapsible="icon"
+        className="bg-sidebar text-foreground border-r border-sidebar-border"
+      >
         <SidebarHeader className="gap-3 px-3 py-5">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0">
@@ -166,8 +170,8 @@ export default function AppShell() {
 
       <SidebarInset className="bg-background">
         <div className="px-4 py-4 lg:px-6 lg:py-6">
-          <div className="mx-auto max-w-6xl overflow-hidden rounded-[20px] border border-border bg-card shadow-sm">
-            <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-card/90 px-4 py-3 backdrop-blur sm:px-5">
+          <div className="mx-auto max-w-6xl rounded-[20px] border border-border bg-card shadow-sm">
+            <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-3 sm:px-5">
               <SidebarTrigger className="rounded-[10px]" />
 
               <div className="min-w-0">
