@@ -176,68 +176,76 @@ export default function AppShell() {
       </Sidebar>
 
       <SidebarInset className="bg-background">
-        <div className="px-4 py-4 lg:px-6 lg:py-6">
-          <div className="mx-auto max-w-6xl overflow-hidden rounded-[20px] border border-border bg-card shadow-sm">
-            <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-card/95 px-4 py-3 backdrop-blur sm:px-5">
-              <SidebarTrigger className="rounded-[10px]" />
+        {/* Topbar separado do conteúdo (fica no "top" mesmo) */}
+        <div className="sticky top-0 z-40 bg-background">
+          <div className="px-4 pt-4 lg:px-6 lg:pt-6">
+            <div className="mx-auto max-w-6xl rounded-[20px] border border-border bg-card/95 shadow-sm backdrop-blur">
+              <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                <SidebarTrigger className="rounded-[10px]" />
 
-              <div className="min-w-0">
-                <div className="text-sm font-semibold tracking-tight">VetVAX</div>
-                <div className="text-[11px] text-muted-foreground">Chines • Profissional • Auditável</div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold tracking-tight">VetVAX</div>
+                  <div className="text-[11px] text-muted-foreground">Chines • Profissional • Auditável</div>
+                </div>
+
+                <div className="ml-auto flex items-center gap-2">
+                  <GlobalCommandPalette />
+
+                  <Button variant="outline" size="icon" className="h-9 w-9 rounded-[12px] border">
+                    <Bell className="h-4 w-4" />
+                  </Button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="h-9 rounded-[12px] border px-2.5">
+                        <Avatar className="h-7 w-7 rounded-full">
+                          <AvatarFallback className="rounded-full bg-primary/10 text-primary font-semibold text-xs">
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="ml-2 hidden sm:inline text-sm font-medium text-foreground">
+                          {profile?.display_name ?? "Usuário"}
+                        </span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="rounded-[12px]">
+                      <DropdownMenuItem className="rounded-[10px]" onClick={() => nav("/settings")}>
+                        Configurações
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="rounded-[10px]"
+                        onClick={async () => {
+                          await signOut();
+                          nav("/login", { replace: true });
+                        }}
+                      >
+                        Sair
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <Button
+                    size="icon"
+                    className="inline-flex rounded-[12px] bg-primary hover:bg-[#1E40AF] sm:hidden"
+                    onClick={() => nav("/appointments/new")}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    className="hidden sm:inline-flex rounded-[12px] bg-primary hover:bg-[#1E40AF]"
+                    onClick={() => nav("/appointments/new")}
+                  >
+                    Novo agendamento
+                  </Button>
+                </div>
               </div>
+            </div>
+          </div>
+        </div>
 
-              <div className="ml-auto flex items-center gap-2">
-                <GlobalCommandPalette />
-
-                <Button variant="outline" size="icon" className="h-9 w-9 rounded-[12px] border">
-                  <Bell className="h-4 w-4" />
-                </Button>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-9 rounded-[12px] border px-2.5">
-                      <Avatar className="h-7 w-7 rounded-full">
-                        <AvatarFallback className="rounded-full bg-primary/10 text-primary font-semibold text-xs">
-                          {initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="ml-2 hidden sm:inline text-sm font-medium text-foreground">
-                        {profile?.display_name ?? "Usuário"}
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="rounded-[12px]">
-                    <DropdownMenuItem className="rounded-[10px]" onClick={() => nav("/settings")}>
-                      Configurações
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="rounded-[10px]"
-                      onClick={async () => {
-                        await signOut();
-                        nav("/login", { replace: true });
-                      }}
-                    >
-                      Sair
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <Button
-                  size="icon"
-                  className="inline-flex rounded-[12px] bg-primary hover:bg-[#1E40AF] sm:hidden"
-                  onClick={() => nav("/appointments/new")}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-                <Button
-                  className="hidden sm:inline-flex rounded-[12px] bg-primary hover:bg-[#1E40AF]"
-                  onClick={() => nav("/appointments/new")}
-                >
-                  Novo agendamento
-                </Button>
-              </div>
-            </header>
-
+        {/* Corpo separado do topbar */}
+        <div className="px-4 pb-4 lg:px-6 lg:pb-6">
+          <div className="mx-auto mt-4 max-w-6xl rounded-[20px] border border-border bg-card shadow-sm">
             <main className="px-4 py-5 sm:px-5 sm:py-6">
               <Outlet />
             </main>
