@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
   CalendarDays,
@@ -11,6 +11,7 @@ import {
   UserCog,
   Users,
 } from "lucide-react";
+import { useMemo } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { cn } from "@/lib/utils";
 import {
@@ -55,11 +56,11 @@ function NavItem({
         className={cn(
           "h-10 rounded-[12px] px-3",
           "!text-foreground",
-          active && "bg-primary !text-primary-foreground",
+          active && "bg-[#1E40AF] !text-white hover:bg-[#1E3A8A]",
         )}
       >
-        <Icon className={cn("h-4 w-4", active ? "!text-primary-foreground" : "!text-muted-foreground")} />
-        <span className={cn("truncate", active ? "!text-primary-foreground" : "!text-foreground")}>{label}</span>
+        <Icon className={cn("h-4 w-4", active ? "!text-white" : "!text-muted-foreground")} />
+        <span className={cn("truncate", active ? "!text-white" : "!text-foreground")}>{label}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
@@ -68,13 +69,14 @@ function NavItem({
 export default function AppShell() {
   const { profile, signOut } = useAuth();
   const nav = useNavigate();
+  const location = useLocation();
 
   const role = profile?.role ?? "viewer";
   const isAdmin = role === "admin";
   const canManage = role === "admin" || role === "manager";
 
-  const current = ((): NavKey => {
-    const p = window.location.pathname;
+  const current = useMemo<NavKey>(() => {
+    const p = location.pathname;
     if (p.startsWith("/tutors")) return "tutors";
     if (p.startsWith("/appointments/new")) return "new";
     if (p.startsWith("/reminders")) return "reminders";
@@ -83,15 +85,13 @@ export default function AppShell() {
     if (p.startsWith("/catalog")) return "catalog";
     if (p.startsWith("/settings")) return "settings";
     return "dashboard";
-  })();
+  }, [location.pathname]);
+
+  const initials = (profile?.display_name?.[0] ?? "U").toUpperCase();
 
   return (
     <SidebarProvider defaultOpen className="bg-background">
-      <Sidebar
-        variant="inset"
-        collapsible="offcanvas"
-        className="bg-sidebar border-r border-sidebar-border"
-      >
+      <Sidebar variant="inset" collapsible="offcanvas" className="bg-sidebar border-r border-sidebar-border">
         <SidebarHeader className="gap-3 px-3 py-5">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0">
@@ -116,12 +116,7 @@ export default function AppShell() {
               <SidebarMenu className="gap-1.5">
                 <NavItem active={current === "dashboard"} onClick={() => nav("/dashboard")} icon={CalendarDays} label="Dashboard" />
                 <NavItem active={current === "tutors"} onClick={() => nav("/tutors")} icon={Users} label="Tutores" />
-                <NavItem
-                  active={current === "new"}
-                  onClick={() => nav("/appointments/new")}
-                  icon={ClipboardList}
-                  label="Novo agendamento"
-                />
+                <NavItem active={current === "new"} onClick={() => nav("/appointments/new")} icon={ClipboardList} label="Novo agendamento" />
                 <NavItem active={current === "reminders"} onClick={() => nav("/reminders")} icon={Bell} label="Lembretes" />
                 <NavItem active={current === "reports"} onClick={() => nav("/reports")} icon={FileDown} label="Relatórios" />
               </SidebarMenu>
@@ -136,12 +131,8 @@ export default function AppShell() {
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu className="gap-1.5">
-                  {isAdmin && (
-                    <NavItem active={current === "access"} onClick={() => nav("/access")} icon={UserCog} label="Acessos" />
-                  )}
-                  {isAdmin && (
-                    <NavItem active={current === "catalog"} onClick={() => nav("/catalog")} icon={Shield} label="Catálogo" />
-                  )}
+                  {isAdmin && <NavItem active={current === "access"} onClick={() => nav("/access")} icon={UserCog} label="Acessos" />}
+                  {isAdmin && <NavItem active={current === "catalog"} onClick={() => nav("/catalog")} icon={Shield} label="Catálogo" />}
                   <NavItem active={current === "settings"} onClick={() => nav("/settings")} icon={Settings} label="Configurações" />
                 </SidebarMenu>
               </SidebarGroupContent>
@@ -153,9 +144,7 @@ export default function AppShell() {
           <div className="flex items-center justify-between gap-2 rounded-[12px] bg-muted/30 px-3 py-3 border border-border">
             <div className="flex items-center gap-3 min-w-0">
               <Avatar className="h-9 w-9 rounded-full">
-                <AvatarFallback className="rounded-full bg-primary/10 text-primary font-semibold">
-                  {(profile?.display_name?.[0] ?? "U").toUpperCase()}
-                </AvatarFallback>
+                <AvatarFallback className="rounded-full bg-primary/10 text-primary font-semibold">{initials}</AvatarFallback>
               </Avatar>
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium text-foreground">{profile?.display_name ?? "Usuário"}</div>
@@ -188,8 +177,8 @@ export default function AppShell() {
 
       <SidebarInset className="bg-background">
         <div className="px-4 py-4 lg:px-6 lg:py-6">
-          <div className="mx-auto max-w-6xl rounded-[20px] border border-border bg-card shadow-sm">
-            <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-card/95 px-4 py-3 backdrop-blur sm:px-5">
+          <div className="mx-auto max-w-6xl overflow-hidden rounded-[20px] border border-border bg-card shadow-sm">
+            <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-card/95 px-4 py-3 backdrop-blur sm:px-5">
               <SidebarTrigger className="rounded-[10px]" />
 
               <div className="min-w-0">
@@ -199,6 +188,39 @@ export default function AppShell() {
 
               <div className="ml-auto flex items-center gap-2">
                 <GlobalCommandPalette />
+
+                <Button variant="outline" size="icon" className="h-9 w-9 rounded-[12px] border">
+                  <Bell className="h-4 w-4" />
+                </Button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="h-9 rounded-[12px] border px-2.5">
+                      <Avatar className="h-7 w-7 rounded-full">
+                        <AvatarFallback className="rounded-full bg-primary/10 text-primary font-semibold text-xs">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="ml-2 hidden sm:inline text-sm font-medium text-foreground">
+                        {profile?.display_name ?? "Usuário"}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="rounded-[12px]">
+                    <DropdownMenuItem className="rounded-[10px]" onClick={() => nav("/settings")}>
+                      Configurações
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="rounded-[10px]"
+                      onClick={async () => {
+                        await signOut();
+                        nav("/login", { replace: true });
+                      }}
+                    >
+                      Sair
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 <Button
                   size="icon"
