@@ -7,17 +7,11 @@ export function RequireAuth({ children }: PropsWithChildren) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  // Nunca mostrar tela de "carregando" e nunca redirecionar durante sincronização inicial.
-  if (loading) return null;
+  // Mantém o layout visível enquanto o auth inicializa (evita a sensação de "topbar sumiu").
+  if (loading) return <>{children}</>;
 
   if (!user) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-        state={{ from: location.pathname + location.search }}
-      />
-    );
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
   return <>{children}</>;
 }
@@ -59,8 +53,6 @@ export function RequireOnboarding({ children }: PropsWithChildren) {
     })();
   }, [loading, user, profile?.org_id, profile?.display_name, refreshProfile]);
 
-  // Não bloqueia a navegação. Caso não exista org_id, as telas podem ficar vazias por RLS,
-  // mas o usuário não fica preso em uma rota de onboarding.
   void attempting;
 
   return <>{children}</>;

@@ -7,7 +7,7 @@ type AuthState = {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
-  /** Mantido para compatibilidade com guards. Não exibimos UI de loading. */
+  /** Mantido para compatibilidade com guards. */
   loading: boolean;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -60,9 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
 
-  // Flags internas para evitar redirecionamentos prematuros (ex.: onboarding) antes de resolver o profile.
+  // Evita múltiplas leituras concorrentes do auth storage (causa os locks do supabase/gotrue-js)
+  const syncingRef = useRef<Promise<void> | null>(null);
+
   const [initialized, setInitialized] = useState(false);
-  const [profileResolved, setProfileResolved] = useState(false);
 
   const profileRef = useRef<Profile | null>(null);
   useEffect(() => {
@@ -74,12 +75,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshProfile = async () => {
     if (!user) {
       setProfile(null);
-      setProfileResolved(true);
       return;
     }
 
     const { profile: p, resolved } = await fetchProfileResolved(user.id, profileRef.current);
-    if (resolved) setProfileResolved(true);
     if (resolved) setProfile(p);
   };
 
@@ -93,52 +92,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!nextSession?.user) {
         setProfile(null);
-        setProfileResolved(true);
         return;
       }
 
       const { profile: p, resolved } = await fetchProfileResolved(nextSession.user.id, profileRef.current);
       if (!mounted) return;
-
-      if (resolved) {
-        setProfile(p);
-        setProfileResolved(true);
-      }
-      // Se não resolveu, não força onboarding; mantém estado anterior (sem UI de loading).
+      if (resolved) setProfile(p);
     };
 
-    const loadSession = async () => {
-      const fallback = { data: { session: null as Session | null } };
-
-      try {
-        const { data } = await withTimeout(supabase.auth.getSession(), 6000, fallback);
-        if (!mounted) return;
-        await sync(data.session);
-      } catch {
-        // Se falhar, não bloqueia UI; apenas marca init para não travar a navegação.
-      } finally {
+    const enqueueSync = (nextSession: Session | null) => {
+      const run = async () => {
+        await sync(nextSession);
         if (mounted) setInitialized(true);
-      }
+      };
+
+      // Serializa para não disparar concorrência (lock "steal")
+      const next = (syncingRef.current ?? Promise.resolve())
+        .catch(() => {
+          // ignore
+        })
+        .then(run);
+
+      syncingRef.current = next.finally(() => {
+        if (syncingRef.current === next) syncingRef.current = null;
+      });
     };
 
-    loadSession();
-
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      await sync(nextSession);
-      if (mounted) setInitialized(true);
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      enqueueSync(nextSession);
     });
-
-    const onVis = () => {
-      if (document.visibilityState !== "visible") return;
-      loadSession();
-    };
-
-    document.addEventListener("visibilitychange", onVis);
 
     return () => {
       mounted = false;
       sub.subscription.unsubscribe();
-      document.removeEventListener("visibilitychange", onVis);
     };
   }, []);
 
@@ -146,8 +132,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
-  // Não mostramos loader. "loading" serve apenas para os guards NÃO decidirem redirects antes da hora.
-  const loading = !initialized || (!!user && !profileResolved);
+  // Não bloqueamos a UI por profile (evita layout/topbar "sumir").
+  const loading = !initialized;
 
   const value = useMemo<AuthState>(
     () => ({
