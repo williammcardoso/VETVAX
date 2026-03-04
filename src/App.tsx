@@ -19,6 +19,7 @@ import Catalog from "@/pages/Catalog";
 import Settings from "@/pages/Settings";
 import Access from "@/pages/Access";
 import Reminders from "@/pages/Reminders";
+import AgendaPublica from "@/pages/AgendaPublica";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/agenda-publica" element={<AgendaPublica />} />
             <Route
               path="/invite"
               element={

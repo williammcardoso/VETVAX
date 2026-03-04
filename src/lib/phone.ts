@@ -19,19 +19,35 @@ export function normalizeBrPhone(input: string): string {
   return cleaned.startsWith("+") ? cleaned : `+${cleaned}`;
 }
 
-export function formatBrPhoneForDisplay(e164: string | null | undefined): string {
-  const digits = (e164 ?? "").replace(/\D/g, "");
-  if (digits.startsWith("55") && digits.length >= 12) {
-    const ddd = digits.slice(2, 4);
-    const rest = digits.slice(4);
-    if (rest.length === 9) return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
-    if (rest.length === 8) return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
-  }
-  return e164 ?? "";
+function onlyDigits(value: string | null | undefined) {
+  return (value ?? "").replace(/\D/g, "");
 }
 
-export function buildWhatsAppLink(phoneE164: string, message: string) {
-  const digits = phoneE164.replace(/\D/g, "");
+export function formatBrPhoneForDisplay(raw: string | null | undefined): string {
+  const digits = onlyDigits(raw);
+  if (!digits) return "";
+
+  // Support legacy E.164 (+55...) and the new format (digits only).
+  const br = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
+
+  // Expect DDD + 8/9 digits
+  if (br.length === 11) {
+    const ddd = br.slice(0, 2);
+    const rest = br.slice(2);
+    return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+  }
+  if (br.length === 10) {
+    const ddd = br.slice(0, 2);
+    const rest = br.slice(2);
+    return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+  }
+
+  // If something unexpected, show the digits (never show +55 prefix explicitly).
+  return br;
+}
+
+export function buildWhatsAppLink(phoneRaw: string, message: string) {
+  const digits = onlyDigits(phoneRaw);
   const encoded = encodeURIComponent(message);
   return `https://wa.me/${digits}?text=${encoded}`;
 }

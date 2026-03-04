@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { CalendarPlus, ClipboardList, MessageCircle, PawPrint, Phone, UserCircle2 } from "lucide-react";
+import { CalendarPlus, ClipboardList, PawPrint, Phone, UserCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Pet, Tutor } from "@/types/vetvax";
 import { Card } from "@/components/ui/card";
@@ -12,6 +12,8 @@ import { formatBrPhoneForDisplay, buildWhatsAppLink } from "@/lib/phone";
 import { toast } from "@/hooks/use-toast";
 import PetUpsertDialog from "@/components/tutors/PetUpsertDialog";
 import TutorUpsertDialog from "@/components/tutors/TutorUpsertDialog";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import { formatTutorAddressLine } from "@/lib/address";
 
 export default function TutorDetail() {
   const { id } = useParams();
@@ -103,7 +105,7 @@ export default function TutorDetail() {
 
   if (tutor.isLoading) {
     return (
-      <Card className="rounded-3xl p-5">
+      <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
         <div className="text-sm text-muted-foreground">Carregando tutor…</div>
       </Card>
     );
@@ -111,15 +113,17 @@ export default function TutorDetail() {
 
   if (!t) {
     return (
-      <Card className="rounded-3xl p-5">
+      <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
         <div className="text-sm font-medium">Tutor não encontrado</div>
         <p className="mt-1 text-sm text-muted-foreground">Verifique o link ou volte para a lista.</p>
-        <Button asChild className="mt-4 rounded-2xl" variant="secondary">
+        <Button asChild className="mt-4 rounded-[10px]" variant="secondary">
           <Link to="/tutors">Voltar</Link>
         </Button>
       </Card>
     );
   }
+
+  const addressLine = formatTutorAddressLine(t);
 
   return (
     <div className="space-y-6">
@@ -129,8 +133,17 @@ export default function TutorDetail() {
             <UserCircle2 className="h-3.5 w-3.5" />
             Tutor
           </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">{t.name}</h1>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight uppercase">{t.name}</h1>
+
+          <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4" />
+              <span>{primaryPhone ? formatBrPhoneForDisplay(primaryPhone) : "—"}</span>
+            </div>
+            {addressLine ? <div className="text-sm">{addressLine}</div> : null}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
             {t.tags?.map((tag) => (
               <Badge key={tag} variant="secondary" className="rounded-full">
                 {tag}
@@ -141,29 +154,24 @@ export default function TutorDetail() {
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button asChild variant="secondary" className="rounded-2xl">
+          <Button asChild variant="secondary" className="rounded-[10px]">
             <Link to={`/appointments/new?tutor=${t.id}`}>
               <CalendarPlus className="mr-2 h-4 w-4" />
               Novo agendamento
             </Link>
           </Button>
-          <Button
-            variant="secondary"
-            className="rounded-2xl"
-            onClick={() => openWhats.mutate()}
-            disabled={openWhats.isPending}
-          >
-            <MessageCircle className="mr-2 h-4 w-4" />
-            Whats
+          <Button variant="secondary" className="rounded-[10px]" onClick={() => openWhats.mutate()} disabled={openWhats.isPending}>
+            <WhatsAppIcon className="mr-2 h-4 w-4" />
+            WhatsApp
           </Button>
-          <Button variant="ghost" className="rounded-2xl" onClick={() => setOpenEditTutor(true)}>
+          <Button variant="ghost" className="rounded-[10px]" onClick={() => setOpenEditTutor(true)}>
             Editar
           </Button>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="rounded-3xl p-5 lg:col-span-2">
+        <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)] lg:col-span-2">
           <div className="text-sm font-semibold">Contato e endereço</div>
           <div className="mt-3 grid gap-2 text-sm">
             <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
@@ -175,22 +183,18 @@ export default function TutorDetail() {
               {[t.street, t.number, t.complement].filter(Boolean).join(", ")}
               {t.neighborhood || t.city || t.uf ? (
                 <>
-                  <div className="text-muted-foreground">
-                    {[t.neighborhood, t.city, t.uf].filter(Boolean).join(" • ")}
-                  </div>
+                  <div className="text-muted-foreground">{[t.neighborhood, t.city, t.uf].filter(Boolean).join(" • ")}</div>
                 </>
               ) : null}
             </div>
-            {t.notes ? (
-              <div className="rounded-2xl border bg-muted/20 p-3 text-xs text-muted-foreground">{t.notes}</div>
-            ) : null}
+            {t.notes ? <div className="rounded-[10px] border-[1.5px] bg-muted/20 p-3 text-xs text-muted-foreground">{t.notes}</div> : null}
           </div>
         </Card>
 
-        <Card className="rounded-3xl p-5">
+        <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
           <div className="text-sm font-semibold">Atalhos</div>
           <div className="mt-3 grid gap-2">
-            <Button asChild className="rounded-2xl">
+            <Button asChild className="rounded-[10px]">
               <Link to={`/appointments/new?tutor=${t.id}`}>
                 <ClipboardList className="mr-2 h-4 w-4" />
                 Agendar em 20s
@@ -198,7 +202,7 @@ export default function TutorDetail() {
             </Button>
             <Button
               variant="secondary"
-              className="rounded-2xl"
+              className="rounded-[10px]"
               onClick={() => {
                 setEditingPet(null);
                 setOpenPet(true);
@@ -212,24 +216,24 @@ export default function TutorDetail() {
       </div>
 
       <Tabs defaultValue="pets">
-        <TabsList className="rounded-2xl">
-          <TabsTrigger value="pets" className="rounded-2xl">
+        <TabsList className="rounded-[10px]">
+          <TabsTrigger value="pets" className="rounded-[10px]">
             Pets
           </TabsTrigger>
-          <TabsTrigger value="history" className="rounded-2xl">
+          <TabsTrigger value="history" className="rounded-[10px]">
             Histórico
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pets" className="mt-4">
-          <Card className="rounded-3xl p-5">
+          <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold">Pets</div>
                 <div className="mt-1 text-xs text-muted-foreground">Opcional — vincule itens por pet quando fizer sentido.</div>
               </div>
               <Button
-                className="rounded-2xl"
+                className="rounded-[10px]"
                 onClick={() => {
                   setEditingPet(null);
                   setOpenPet(true);
@@ -244,7 +248,7 @@ export default function TutorDetail() {
               {(pets.data ?? []).map((p) => (
                 <button
                   key={p.id}
-                  className="text-left rounded-3xl border bg-card p-4 hover:bg-muted/30"
+                  className="text-left rounded-[10px] border-[1.5px] border-border bg-card p-4 hover:bg-muted/30"
                   onClick={() => {
                     setEditingPet(p);
                     setOpenPet(true);
@@ -256,18 +260,16 @@ export default function TutorDetail() {
                     {p.age_text ? ` • ${p.age_text}` : ""}
                     {p.breed ? ` • ${p.breed}` : ""}
                   </div>
-                  {p.notes ? (
-                    <div className="mt-3 line-clamp-2 text-xs text-muted-foreground">{p.notes}</div>
-                  ) : null}
+                  {p.notes ? <div className="mt-3 line-clamp-2 text-xs text-muted-foreground">{p.notes}</div> : null}
                 </button>
               ))}
 
               {!pets.isLoading && (pets.data?.length ?? 0) === 0 && (
-                <div className="rounded-3xl border bg-muted/10 p-6 text-center sm:col-span-2 lg:col-span-3">
+                <div className="rounded-[10px] border-[1.5px] border-border bg-muted/10 p-6 text-center sm:col-span-2 lg:col-span-3">
                   <div className="text-sm font-medium">Nenhum pet cadastrado</div>
                   <p className="mt-1 text-xs text-muted-foreground">Você pode cadastrar agora ou seguir usando sem pets.</p>
                   <Button
-                    className="mt-4 rounded-2xl"
+                    className="mt-4 rounded-[10px]"
                     onClick={() => {
                       setEditingPet(null);
                       setOpenPet(true);
@@ -282,11 +284,11 @@ export default function TutorDetail() {
         </TabsContent>
 
         <TabsContent value="history" className="mt-4">
-          <Card className="rounded-3xl p-5">
+          <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
             <div className="text-sm font-semibold">Timeline (últimos 15)</div>
             <div className="mt-4 grid gap-3">
               {(history.data?.appointments ?? []).map((a: any) => (
-                <div key={a.id} className="rounded-3xl border bg-card p-4">
+                <div key={a.id} className="rounded-[10px] border-[1.5px] border-border bg-card p-4">
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-medium">Agendamento • {a.status}</div>
                     <Badge variant="secondary" className="rounded-full">
@@ -301,7 +303,7 @@ export default function TutorDetail() {
               ))}
 
               {(history.data?.reminders ?? []).map((r: any) => (
-                <div key={r.id} className="rounded-3xl border bg-muted/10 p-4">
+                <div key={r.id} className="rounded-[10px] border-[1.5px] border-border bg-muted/10 p-4">
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-medium">Lembrete • {r.status}</div>
                     <Badge variant="secondary" className="rounded-full">
@@ -316,12 +318,12 @@ export default function TutorDetail() {
               {!history.isLoading &&
                 (history.data?.appointments?.length ?? 0) === 0 &&
                 (history.data?.reminders?.length ?? 0) === 0 && (
-                  <div className="rounded-3xl border bg-muted/10 p-6 text-center">
+                  <div className="rounded-[10px] border-[1.5px] border-border bg-muted/10 p-6 text-center">
                     <div className="text-sm font-medium">Sem histórico ainda</div>
                     <p className="mt-1 text-xs text-muted-foreground">
                       Crie um agendamento para este tutor e o sistema começará a construir a timeline.
                     </p>
-                    <Button asChild className="mt-4 rounded-2xl">
+                    <Button asChild className="mt-4 rounded-[10px]">
                       <Link to={`/appointments/new?tutor=${t.id}`}>Novo agendamento</Link>
                     </Button>
                   </div>

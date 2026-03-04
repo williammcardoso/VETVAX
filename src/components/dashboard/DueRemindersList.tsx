@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { MoreHorizontal } from "lucide-react";
 import type { DueReminderRow } from "@/types/vetvax";
@@ -7,10 +7,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { buildWhatsAppLink } from "@/lib/phone";
-import { daysDiffFromToday, formatDateBr } from "@/lib/datetime";
+import { daysDiffFromToday, formatDateBr, dayjs } from "@/lib/datetime";
 import { supabase } from "@/lib/supabase";
 import { useWhatsMessage } from "@/components/dashboard/useWhatsMessage";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import ResolveReminderDialog from "@/components/reminders/ResolveReminderDialog";
+import { useNavigate } from "react-router-dom";
 
 function statusTone(diff: number) {
   if (diff < 0) return { bar: "border-l-[#DC2626]", dot: "bg-[#DC2626]" };
@@ -26,7 +28,11 @@ export default function DueRemindersList({
   loading: boolean;
   onChanged: () => void;
 }) {
+  const nav = useNavigate();
   const { buildReminderMessage, pickPhone } = useWhatsMessage();
+
+  const [resolveOpen, setResolveOpen] = useState(false);
+  const [resolveRow, setResolveRow] = useState<DueReminderRow | null>(null);
 
   const rowsWithDiff = useMemo(() => {
     return rows.map((r) => ({ r, diff: daysDiffFromToday(r.due_date) }));
@@ -135,7 +141,13 @@ export default function DueRemindersList({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="rounded-[10px]">
-                      <DropdownMenuItem className="rounded-[8px]" onClick={() => setStatus.mutate({ id: r.id, status: "FEITO" })}>
+                      <DropdownMenuItem
+                        className="rounded-[8px]"
+                        onClick={() => {
+                          setResolveRow(r);
+                          setResolveOpen(true);
+                        }}
+                      >
                         Marcar como resolvido
                       </DropdownMenuItem>
                       <DropdownMenuItem className="rounded-[8px]" onClick={() => setStatus.mutate({ id: r.id, status: "ARQUIVADO" })}>
@@ -149,6 +161,26 @@ export default function DueRemindersList({
           </div>
         );
       })}
+
+      <ResolveReminderDialog
+        open={resolveOpen}
+        row={resolveRow}
+        onOpenChange={(v) => {
+          setResolveOpen(v);
+          if (!v) setResolveRow(null);
+        }}
+        onOnlyResolve={(row) => {
+          setResolveOpen(false);
+          setResolveRow(null);
+          setStatus.mutate({ id: row.id, status: "FEITO" });
+        }}
+        onScheduleNow={(row) => {
+          setResolveOpen(false);
+          setResolveRow(null);
+          const date = dayjs().format("YYYY-MM-DD");
+          nav(`/appointments/new?tutor=${encodeURIComponent(row.tutor_id)}&fromReminder=${encodeURIComponent(row.id)}&resolveReminder=${encodeURIComponent(row.id)}&date=${encodeURIComponent(date)}`);
+        }}
+      />
     </div>
   );
 }

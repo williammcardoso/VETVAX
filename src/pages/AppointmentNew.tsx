@@ -63,6 +63,8 @@ function buildTimeSlots() {
 export default function AppointmentNew() {
   const nav = useNavigate();
   const tutorParam = useQueryParam("tutor");
+  const dateParam = useQueryParam("date");
+  const resolveReminderParam = useQueryParam("resolveReminder");
 
   const [openNewTutor, setOpenNewTutor] = useState(false);
 
@@ -84,7 +86,7 @@ export default function AppointmentNew() {
     resolver: zodResolver(schema),
     defaultValues: {
       tutor_id: tutorParam ?? "",
-      scheduled_date: dayjs().format("YYYY-MM-DD"),
+      scheduled_date: dateParam ?? dayjs().format("YYYY-MM-DD"),
       scheduled_time: "09:00",
       notes: "",
       separate_by_pet: false,
@@ -94,8 +96,9 @@ export default function AppointmentNew() {
 
   useEffect(() => {
     if (tutorParam) form.setValue("tutor_id", tutorParam);
+    if (dateParam) form.setValue("scheduled_date", dateParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tutorParam]);
+  }, [tutorParam, dateParam]);
 
   const tutorId = form.watch("tutor_id");
   const scheduledDate = form.watch("scheduled_date");
@@ -136,7 +139,6 @@ export default function AppointmentNew() {
 
   const save = useMutation({
     mutationFn: async (values: Values) => {
-      // valida requires_description no front
       const catalogMap = new Map((catalog.data ?? []).map((c) => [c.id, c] as const));
       for (const it of values.items) {
         const ci = catalogMap.get(it.catalog_item_id);
@@ -150,7 +152,6 @@ export default function AppointmentNew() {
           tutor_id: values.tutor_id,
           scheduled_date: values.scheduled_date,
           scheduled_time: values.scheduled_time,
-          // Mantemos o campo no backend, mas não expomos na UI (regra: remover Canal).
           channel: "store",
           notes: values.notes,
           items: values.items.map((it) => ({
@@ -169,7 +170,10 @@ export default function AppointmentNew() {
       if (error) throw error;
       return data as string;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      if (resolveReminderParam) {
+        await supabase.from("reminders").update({ status: "FEITO" }).eq("id", resolveReminderParam);
+      }
       toast({ title: "Agendamento criado" });
       nav("/dashboard");
     },
@@ -204,9 +208,7 @@ export default function AppointmentNew() {
                     onChange={(id) => form.setValue("tutor_id", id, { shouldValidate: true })}
                     onCreateNew={() => setOpenNewTutor(true)}
                   />
-                  {form.formState.errors.tutor_id && (
-                    <p className="mt-1 text-xs text-destructive">{form.formState.errors.tutor_id.message}</p>
-                  )}
+                  {form.formState.errors.tutor_id && <p className="mt-1 text-xs text-destructive">{form.formState.errors.tutor_id.message}</p>}
                 </div>
               </div>
             </div>
@@ -242,17 +244,12 @@ export default function AppointmentNew() {
                     />
                   </PopoverContent>
                 </Popover>
-                {form.formState.errors.scheduled_date && (
-                  <p className="text-xs text-destructive">{form.formState.errors.scheduled_date.message}</p>
-                )}
+                {form.formState.errors.scheduled_date && <p className="text-xs text-destructive">{form.formState.errors.scheduled_date.message}</p>}
               </div>
 
               <div className="grid gap-2">
                 <Label>Hora</Label>
-                <Select
-                  value={form.watch("scheduled_time")}
-                  onValueChange={(v) => form.setValue("scheduled_time", v, { shouldValidate: true })}
-                >
+                <Select value={form.watch("scheduled_time")} onValueChange={(v) => form.setValue("scheduled_time", v, { shouldValidate: true })}>
                   <SelectTrigger className="h-10 rounded-[10px] border-[1.5px]">
                     <SelectValue placeholder="Selecionar horário" />
                   </SelectTrigger>
@@ -270,9 +267,7 @@ export default function AppointmentNew() {
                     })}
                   </SelectContent>
                 </Select>
-                {form.formState.errors.scheduled_time && (
-                  <p className="text-xs text-destructive">{form.formState.errors.scheduled_time.message}</p>
-                )}
+                {form.formState.errors.scheduled_time && <p className="text-xs text-destructive">{form.formState.errors.scheduled_time.message}</p>}
               </div>
             </div>
 
@@ -319,10 +314,7 @@ export default function AppointmentNew() {
                   <div className="grid gap-3 sm:grid-cols-12 sm:items-end">
                     <div className="grid gap-2 sm:col-span-5">
                       <Label>Item</Label>
-                      <Select
-                        value={catId || ""}
-                        onValueChange={(v) => form.setValue(`items.${idx}.catalog_item_id`, v, { shouldValidate: true })}
-                      >
+                      <Select value={catId || ""} onValueChange={(v) => form.setValue(`items.${idx}.catalog_item_id`, v, { shouldValidate: true })}>
                         <SelectTrigger className="rounded-[10px] border-[1.5px]">
                           <SelectValue placeholder="Selecione…" />
                         </SelectTrigger>
@@ -335,9 +327,7 @@ export default function AppointmentNew() {
                         </SelectContent>
                       </Select>
                       {form.formState.errors.items?.[idx]?.catalog_item_id && (
-                        <p className="text-xs text-destructive">
-                          {form.formState.errors.items?.[idx]?.catalog_item_id?.message as any}
-                        </p>
+                        <p className="text-xs text-destructive">{form.formState.errors.items?.[idx]?.catalog_item_id?.message as any}</p>
                       )}
                     </div>
 
@@ -368,14 +358,7 @@ export default function AppointmentNew() {
                     </div>
 
                     <div className="sm:col-span-1 flex justify-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-10 w-10 rounded-[10px]"
-                        onClick={() => remove(idx)}
-                        disabled={fields.length === 1}
-                      >
+                      <Button type="button" variant="ghost" size="icon" className="h-10 w-10 rounded-[10px]" onClick={() => remove(idx)} disabled={fields.length === 1}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

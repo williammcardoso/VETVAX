@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Archive, CheckCircle2, FileDown, MessageCircle, MessagesSquare, ShieldAlert } from "lucide-react";
+import { Archive, CheckCircle2, FileDown, MessagesSquare, ShieldAlert } from "lucide-react";
 import type { DueReminderRow } from "@/types/vetvax";
 import { supabase } from "@/lib/supabase";
 import { buildWhatsAppLink } from "@/lib/phone";
@@ -13,6 +13,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import ResolveReminderDialog from "@/components/reminders/ResolveReminderDialog";
+import { useNavigate } from "react-router-dom";
+import { dayjs } from "@/lib/datetime";
 
 function dueLabel(dueDateISO: string) {
   const diff = daysDiffFromToday(dueDateISO);
@@ -64,10 +68,13 @@ export default function RemindersTable({
   loading: boolean;
   onChanged: () => void;
 }) {
+  const nav = useNavigate();
   const { buildReminderMessage, pickPhone } = useWhatsMessage();
 
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [resolveOpen, setResolveOpen] = useState(false);
+  const [resolveRow, setResolveRow] = useState<DueReminderRow | null>(null);
 
   const ids = useMemo(() => rows.map((r) => r.id), [rows]);
   const selectedIds = useMemo(() => ids.filter((id) => selected[id]), [ids, selected]);
@@ -92,7 +99,6 @@ export default function RemindersTable({
       const phone = pickPhone(row.tutor_phone1, row.tutor_phone2);
       if (!phone) throw new Error("Tutor sem telefone");
 
-      // anti-spam (24h)
       if (row.last_sent_at) {
         const last = new Date(row.last_sent_at).getTime();
         const hours = (Date.now() - last) / (1000 * 60 * 60);
@@ -142,8 +148,6 @@ export default function RemindersTable({
   const someChecked = selectedIds.length > 0 && selectedIds.length < ids.length;
 
   const bulkLinks = useMemo(() => {
-    // Gera links/mensagens “melhor esforço” (sem travar a UI com async aqui).
-    // A mensagem real do template é montada no clique em “Abrir Whats (1 a 1)”.
     return selectedRows.map((r) => {
       const phone = pickPhone(r.tutor_phone1, r.tutor_phone2);
       const digits = phone ? phone.replace(/\D/g, "") : "";
@@ -158,12 +162,12 @@ export default function RemindersTable({
   }, [pickPhone, selectedRows]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border">
-      <div className="flex flex-col gap-2 border-b bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="overflow-hidden rounded-[10px] border-[1.5px] border-border">
+      <div className="flex flex-col gap-2 border-b border-border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
-            className="rounded-2xl"
+            className="h-10 rounded-[10px]"
             onClick={() => {
               const flat = (rows ?? []).map((r) => ({
                 id: r.id,
@@ -171,6 +175,7 @@ export default function RemindersTable({
                 tutor: r.tutor_name,
                 pet: r.pet_name ?? "",
                 tipo: r.reminder_type,
+                status: r.status,
                 ultima_aplicacao: r.last_applied_at ?? "",
                 ultimo_envio: r.last_sent_at ?? "",
                 envios: r.send_count ?? 0,
@@ -191,16 +196,16 @@ export default function RemindersTable({
 
           <Button
             variant="secondary"
-            className="rounded-2xl"
+            className="h-10 rounded-[10px]"
             disabled={!selectedIds.length || bulkSetStatus.isPending}
             onClick={() => bulkSetStatus.mutate({ status: "FEITO", ids: selectedIds })}
           >
             <CheckCircle2 className="mr-2 h-4 w-4" />
-            Marcar feito ({selectedIds.length})
+            Marcar resolvido ({selectedIds.length})
           </Button>
           <Button
             variant="secondary"
-            className="rounded-2xl"
+            className="h-10 rounded-[10px]"
             disabled={!selectedIds.length || bulkSetStatus.isPending}
             onClick={() => bulkSetStatus.mutate({ status: "ARQUIVADO", ids: selectedIds })}
           >
@@ -208,35 +213,25 @@ export default function RemindersTable({
             Arquivar ({selectedIds.length})
           </Button>
 
-          <Button
-            variant="secondary"
-            className="rounded-2xl"
-            disabled={!selectedIds.length}
-            onClick={() => setBulkOpen(true)}
-          >
+          <Button variant="secondary" className="h-10 rounded-[10px]" disabled={!selectedIds.length} onClick={() => setBulkOpen(true)}>
             <MessagesSquare className="mr-2 h-4 w-4" />
             Whats em lote
           </Button>
         </div>
 
-        <div className="text-xs text-muted-foreground">
-          Selecione linhas para ações em lote. Alguns navegadores bloqueiam múltiplas abas.
-        </div>
+        <div className="text-xs text-muted-foreground">Selecione linhas para ações em lote.</div>
       </div>
 
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/40">
             <TableHead className="w-[44px]">
-              <Checkbox
-                checked={allChecked ? true : someChecked ? "indeterminate" : false}
-                onCheckedChange={(v) => toggleAll(Boolean(v))}
-              />
+              <Checkbox checked={allChecked ? true : someChecked ? "indeterminate" : false} onCheckedChange={(v) => toggleAll(Boolean(v))} />
             </TableHead>
             <TableHead>Vencimento</TableHead>
             <TableHead>Tutor</TableHead>
             <TableHead className="hidden lg:table-cell">Contexto</TableHead>
-            <TableHead className="w-[140px]"></TableHead>
+            <TableHead className="w-[160px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -258,8 +253,10 @@ export default function RemindersTable({
               ? (Date.now() - new Date(r.last_sent_at).getTime()) / (1000 * 60 * 60) < 24
               : false;
 
+            const leftBar = urgent ? "border-l-[#DC2626]" : "border-l-[#16A34A]";
+
             return (
-              <TableRow key={r.id} className="hover:bg-muted/30">
+              <TableRow key={r.id} className={`hover:bg-muted/30 border-l-4 ${leftBar}`}>
                 <TableCell className="align-top">
                   <Checkbox checked={!!selected[r.id]} onCheckedChange={(v) => toggleOne(r.id, Boolean(v))} />
                 </TableCell>
@@ -270,6 +267,9 @@ export default function RemindersTable({
                     <Badge className="rounded-full" variant={urgent ? "destructive" : "secondary"}>
                       {urgent && <ShieldAlert className="mr-1 h-3 w-3" />}
                       {dueText}
+                    </Badge>
+                    <Badge variant="secondary" className="ml-2 rounded-full text-[11px]">
+                      {r.status}
                     </Badge>
                   </div>
                 </TableCell>
@@ -299,9 +299,7 @@ export default function RemindersTable({
                 <TableCell className="hidden lg:table-cell align-top">
                   <div className="text-xs text-muted-foreground">
                     {r.notes ? r.notes : "—"}
-                    {r.last_sent_at && (
-                      <div className="mt-1 text-[11px]">último envio: {new Date(r.last_sent_at).toLocaleString("pt-BR")}</div>
-                    )}
+                    {r.last_sent_at && <div className="mt-1 text-[11px]">último envio: {new Date(r.last_sent_at).toLocaleString("pt-BR")}</div>}
                   </div>
                 </TableCell>
 
@@ -310,32 +308,33 @@ export default function RemindersTable({
                     <Button
                       variant="secondary"
                       size="icon"
-                      className="rounded-2xl"
+                      className="h-10 w-10 rounded-[10px]"
                       onClick={() => openWhats.mutate(r)}
                       disabled={openWhats.isPending || lastSentRecently}
                       title={lastSentRecently ? "Envio recente (menos de 24h)." : "Abrir WhatsApp"}
                     >
-                      <MessageCircle className="h-4 w-4" />
+                      <WhatsAppIcon className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="rounded-2xl"
-                      onClick={() => bulkSetStatus.mutate({ status: "FEITO", ids: [r.id] })}
+                      className="h-10 rounded-[10px]"
+                      onClick={() => {
+                        setResolveRow(r);
+                        setResolveOpen(true);
+                      }}
                       disabled={bulkSetStatus.isPending}
-                      title="Marcar como feito"
+                      title="Marcar como resolvido"
                     >
-                      <CheckCircle2 className="h-4 w-4" />
+                      Resolver
                     </Button>
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="rounded-2xl"
+                      className="h-10 rounded-[10px]"
                       onClick={() => bulkSetStatus.mutate({ status: "ARQUIVADO", ids: [r.id] })}
                       disabled={bulkSetStatus.isPending}
                       title="Arquivar"
                     >
-                      <Archive className="h-4 w-4" />
+                      Arquivar
                     </Button>
                   </div>
                 </TableCell>
@@ -347,13 +346,11 @@ export default function RemindersTable({
             <TableRow>
               <TableCell colSpan={5} className="py-10">
                 <div className="mx-auto max-w-sm text-center">
-                  <div className="mx-auto grid h-10 w-10 place-items-center rounded-2xl bg-muted">
+                  <div className="mx-auto grid h-10 w-10 place-items-center rounded-[10px] bg-muted">
                     <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div className="mt-3 text-sm font-medium">Nenhum lembrete no filtro</div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Lembretes são criados na baixa de um agendamento quando você informa uma próxima aplicação.
-                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Lembretes são criados na baixa de um agendamento quando você informa uma próxima aplicação.</p>
                 </div>
               </TableCell>
             </TableRow>
@@ -362,7 +359,7 @@ export default function RemindersTable({
       </Table>
 
       <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
-        <DialogContent className="rounded-3xl max-w-2xl">
+        <DialogContent className="rounded-[10px] max-w-2xl">
           <DialogHeader>
             <DialogTitle>Whats em lote ({selectedRows.length})</DialogTitle>
           </DialogHeader>
@@ -376,7 +373,7 @@ export default function RemindersTable({
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
               <Button
                 variant="secondary"
-                className="rounded-2xl"
+                className="rounded-[10px]"
                 onClick={async () => {
                   const links: string[] = [];
                   for (const r of selectedRows) {
@@ -398,9 +395,8 @@ export default function RemindersTable({
               </Button>
 
               <Button
-                className="rounded-2xl"
+                className="rounded-[10px]"
                 onClick={async () => {
-                  // Tenta abrir um a um (pode ser bloqueado). Também atualiza last_sent_at como intenção.
                   for (const r of selectedRows) {
                     try {
                       await openWhats.mutateAsync(r);
@@ -415,7 +411,7 @@ export default function RemindersTable({
               </Button>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border">
+            <div className="overflow-hidden rounded-[10px] border-[1.5px] border-border">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/40">
@@ -431,9 +427,7 @@ export default function RemindersTable({
                       <TableCell className="text-sm font-medium">{l.tutor}</TableCell>
                       <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{l.pet ?? "—"}</TableCell>
                       <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{formatDateBr(l.due)}</TableCell>
-                      <TableCell className="text-right text-sm text-muted-foreground">
-                        {l.phoneDigits ? `…${l.phoneDigits.slice(-4)}` : "sem telefone"}
-                      </TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground">{l.phoneDigits ? `…${l.phoneDigits.slice(-4)}` : "sem telefone"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -442,6 +436,26 @@ export default function RemindersTable({
           </div>
         </DialogContent>
       </Dialog>
+
+      <ResolveReminderDialog
+        open={resolveOpen}
+        row={resolveRow}
+        onOpenChange={(v) => {
+          setResolveOpen(v);
+          if (!v) setResolveRow(null);
+        }}
+        onOnlyResolve={(row) => {
+          setResolveOpen(false);
+          setResolveRow(null);
+          bulkSetStatus.mutate({ status: "FEITO", ids: [row.id] });
+        }}
+        onScheduleNow={(row) => {
+          setResolveOpen(false);
+          setResolveRow(null);
+          const date = dayjs().format("YYYY-MM-DD");
+          nav(`/appointments/new?tutor=${encodeURIComponent(row.tutor_id)}&resolveReminder=${encodeURIComponent(row.id)}&date=${encodeURIComponent(date)}`);
+        }}
+      />
     </div>
   );
 }

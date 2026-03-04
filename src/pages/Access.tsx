@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, KeyRound, Shield, UserCog } from "lucide-react";
+import { Copy, KeyRound, Shield, UserCog, UserPlus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -18,11 +18,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import CreateUserDialog from "@/components/access/CreateUserDialog";
 
 function randomToken(bytes = 24) {
   const buf = new Uint8Array(bytes);
   crypto.getRandomValues(buf);
-  // base64url
   const b64 = btoa(String.fromCharCode(...buf));
   return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
@@ -41,6 +41,7 @@ export default function Access() {
   const qc = useQueryClient();
 
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [createUserOpen, setCreateUserOpen] = useState(false);
 
   const branches = useQuery({
     queryKey: ["branches", "active"],
@@ -182,9 +183,15 @@ export default function Access() {
               </div>
               <div className="mt-1 text-xs text-muted-foreground">Somente admin pode listar/alterar papéis.</div>
             </div>
-            <Badge variant="secondary" className="rounded-full">
-              {rows.length}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="rounded-full">
+                {rows.length}
+              </Badge>
+              <Button variant="secondary" className="h-9 rounded-2xl" onClick={() => setCreateUserOpen(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Novo usuário
+              </Button>
+            </div>
           </div>
 
           <div className="mt-4 overflow-hidden rounded-2xl border">
@@ -304,9 +311,7 @@ export default function Access() {
                               inativo
                             </Badge>
                           )}
-                          {inv.accepted_at && (
-                            <Badge className="rounded-full text-[11px]">aceito</Badge>
-                          )}
+                          {inv.accepted_at && <Badge className="rounded-full text-[11px]">aceito</Badge>}
                           {expired && !inv.accepted_at && (
                             <Badge variant="destructive" className="rounded-full text-[11px]">
                               expirado
@@ -376,9 +381,7 @@ export default function Access() {
             <div className="grid gap-2">
               <Label>Email</Label>
               <Input className="rounded-2xl" placeholder="pessoa@empresa.com" {...form.register("email")} />
-              {form.formState.errors.email && (
-                <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
-              )}
+              {form.formState.errors.email && <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
@@ -398,10 +401,7 @@ export default function Access() {
 
               <div className="grid gap-2">
                 <Label>Filial</Label>
-                <Select
-                  value={form.watch("branch_id") || "_none"}
-                  onValueChange={(v) => form.setValue("branch_id", v === "_none" ? "" : v)}
-                >
+                <Select value={form.watch("branch_id") || "_none"} onValueChange={(v) => form.setValue("branch_id", v === "_none" ? "" : v)}>
                   <SelectTrigger className="rounded-2xl">
                     <SelectValue placeholder="Opcional" />
                   </SelectTrigger>
@@ -433,6 +433,14 @@ export default function Access() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <CreateUserDialog
+        open={createUserOpen}
+        onOpenChange={setCreateUserOpen}
+        onCreated={async () => {
+          await qc.invalidateQueries({ queryKey: ["access", "members"] });
+        }}
+      />
     </div>
   );
 }

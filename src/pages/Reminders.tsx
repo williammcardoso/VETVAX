@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Filter, MessageCircle, RefreshCw } from "lucide-react";
+import { Bell, Filter, RefreshCw, Search } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Branch, DueReminderRow } from "@/types/vetvax";
 import { Card } from "@/components/ui/card";
@@ -13,9 +13,12 @@ import { dayjs } from "@/lib/datetime";
 
 type DuePreset = "overdue" | "7d" | "30d" | "60d" | "all";
 
+type StatusFilter = "all" | "ATIVO" | "FEITO" | "ARQUIVADO";
+
 type Filters = {
   q: string;
   due: DuePreset;
+  status: StatusFilter;
   reminderType: "all" | "vacina" | "medicação" | "outro";
   pet: "all" | "with_pet" | "without_pet";
   branchId: string;
@@ -27,6 +30,7 @@ function defaults(): Filters {
   return {
     q: "",
     due: "30d",
+    status: "ATIVO",
     reminderType: "all",
     pet: "all",
     branchId: "all",
@@ -80,10 +84,18 @@ export default function Reminders() {
   const rows = useQuery({
     queryKey: ["reminders", "list", filters],
     queryFn: async () => {
-      let q = supabase.from("vw_due_reminders").select("*").order("due_date", { ascending: true }).limit(500);
+      // IMPORTANT: the view vw_due_reminders is fixed to ATIVO only, so it can't power the full list.
+      // Here we query from reminders + tutors/pets to support: ativos, vencidos, arquivados, resolvidos.
+      let q = supabase
+        .from("reminders")
+        .select(
+          "id, org_id, branch_id, tutor_id, pet_id, due_date, reference_appointment_id, last_applied_at, reminder_type, message_template_id, status, last_sent_at, send_count, notes, created_at, is_active, tutor:tutors(name, phone1, phone2), pet:pets(name)",
+        )
+        .eq("is_active", true)
+        .order("due_date", { ascending: true })
+        .limit(800);
 
-      // status is already filtered in the view (ATIVO + is_active). Keep defensive.
-      q = q.eq("status", "ATIVO");
+      if (filters.status !== "all") q = q.eq("status", filters.status);
 
       const range = dueRange(filters.due);
       if (range.from) q = q.gte("due_date", range.from);
@@ -98,14 +110,44 @@ export default function Reminders() {
 
       const term = filters.q.trim();
       if (term) {
-        q = q.or(
-          `tutor_name.ilike.%${term}%,tutor_phone1.ilike.%${term}%,tutor_phone2.ilike.%${term}%,pet_name.ilike.%${term}%`,
-        );
+        // OR over joined columns is limited in postgrest; use ilike on notes and rely on client-side match for tutor/pet.
+        q = q.ilike("notes", `%${term}%`);
       }
 
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as DueReminderRow[];
+
+      const mapped = (data ?? []).map((r: any) => ({
+        id: r.id,
+        org_id: r.org_id,
+        branch_id: r.branch_id,
+        tutor_id: r.tutor_id,
+        pet_id: r.pet_id,
+        due_date: r.due_date,
+        reference_appointment_id: r.reference_appointment_id,
+        last_applied_at: r.last_applied_at,
+        reminder_type: r.reminder_type,
+        message_template_id: r.message_template_id,
+        status: r.status,
+        last_sent_at: r.last_sent_at,
+        send_count: r.send_count ?? 0,
+        notes: r.notes,
+        tutor_name: r.tutor?.name ?? "",
+        tutor_phone1: r.tutor?.phone1 ?? null,
+        tutor_phone2: r.tutor?.phone2 ?? null,
+        pet_name: r.pet?.name ?? null,
+      })) as DueReminderRow[];
+
+      if (!term) return mapped;
+
+      const t = term.toLowerCase();
+      return mapped.filter((row) => {
+        const hay = [row.tutor_name, row.pet_name, row.tutor_phone1, row.tutor_phone2, row.notes, row.reminder_type]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(t);
+      });
     },
   });
 
@@ -118,6 +160,15 @@ export default function Reminders() {
 
   const count = useMemo(() => rows.data?.length ?? 0, [rows.data]);
 
+  const countLabel =
+    filters.status === "all"
+      ? `${count} no total`
+      : filters.status === "ATIVO"
+        ? `${count} ativos`
+        : filters.status === "FEITO"
+          ? `${count} resolvidos`
+          : `${count} arquivados`;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -127,47 +178,54 @@ export default function Reminders() {
             Lembretes
           </div>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">Próximas aplicações</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Filtros avançados, ações em lote e export. Envio tem anti-spam (24h por lembrete).
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Acompanhe vencidos, ativos, resolvidos e arquivados.</p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative sm:w-[320px]">
-            <MessageCircle className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="pl-9 rounded-2xl"
+              className="h-10 rounded-[10px] border-[1.5px] pl-9"
               placeholder="Buscar tutor / telefone / pet…"
               value={filters.q}
               onChange={(e) => persist({ ...filters, q: e.target.value })}
             />
           </div>
 
-          <Button variant="secondary" className="rounded-2xl" onClick={refetchAll}>
+          <Button variant="secondary" className="h-10 rounded-[10px]" onClick={refetchAll}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Atualizar
           </Button>
         </div>
       </div>
 
-      <Card className="rounded-3xl p-4 sm:p-5">
+      <Card className="rounded-[10px] border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="rounded-full">
-              {count} ativos
-            </Badge>
-            <Badge variant="secondary" className="rounded-full">
-              TZ: America/Sao_Paulo
+              {countLabel}
             </Badge>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
+            <Select value={filters.status} onValueChange={(v) => persist({ ...filters, status: v as StatusFilter })}>
+              <SelectTrigger className="h-10 rounded-[10px] border-[1.5px] w-full sm:w-[200px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent className="rounded-[10px]">
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="ATIVO">Ativos</SelectItem>
+                <SelectItem value="FEITO">Resolvidos</SelectItem>
+                <SelectItem value="ARQUIVADO">Arquivados</SelectItem>
+              </SelectContent>
+            </Select>
+
             <Select value={filters.due} onValueChange={(v) => persist({ ...filters, due: v as DuePreset })}>
-              <SelectTrigger className="rounded-2xl w-full sm:w-[210px]">
+              <SelectTrigger className="h-10 rounded-[10px] border-[1.5px] w-full sm:w-[210px]">
                 <Filter className="mr-2 h-4 w-4 opacity-70" />
                 <SelectValue placeholder="Vencimento" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent className="rounded-[10px]">
                 <SelectItem value="overdue">Somente vencidos</SelectItem>
                 <SelectItem value="7d">Próximos 7 dias</SelectItem>
                 <SelectItem value="30d">Próximos 30 dias</SelectItem>
@@ -176,14 +234,11 @@ export default function Reminders() {
               </SelectContent>
             </Select>
 
-            <Select
-              value={filters.reminderType}
-              onValueChange={(v) => persist({ ...filters, reminderType: v as Filters["reminderType"] })}
-            >
-              <SelectTrigger className="rounded-2xl w-full sm:w-[190px]">
+            <Select value={filters.reminderType} onValueChange={(v) => persist({ ...filters, reminderType: v as Filters["reminderType"] })}>
+              <SelectTrigger className="h-10 rounded-[10px] border-[1.5px] w-full sm:w-[190px]">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent className="rounded-[10px]">
                 <SelectItem value="all">Todos os tipos</SelectItem>
                 <SelectItem value="vacina">Vacina</SelectItem>
                 <SelectItem value="medicação">Medicação</SelectItem>
@@ -192,24 +247,21 @@ export default function Reminders() {
             </Select>
 
             <Select value={filters.pet} onValueChange={(v) => persist({ ...filters, pet: v as Filters["pet"] })}>
-              <SelectTrigger className="rounded-2xl w-full sm:w-[190px]">
+              <SelectTrigger className="h-10 rounded-[10px] border-[1.5px] w-full sm:w-[190px]">
                 <SelectValue placeholder="Pet" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent className="rounded-[10px]">
                 <SelectItem value="all">Tutor ou pet</SelectItem>
                 <SelectItem value="with_pet">Somente com pet</SelectItem>
                 <SelectItem value="without_pet">Somente tutor</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select
-              value={filters.branchId}
-              onValueChange={(v) => persist({ ...filters, branchId: v as Filters["branchId"] })}
-            >
-              <SelectTrigger className="rounded-2xl w-full sm:w-[210px]">
+            <Select value={filters.branchId} onValueChange={(v) => persist({ ...filters, branchId: v as Filters["branchId"] })}>
+              <SelectTrigger className="h-10 rounded-[10px] border-[1.5px] w-full sm:w-[210px]">
                 <SelectValue placeholder="Filial" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent className="rounded-[10px]">
                 <SelectItem value="all">Todas</SelectItem>
                 {(branches.data ?? []).map((b) => (
                   <SelectItem key={b.id} value={b.id}>

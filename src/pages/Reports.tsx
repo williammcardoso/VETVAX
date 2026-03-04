@@ -1,89 +1,125 @@
 import { useMemo, useState } from "react";
-import { FileDown } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileDown, Filter, Syringe, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { dayjs } from "@/lib/datetime";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { dayjs } from "@/lib/datetime";
+import VaccinationsReportTable, { type VaccinationReportRow } from "@/components/reports/VaccinationsReportTable";
+import ReopenCheckoutDialog from "@/components/reports/ReopenCheckoutDialog";
 
-type Status = "all" | "PENDENTE" | "APLICADO" | "CANCELADO";
+type Status = "all" | "APLICADO" | "CANCELADO";
 
-function toCsv(rows: Array<Record<string, any>>) {
-  if (!rows.length) return "";
-  const headers = Object.keys(rows[0]);
-  const escape = (v: any) => {
-    const s = v === null || v === undefined ? "" : String(v);
-    const needs = /[",\n]/.test(s);
-    const escaped = s.replace(/"/g, '""');
-    return needs ? `"${escaped}"` : escaped;
-  };
-  return [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\n");
+type FiltersState = {
+  from: string;
+  to: string;
+  status: Status;
+  tutor: string;
+  vaccineQuery: string;
+};
+
+function buildVaccinesLabel(appliedItemsSnapshot: any) {
+  const items = Array.isArray(appliedItemsSnapshot) ? appliedItemsSnapshot : [];
+  const vaccines = items
+    .filter((it) => (it?.category ?? "") === "vaccine")
+    .map((it) => String(it?.catalog_name ?? it?.name ?? "").trim())
+    .filter(Boolean);
+
+  // de-dup preserving order
+  const seen = new Set<string>();
+  const uniq: string[] = [];
+  for (const v of vaccines) {
+    const k = v.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    uniq.push(v);
+  }
+
+  return uniq.join(" • ");
 }
 
-function downloadText(filename: string, text: string) {
-  const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+async function fetchReport(filters: FiltersState) {
+  // We use appointment_checkouts as the source of truth for "vaccinations".
+  // No schema changes; only reads + a controlled reopen action.
+  let q = supabase
+    .from("appointment_checkouts")
+    .select(
+      "id, appointment_id, status_result, checkout_date, applied_items_snapshot, appointment:appointments(id, scheduled_date, scheduled_time, tutor_id, tutor:tutors(id, name, phone1, phone2))",
+    )
+    .gte("checkout_date", filters.from)
+    .lte("checkout_date", filters.to)
+    .order("checkout_date", { ascending: false })
+    .limit(500);
+
+  if (filters.status !== "all") q = q.eq("status_result", filters.status);
+
+  const { data, error } = await q;
+  if (error) throw error;
+
+  const mapped: VaccinationReportRow[] = (data ?? []).map((r: any) => {
+    const appt = r.appointment;
+    const tutor = appt?.tutor;
+
+    return {
+      checkout_id: r.id,
+      appointment_id: r.appointment_id,
+      checkout_date: r.checkout_date,
+      scheduled_date: appt?.scheduled_date ?? r.checkout_date,
+      scheduled_time: appt?.scheduled_time ?? "00:00:00",
+      tutor_id: appt?.tutor_id ?? "",
+      tutor_name: tutor?.name ?? "—",
+      tutor_phone1: tutor?.phone1 ?? null,
+      tutor_phone2: tutor?.phone2 ?? null,
+      status: r.status_result,
+      vaccines: buildVaccinesLabel(r.applied_items_snapshot),
+    };
+  });
+
+  const tutorTerm = filters.tutor.trim().toLowerCase();
+  const vaccineTerm = filters.vaccineQuery.trim().toLowerCase();
+
+  return mapped.filter((row) => {
+    if (tutorTerm) {
+      const hay = [row.tutor_name, row.tutor_phone1, row.tutor_phone2].filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(tutorTerm)) return false;
+    }
+    if (vaccineTerm) {
+      if (!row.vaccines.toLowerCase().includes(vaccineTerm)) return false;
+    }
+    return true;
+  });
 }
 
 export default function Reports() {
-  const [from, setFrom] = useState(dayjs().startOf("month").format("YYYY-MM-DD"));
-  const [to, setTo] = useState(dayjs().endOf("month").format("YYYY-MM-DD"));
-  const [status, setStatus] = useState<Status>("all");
+  const qc = useQueryClient();
 
-  const filename = useMemo(() => {
-    const s = status === "all" ? "todos" : status.toLowerCase();
-    return `vetvax_agendamentos_${from}_a_${to}_${s}.csv`;
-  }, [from, to, status]);
+  const [filters, setFilters] = useState<FiltersState>(() => ({
+    from: dayjs().startOf("month").format("YYYY-MM-DD"),
+    to: dayjs().endOf("month").format("YYYY-MM-DD"),
+    status: "APLICADO",
+    tutor: "",
+    vaccineQuery: "",
+  }));
 
-  const exportCsv = async () => {
-    try {
-      let q = supabase
-        .from("appointments")
-        .select("id, scheduled_date, scheduled_time, channel, status, notes, tutor:tutors(name, phone1, phone2)")
-        .gte("scheduled_date", from)
-        .lte("scheduled_date", to)
-        .order("scheduled_date", { ascending: true })
-        .order("scheduled_time", { ascending: true });
+  const rows = useQuery({
+    queryKey: ["reports", "vaccinations", filters],
+    queryFn: () => fetchReport(filters),
+  });
 
-      if (status !== "all") q = q.eq("status", status);
+  const [reopenOpen, setReopenOpen] = useState(false);
+  const [reopenRow, setReopenRow] = useState<VaccinationReportRow | null>(null);
 
-      const { data, error } = await q;
-      if (error) throw error;
+  const count = rows.data?.length ?? 0;
 
-      const flat = (data ?? []).map((r: any) => ({
-        id: r.id,
-        data: r.scheduled_date,
-        hora: r.scheduled_time,
-        canal: r.channel,
-        status: r.status,
-        tutor_nome: r.tutor?.name ?? "",
-        tutor_phone1: r.tutor?.phone1 ?? "",
-        tutor_phone2: r.tutor?.phone2 ?? "",
-        observacao: r.notes ?? "",
-      }));
-
-      const csv = toCsv(flat);
-      if (!csv) {
-        toast({ title: "Sem dados", description: "Nenhum agendamento no filtro." });
-        return;
-      }
-
-      downloadText(filename, csv);
-      toast({ title: "Export gerado", description: filename });
-    } catch (e: any) {
-      toast({ title: "Falha no export", description: e?.message ?? "Tente novamente.", variant: "destructive" });
-    }
-  };
+  const title = useMemo(() => {
+    const s = filters.status === "all" ? "todos" : filters.status.toLowerCase();
+    return `Relatório de vacinações (${s})`;
+  }, [filters.status]);
 
   return (
     <div className="space-y-6">
@@ -92,43 +128,117 @@ export default function Reports() {
           <FileDown className="h-3.5 w-3.5" />
           Relatórios
         </div>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Exports (CSV)</h1>
-        <p className="mt-1 text-sm text-muted-foreground">MVP: exportar agendamentos por período e status (client-side).</p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{title}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Baseado nas baixas (checkouts). Use filtros, exporte CSV e reabra registros quando necessário.
+        </p>
       </div>
 
-      <Card className="rounded-3xl p-4 sm:p-6">
-        <div className="grid gap-4 sm:grid-cols-3 sm:items-end">
-          <div className="grid gap-2">
-            <Label>De</Label>
-            <Input type="date" className="rounded-2xl" value={from} onChange={(e) => setFrom(e.target.value)} />
+      <Card className="rounded-[10px] border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="rounded-full">
+              {count} registros
+            </Badge>
           </div>
-          <div className="grid gap-2">
-            <Label>Até</Label>
-            <Input type="date" className="rounded-2xl" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
-          <div className="grid gap-2">
-            <Label>Status</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
-              <SelectTrigger className="rounded-2xl">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="PENDENTE">Pendente</SelectItem>
-                <SelectItem value="APLICADO">Aplicado</SelectItem>
-                <SelectItem value="CANCELADO">Cancelado</SelectItem>
-              </SelectContent>
-            </Select>
+
+          <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
+            <div className="grid gap-2">
+              <Label>Período</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="date"
+                  className="h-10 rounded-[10px] border-[1.5px]"
+                  value={filters.from}
+                  onChange={(e) => setFilters((p) => ({ ...p, from: e.target.value }))}
+                />
+                <Input
+                  type="date"
+                  className="h-10 rounded-[10px] border-[1.5px]"
+                  value={filters.to}
+                  onChange={(e) => setFilters((p) => ({ ...p, to: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Status</Label>
+              <Select value={filters.status} onValueChange={(v) => setFilters((p) => ({ ...p, status: v as Status }))}>
+                <SelectTrigger className="h-10 rounded-[10px] border-[1.5px] w-full sm:w-[200px]">
+                  <Filter className="mr-2 h-4 w-4 opacity-70" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="rounded-[10px]">
+                  <SelectItem value="APLICADO">Aplicado</SelectItem>
+                  <SelectItem value="CANCELADO">Cancelado</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Tutor</Label>
+              <div className="relative">
+                <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="h-10 rounded-[10px] border-[1.5px] pl-9 w-full sm:w-[240px]"
+                  placeholder="Nome ou telefone…"
+                  value={filters.tutor}
+                  onChange={(e) => setFilters((p) => ({ ...p, tutor: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Tipo vacina</Label>
+              <div className="relative">
+                <Syringe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="h-10 rounded-[10px] border-[1.5px] pl-9 w-full sm:w-[240px]"
+                  placeholder="Ex: V8, antirrábica…"
+                  value={filters.vaccineQuery}
+                  onChange={(e) => setFilters((p) => ({ ...p, vaccineQuery: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <Button
+              variant="secondary"
+              className="h-10 rounded-[10px]"
+              onClick={async () => {
+                await qc.invalidateQueries({ queryKey: ["reports", "vaccinations"] });
+                toast({ title: "Atualizado" });
+              }}
+            >
+              Atualizar
+            </Button>
           </div>
         </div>
 
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button className="rounded-2xl" onClick={exportCsv}>
-            <FileDown className="mr-2 h-4 w-4" />
-            Exportar CSV
-          </Button>
+        <div className="mt-4">
+          <VaccinationsReportTable
+            loading={rows.isLoading}
+            rows={rows.data ?? []}
+            onExport={() => toast({ title: "CSV exportado" })}
+            onReopen={(r) => {
+              setReopenRow(r);
+              setReopenOpen(true);
+            }}
+          />
         </div>
       </Card>
+
+      <ReopenCheckoutDialog
+        open={reopenOpen}
+        row={reopenRow}
+        onOpenChange={(v) => {
+          setReopenOpen(v);
+          if (!v) setReopenRow(null);
+        }}
+        onChanged={async () => {
+          await qc.invalidateQueries({ queryKey: ["reports", "vaccinations"] });
+        }}
+      />
     </div>
   );
 }
