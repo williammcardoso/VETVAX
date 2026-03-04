@@ -14,6 +14,17 @@ type AgendaItem = {
   vaccine: string;
 };
 
+function todayIsoInSaoPaulo() {
+  // Avoid UTC date drift: appointments.scheduled_date is a DATE, so we should compare using the org's timezone.
+  // en-CA produces YYYY-MM-DD.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -67,11 +78,8 @@ serve(async (req) => {
 
     console.log("[public-agenda] matched org", { org_id: match.org_id });
 
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, "0");
-    const dd = String(today.getDate()).padStart(2, "0");
-    const todayIso = `${yyyy}-${mm}-${dd}`;
+    const todayIso = todayIsoInSaoPaulo();
+    console.log("[public-agenda] date filter", { todayIso });
 
     const { data, error } = await admin
       .from("appointments")
