@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { MessageCircle, MoreHorizontal } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import type { DueReminderRow } from "@/types/vetvax";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -10,11 +10,11 @@ import { buildWhatsAppLink } from "@/lib/phone";
 import { daysDiffFromToday, formatDateBr } from "@/lib/datetime";
 import { supabase } from "@/lib/supabase";
 import { useWhatsMessage } from "@/components/dashboard/useWhatsMessage";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 
 function statusTone(diff: number) {
-  if (diff < 0) return { bar: "bg-destructive", dot: "bg-destructive" };
-  if (diff === 0) return { bar: "bg-amber-500", dot: "bg-amber-500" };
-  return { bar: "bg-emerald-500", dot: "bg-emerald-500" };
+  if (diff < 0) return { bar: "border-l-[#DC2626]", dot: "bg-[#DC2626]" };
+  return { bar: "border-l-[#16A34A]", dot: "bg-[#16A34A]" };
 }
 
 export default function DueRemindersList({
@@ -85,7 +85,7 @@ export default function DueRemindersList({
       {loading &&
         Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="p-3">
-            <Skeleton className="h-14 w-full rounded-[12px]" />
+            <Skeleton className="h-14 w-full rounded-[10px]" />
           </div>
         ))}
 
@@ -104,9 +104,7 @@ export default function DueRemindersList({
           : false;
 
         return (
-          <div key={r.id} className="flex gap-3 p-3">
-            <div className={`w-1.5 rounded-full ${tone.bar}`} />
-
+          <div key={r.id} className={`flex gap-3 border-l-4 ${tone.bar} p-3`}>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -127,7 +125,7 @@ export default function DueRemindersList({
                     disabled={openWhats.isPending || lastSentRecently}
                     title={lastSentRecently ? "Envio recente (menos de 24h)" : "WhatsApp"}
                   >
-                    <MessageCircle className="h-4 w-4" strokeWidth={2} />
+                    <WhatsAppIcon className="h-4 w-4" />
                   </Button>
 
                   <DropdownMenu>
@@ -136,17 +134,11 @@ export default function DueRemindersList({
                         <MoreHorizontal className="h-4 w-4" strokeWidth={2} />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-[12px]">
-                      <DropdownMenuItem
-                        className="rounded-[10px]"
-                        onClick={() => setStatus.mutate({ id: r.id, status: "FEITO" })}
-                      >
+                    <DropdownMenuContent align="end" className="rounded-[10px]">
+                      <DropdownMenuItem className="rounded-[8px]" onClick={() => setStatus.mutate({ id: r.id, status: "FEITO" })}>
                         Marcar como resolvido
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="rounded-[10px]"
-                        onClick={() => setStatus.mutate({ id: r.id, status: "ARQUIVADO" })}
-                      >
+                      <DropdownMenuItem className="rounded-[8px]" onClick={() => setStatus.mutate({ id: r.id, status: "ARQUIVADO" })}>
                         Arquivar
                       </DropdownMenuItem>
                     </DropdownMenuContent>

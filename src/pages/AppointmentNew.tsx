@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Trash2 } from "lucide-react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -18,6 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import TutorCombobox from "@/components/tutors/TutorCombobox";
 import TutorUpsertDialog from "@/components/tutors/TutorUpsertDialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 const itemSchema = z.object({
   catalog_item_id: z.string().uuid("Selecione um item"),
@@ -34,7 +37,6 @@ const schema = z.object({
   tutor_id: z.string().uuid("Selecione um tutor"),
   scheduled_date: z.string().min(10, "Informe a data"),
   scheduled_time: z.string().min(4, "Informe o horário"),
-  channel: z.enum(["store", "phone", "whatsapp", "other"]),
   notes: z.string().optional().nullable(),
   separate_by_pet: z.boolean().default(false),
   items: z.array(itemSchema).min(1, "Adicione ao menos 1 item"),
@@ -45,6 +47,17 @@ type Values = z.infer<typeof schema>;
 function useQueryParam(name: string) {
   const { search } = useLocation();
   return useMemo(() => new URLSearchParams(search).get(name), [search, name]);
+}
+
+function buildTimeSlots() {
+  const slots: string[] = [];
+  for (let h = 8; h <= 18; h++) {
+    for (const m of [0, 30]) {
+      if (h === 18 && m > 0) continue;
+      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    }
+  }
+  return slots;
 }
 
 export default function AppointmentNew() {
@@ -73,7 +86,6 @@ export default function AppointmentNew() {
       tutor_id: tutorParam ?? "",
       scheduled_date: dayjs().format("YYYY-MM-DD"),
       scheduled_time: "09:00",
-      channel: "store",
       notes: "",
       separate_by_pet: false,
       items: [{ catalog_item_id: "", quantity: 1, pet_id: null, free_description: null }],
@@ -86,6 +98,7 @@ export default function AppointmentNew() {
   }, [tutorParam]);
 
   const tutorId = form.watch("tutor_id");
+  const scheduledDate = form.watch("scheduled_date");
 
   const pets = useQuery({
     queryKey: ["pets", "byTutor", tutorId],
@@ -101,6 +114,23 @@ export default function AppointmentNew() {
       return (data ?? []) as Pet[];
     },
   });
+
+  const busyTimes = useQuery({
+    queryKey: ["appointments", "busyTimes", scheduledDate],
+    enabled: !!scheduledDate,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("scheduled_time")
+        .eq("scheduled_date", scheduledDate)
+        .eq("status", "PENDENTE")
+        .eq("is_active", true);
+      if (error) throw error;
+      return new Set((data ?? []).map((r: any) => String(r.scheduled_time).slice(0, 5)));
+    },
+  });
+
+  const timeSlots = useMemo(() => buildTimeSlots(), []);
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "items" });
 
@@ -120,7 +150,8 @@ export default function AppointmentNew() {
           tutor_id: values.tutor_id,
           scheduled_date: values.scheduled_date,
           scheduled_time: values.scheduled_time,
-          channel: values.channel,
+          // Mantemos o campo no backend, mas não expomos na UI (regra: remover Canal).
+          channel: "store",
           notes: values.notes,
           items: values.items.map((it) => ({
             catalog_item_id: it.catalog_item_id,
@@ -156,13 +187,13 @@ export default function AppointmentNew() {
           <h1 className="text-2xl font-semibold tracking-tight">Novo agendamento</h1>
           <p className="mt-1 text-sm text-muted-foreground">Crie um pedido unificado no tutor ou separe itens por pet.</p>
         </div>
-        <Button asChild variant="secondary" className="rounded-2xl">
+        <Button asChild variant="secondary" className="rounded-[10px]">
           <Link to="/dashboard">Voltar</Link>
         </Button>
       </div>
 
       <form className="grid gap-6" onSubmit={form.handleSubmit((v) => save.mutate(v))}>
-        <Card className="rounded-3xl p-4 sm:p-6">
+        <Card className="rounded-[10px] border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-6">
           <div className="grid gap-4">
             <div className="grid gap-2">
               <Label>Tutor</Label>
@@ -180,35 +211,72 @@ export default function AppointmentNew() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Data</Label>
-                <Input type="date" className="rounded-2xl" {...form.register("scheduled_date")} />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        "h-10 w-full justify-start rounded-[10px] border-[1.5px] text-left font-medium",
+                        !scheduledDate && "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {scheduledDate ? dayjs(scheduledDate).format("DD/MM/YYYY") : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto rounded-[10px] p-3" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={scheduledDate ? new Date(scheduledDate + "T00:00:00") : undefined}
+                      onSelect={(d) => {
+                        if (!d) return;
+                        const iso = dayjs(d).format("YYYY-MM-DD");
+                        form.setValue("scheduled_date", iso, { shouldValidate: true });
+                      }}
+                      initialFocus
+                      className="rounded-[10px]"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {form.formState.errors.scheduled_date && (
+                  <p className="text-xs text-destructive">{form.formState.errors.scheduled_date.message}</p>
+                )}
               </div>
+
               <div className="grid gap-2">
                 <Label>Hora</Label>
-                <Input type="time" className="rounded-2xl" {...form.register("scheduled_time")} />
-              </div>
-              <div className="grid gap-2">
-                <Label>Canal</Label>
                 <Select
-                  value={form.watch("channel")}
-                  onValueChange={(v) => form.setValue("channel", v as Values["channel"]) }
+                  value={form.watch("scheduled_time")}
+                  onValueChange={(v) => form.setValue("scheduled_time", v, { shouldValidate: true })}
                 >
-                  <SelectTrigger className="rounded-2xl">
-                    <SelectValue />
+                  <SelectTrigger className="h-10 rounded-[10px] border-[1.5px]">
+                    <SelectValue placeholder="Selecionar horário" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-2xl">
-                    <SelectItem value="store">Loja</SelectItem>
-                    <SelectItem value="phone">Telefone</SelectItem>
-                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                    <SelectItem value="other">Outro</SelectItem>
+                  <SelectContent className="rounded-[10px]">
+                    {timeSlots.map((t) => {
+                      const busy = busyTimes.data?.has(t) ?? false;
+                      return (
+                        <SelectItem key={t} value={t} disabled={busy}>
+                          <div className="flex w-full items-center justify-between gap-3">
+                            <span>{t}</span>
+                            {busy ? <span className="text-xs text-muted-foreground">ocupado</span> : null}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
+                {form.formState.errors.scheduled_time && (
+                  <p className="text-xs text-destructive">{form.formState.errors.scheduled_time.message}</p>
+                )}
               </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-2xl border bg-muted/20 px-3 py-3">
+            <div className="flex items-center justify-between rounded-[10px] border-[1.5px] border-border bg-muted/20 px-3 py-3">
               <div>
                 <div className="text-sm font-medium">Separar por pets</div>
                 <div className="text-xs text-muted-foreground">Se ligado, cada item pode ser vinculado a um pet.</div>
@@ -218,12 +286,12 @@ export default function AppointmentNew() {
 
             <div className="grid gap-2">
               <Label>Observações</Label>
-              <Textarea className="rounded-2xl" rows={3} {...form.register("notes")} />
+              <Textarea className="rounded-[10px] border-[1.5px]" rows={3} {...form.register("notes")} />
             </div>
           </div>
         </Card>
 
-        <Card className="rounded-3xl p-4 sm:p-6">
+        <Card className="rounded-[10px] border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-semibold">Itens</div>
@@ -232,7 +300,7 @@ export default function AppointmentNew() {
             <Button
               type="button"
               variant="secondary"
-              className="rounded-2xl"
+              className="rounded-[10px]"
               onClick={() => append({ catalog_item_id: "", quantity: 1, pet_id: null, free_description: null })}
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -247,7 +315,7 @@ export default function AppointmentNew() {
               const needsDesc = !!cat?.requires_description;
 
               return (
-                <div key={f.id} className="rounded-3xl border bg-card p-4">
+                <div key={f.id} className="rounded-[10px] border-[1.5px] border-border bg-card p-4">
                   <div className="grid gap-3 sm:grid-cols-12 sm:items-end">
                     <div className="grid gap-2 sm:col-span-5">
                       <Label>Item</Label>
@@ -255,10 +323,10 @@ export default function AppointmentNew() {
                         value={catId || ""}
                         onValueChange={(v) => form.setValue(`items.${idx}.catalog_item_id`, v, { shouldValidate: true })}
                       >
-                        <SelectTrigger className="rounded-2xl">
+                        <SelectTrigger className="rounded-[10px] border-[1.5px]">
                           <SelectValue placeholder="Selecione…" />
                         </SelectTrigger>
-                        <SelectContent className="rounded-2xl">
+                        <SelectContent className="rounded-[10px]">
                           {(catalog.data ?? []).map((c) => (
                             <SelectItem key={c.id} value={c.id}>
                               {c.name}
@@ -275,27 +343,20 @@ export default function AppointmentNew() {
 
                     <div className="grid gap-2 sm:col-span-2">
                       <Label>Qtd.</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        className="rounded-2xl"
-                        {...form.register(`items.${idx}.quantity` as const)}
-                      />
+                      <Input type="number" min={1} className="h-10 rounded-[10px] border-[1.5px]" {...form.register(`items.${idx}.quantity` as const)} />
                     </div>
 
                     <div className="grid gap-2 sm:col-span-4">
                       <Label>Pet (opcional)</Label>
                       <Select
                         value={(form.watch(`items.${idx}.pet_id`) ?? "") || ""}
-                        onValueChange={(v) =>
-                          form.setValue(`items.${idx}.pet_id`, v === "_none" ? null : v, { shouldValidate: true })
-                        }
+                        onValueChange={(v) => form.setValue(`items.${idx}.pet_id`, v === "_none" ? null : v, { shouldValidate: true })}
                         disabled={!separateByPet || !tutorId}
                       >
-                        <SelectTrigger className="rounded-2xl">
+                        <SelectTrigger className="rounded-[10px] border-[1.5px]">
                           <SelectValue placeholder={separateByPet ? "Selecione…" : "Desligado"} />
                         </SelectTrigger>
-                        <SelectContent className="rounded-2xl">
+                        <SelectContent className="rounded-[10px]">
                           <SelectItem value="_none">Sem pet</SelectItem>
                           {(pets.data ?? []).map((p) => (
                             <SelectItem key={p.id} value={p.id}>
@@ -311,7 +372,7 @@ export default function AppointmentNew() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="rounded-2xl"
+                        className="h-10 w-10 rounded-[10px]"
                         onClick={() => remove(idx)}
                         disabled={fields.length === 1}
                       >
@@ -324,7 +385,7 @@ export default function AppointmentNew() {
                     <div className="mt-3 grid gap-2">
                       <Label>Descrição (obrigatória)</Label>
                       <Textarea
-                        className="rounded-2xl"
+                        className="rounded-[10px] border-[1.5px]"
                         rows={2}
                         placeholder="Ex: medicação X, dose Y, observações…"
                         {...form.register(`items.${idx}.free_description` as const)}
@@ -335,15 +396,15 @@ export default function AppointmentNew() {
                   <div className="mt-3 grid gap-3 sm:grid-cols-3">
                     <div className="grid gap-2">
                       <Label>Marca (opcional)</Label>
-                      <Input className="rounded-2xl" {...form.register(`items.${idx}.brand` as const)} />
+                      <Input className="h-10 rounded-[10px] border-[1.5px]" {...form.register(`items.${idx}.brand` as const)} />
                     </div>
                     <div className="grid gap-2">
                       <Label>Lote (opcional)</Label>
-                      <Input className="rounded-2xl" {...form.register(`items.${idx}.lot` as const)} />
+                      <Input className="h-10 rounded-[10px] border-[1.5px]" {...form.register(`items.${idx}.lot` as const)} />
                     </div>
                     <div className="grid gap-2">
                       <Label>Validade (opcional)</Label>
-                      <Input type="date" className="rounded-2xl" {...form.register(`items.${idx}.expires_on` as const)} />
+                      <Input type="date" className="h-10 rounded-[10px] border-[1.5px]" {...form.register(`items.${idx}.expires_on` as const)} />
                     </div>
                   </div>
                 </div>
@@ -356,7 +417,7 @@ export default function AppointmentNew() {
           )}
 
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button type="submit" className="rounded-2xl" disabled={save.isPending}>
+            <Button type="submit" className="rounded-[10px]" disabled={save.isPending}>
               {save.isPending ? "Criando…" : "Criar agendamento"}
             </Button>
           </div>

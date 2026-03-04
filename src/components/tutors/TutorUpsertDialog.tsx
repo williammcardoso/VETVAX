@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import type { Tutor } from "@/types/vetvax";
 import { supabase } from "@/lib/supabase";
-import { normalizeBrPhone } from "@/lib/phone";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -31,6 +30,17 @@ const schema = z.object({
 });
 
 type Values = z.infer<typeof schema>;
+
+function maskPhoneBR(value: string) {
+  const d = (value ?? "").replace(/\D/g, "").slice(0, 11);
+  if (!d) return "";
+  const ddd = d.slice(0, 2);
+  const rest = d.slice(2);
+  if (rest.length <= 4) return `(${ddd}) ${rest}`;
+  if (rest.length <= 5) return `(${ddd}) ${rest}`;
+  if (rest.length <= 9) return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+  return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5, 9)}`;
+}
 
 export default function TutorUpsertDialog({
   open,
@@ -73,8 +83,9 @@ export default function TutorUpsertDialog({
         created_by: user?.id ?? null,
 
         name: values.name,
-        phone1: values.phone1 ? normalizeBrPhone(values.phone1) : null,
-        phone2: values.phone2 ? normalizeBrPhone(values.phone2) : null,
+        // Salva apenas números no banco
+        phone1: values.phone1 ? (values.phone1 ?? "").replace(/\D/g, "") : null,
+        phone2: values.phone2 ? (values.phone2 ?? "").replace(/\D/g, "") : null,
         street: values.street || null,
         number: values.number || null,
         complement: values.complement || null,
@@ -90,7 +101,6 @@ export default function TutorUpsertDialog({
       };
 
       if (initial?.id) {
-        // Não atualize org_id/created_by em updates (mantemos o dado original).
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { org_id, created_by, ...updatePayload } = payload;
         const { data, error } = await supabase
@@ -122,7 +132,7 @@ export default function TutorUpsertDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-3xl max-w-2xl">
+      <DialogContent className="rounded-[10px] max-w-2xl">
         <DialogHeader>
           <DialogTitle>{initial?.id ? "Editar tutor" : "Novo tutor"}</DialogTitle>
         </DialogHeader>
@@ -130,53 +140,63 @@ export default function TutorUpsertDialog({
         <form className="mt-2 grid gap-4" onSubmit={form.handleSubmit((v) => save.mutate(v))}>
           <div className="grid gap-2">
             <Label>Nome</Label>
-            <Input className="rounded-2xl" placeholder="Ex: Maria Silva" {...form.register("name")} />
-            {form.formState.errors.name && (
-              <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
-            )}
+            <Input className="h-10 rounded-[10px] border-[1.5px]" placeholder="Ex: Maria Silva" {...form.register("name")} />
+            {form.formState.errors.name && <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>Telefone 1</Label>
-              <Input className="rounded-2xl" placeholder="+55 11 99999-9999" {...form.register("phone1")} />
+              <Input
+                className="h-10 rounded-[10px] border-[1.5px]"
+                placeholder="(00) 00000-0000"
+                inputMode="tel"
+                value={maskPhoneBR(form.watch("phone1") ?? "")}
+                onChange={(e) => form.setValue("phone1", maskPhoneBR(e.target.value))}
+              />
             </div>
             <div className="grid gap-2">
               <Label>Telefone 2</Label>
-              <Input className="rounded-2xl" placeholder="Opcional" {...form.register("phone2")} />
+              <Input
+                className="h-10 rounded-[10px] border-[1.5px]"
+                placeholder="(00) 00000-0000"
+                inputMode="tel"
+                value={maskPhoneBR(form.watch("phone2") ?? "")}
+                onChange={(e) => form.setValue("phone2", maskPhoneBR(e.target.value))}
+              />
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-6">
             <div className="grid gap-2 sm:col-span-3">
               <Label>Rua</Label>
-              <Input className="rounded-2xl" {...form.register("street")} />
+              <Input className="h-10 rounded-[10px] border-[1.5px]" {...form.register("street")} />
             </div>
             <div className="grid gap-2 sm:col-span-1">
               <Label>Nº</Label>
-              <Input className="rounded-2xl" {...form.register("number")} />
+              <Input className="h-10 rounded-[10px] border-[1.5px]" {...form.register("number")} />
             </div>
             <div className="grid gap-2 sm:col-span-2">
               <Label>Complemento</Label>
-              <Input className="rounded-2xl" {...form.register("complement")} />
+              <Input className="h-10 rounded-[10px] border-[1.5px]" {...form.register("complement")} />
             </div>
             <div className="grid gap-2 sm:col-span-2">
               <Label>Bairro</Label>
-              <Input className="rounded-2xl" {...form.register("neighborhood")} />
+              <Input className="h-10 rounded-[10px] border-[1.5px]" {...form.register("neighborhood")} />
             </div>
             <div className="grid gap-2 sm:col-span-3">
               <Label>Cidade</Label>
-              <Input className="rounded-2xl" {...form.register("city")} />
+              <Input className="h-10 rounded-[10px] border-[1.5px]" {...form.register("city")} />
             </div>
             <div className="grid gap-2 sm:col-span-1">
               <Label>UF</Label>
-              <Input className="rounded-2xl" maxLength={2} {...form.register("uf")} />
+              <Input className="h-10 rounded-[10px] border-[1.5px]" maxLength={2} {...form.register("uf")} />
             </div>
           </div>
 
           <div className="grid gap-2">
             <Label>Tags (separadas por vírgula)</Label>
-            <Input className="rounded-2xl" placeholder="cliente antigo, vip" {...form.register("tagsText")} />
+            <Input className="h-10 rounded-[10px] border-[1.5px]" placeholder="cliente antigo, vip" {...form.register("tagsText")} />
             <div className="flex flex-wrap gap-1">
               {(form.watch("tagsText") ?? "")
                 .split(",")
@@ -191,7 +211,7 @@ export default function TutorUpsertDialog({
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-2xl border bg-muted/20 px-3 py-3">
+          <div className="flex items-center justify-between rounded-[10px] border-[1.5px] border-border bg-muted/20 px-3 py-3">
             <div>
               <div className="text-sm font-medium">Consentimento de contato</div>
               <div className="text-xs text-muted-foreground">Marque apenas se o tutor autorizou mensagens.</div>
@@ -201,14 +221,14 @@ export default function TutorUpsertDialog({
 
           <div className="grid gap-2">
             <Label>Observações</Label>
-            <Textarea className="rounded-2xl" rows={3} {...form.register("notes")} />
+            <Textarea className="rounded-[10px] border-[1.5px]" rows={3} {...form.register("notes")} />
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="secondary" className="rounded-2xl" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="secondary" className="rounded-[10px]" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" className="rounded-2xl" disabled={save.isPending}>
+            <Button type="submit" className="rounded-[10px]" disabled={save.isPending}>
               {save.isPending ? "Salvando…" : "Salvar"}
             </Button>
           </div>

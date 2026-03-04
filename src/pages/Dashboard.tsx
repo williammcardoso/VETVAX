@@ -147,13 +147,7 @@ export default function Dashboard() {
           value={upcoming.data?.length ?? "–"}
           tone="blue"
         />
-        <KpiCard
-          icon={Syringe}
-          badge="Total"
-          label="Lembretes ativos"
-          value={reminders.data?.length ?? "–"}
-          tone="amber"
-        />
+        <KpiCard icon={Syringe} badge="Total" label="Lembretes ativos" value={reminders.data?.length ?? "–"} tone="amber" />
         <KpiCard
           icon={ShieldAlert}
           badge="Vencidos"
@@ -161,18 +155,12 @@ export default function Dashboard() {
           value={kpis.data?.overdue_reminders ?? "–"}
           tone="red"
         />
-        <KpiCard
-          icon={CheckCircle2}
-          badge="Mês"
-          label="Aplicados (mês)"
-          value={kpis.data?.applied_month ?? "–"}
-          tone="green"
-        />
+        <KpiCard icon={CheckCircle2} badge="Mês" label="Aplicados (mês)" value={kpis.data?.applied_month ?? "–"} tone="green" />
       </div>
 
       {/* Layout 2 colunas */}
       <div className="grid gap-5 lg:grid-cols-[0.66fr_0.34fr]">
-        <section className="rounded-[14px] bg-card border border-border p-4 sm:p-5">
+        <section className="rounded-[10px] bg-card border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-base font-semibold">Próximos agendamentos</div>
@@ -183,7 +171,7 @@ export default function Dashboard() {
               <div className="relative w-full sm:w-[280px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  className="h-10 rounded-[12px] border bg-background pl-9"
+                  className="h-10 rounded-[10px] border-[1.5px] bg-background pl-9"
                   placeholder="Buscar tutor / telefone..."
                   value={filters.q}
                   onChange={(e) => {
@@ -193,19 +181,14 @@ export default function Dashboard() {
                   }}
                 />
               </div>
-              <Button variant="outline" className="h-10 rounded-[12px] border" onClick={onRefetch}>
+              <Button variant="outline" className="h-10 rounded-[10px] border-[1.5px]" onClick={onRefetch}>
                 Atualizar
               </Button>
             </div>
           </div>
 
           <div className="mt-4">
-            <UpcomingAppointmentsTable
-              loading={upcoming.isLoading}
-              rows={upcomingPaged}
-              onChanged={onRefetch}
-              variant="compact"
-            />
+            <UpcomingAppointmentsTable loading={upcoming.isLoading} rows={upcomingPaged} onChanged={onRefetch} variant="compact" />
           </div>
 
           <div className="mt-4">
@@ -213,7 +196,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="rounded-[14px] bg-card border border-border p-4 sm:p-5">
+        <section className="rounded-[10px] bg-card border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-base font-semibold">Lembretes</div>
@@ -222,7 +205,7 @@ export default function Dashboard() {
             <Badge className="rounded-full border bg-muted text-foreground">Total</Badge>
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-[12px] border border-border bg-background">
+          <div className="mt-4 overflow-hidden rounded-[10px] border-[1.5px] border-border bg-background">
             <DueRemindersList loading={reminders.isLoading} rows={remindersPaged} onChanged={onRefetch} />
           </div>
 
