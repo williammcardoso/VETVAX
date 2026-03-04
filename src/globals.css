@@ -7,7 +7,8 @@
     /* VetVAX — identidade mais forte (alto contraste) */
     --brand: 221 83% 47%; /* #1D4ED8 */
 
-    --background: 214 33% 95%; /* #EEF2F7 */
+    /* Base mais branca (pedido do usuário) */
+    --background: 0 0% 100%;
     --foreground: 222 47% 11%; /* slate-900 */
 
     --card: 0 0% 100%;
@@ -19,10 +20,10 @@
     --primary: var(--brand);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%; /* slate-100 */
+    --secondary: 214 33% 95%; /* #EEF2F7 */
     --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 40% 96%;
+    --muted: 214 33% 95%;
     --muted-foreground: 215 16% 47%; /* #64748B */
 
     --accent: 221 83% 96%;
@@ -55,7 +56,7 @@
   .dark {
     --brand: 221 83% 47%;
 
-    --background: 214 33% 95%;
+    --background: 0 0% 100%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -67,10 +68,10 @@
     --primary: var(--brand);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
+    --secondary: 214 33% 95%;
     --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 40% 96%;
+    --muted: 214 33% 95%;
     --muted-foreground: 215 16% 47%;
 
     --accent: 221 83% 96%;

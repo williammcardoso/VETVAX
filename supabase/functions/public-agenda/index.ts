@@ -7,11 +7,15 @@ const corsHeaders = {
 };
 
 type AgendaItem = {
+  appointment_id: string;
   scheduled_date: string;
   scheduled_time: string;
+  status: "PENDENTE" | "APLICADO" | "CANCELADO";
   tutor_name: string;
   pet_name: string | null;
-  vaccine: string;
+  category: string;
+  item_name: string;
+  quantity: number;
 };
 
 function todayIsoInSaoPaulo() {
@@ -81,18 +85,18 @@ serve(async (req) => {
     const todayIso = todayIsoInSaoPaulo();
     console.log("[public-agenda] date filter", { todayIso });
 
+    // IMPORTANT: public agenda should show *all* upcoming appointments (not only PENDENTE and not only vaccines).
     const { data, error } = await admin
       .from("appointments")
       .select(
-        "id, org_id, scheduled_date, scheduled_time, status, is_active, tutor:tutors(name), items:appointment_items(pet:pets(name), item:catalog_items(name, category))",
+        "id, org_id, scheduled_date, scheduled_time, status, is_active, tutor:tutors(name), items:appointment_items(quantity, pet:pets(name), item:catalog_items(name, category))",
       )
       .eq("org_id", match.org_id)
       .eq("is_active", true)
-      .eq("status", "PENDENTE")
       .gte("scheduled_date", todayIso)
       .order("scheduled_date", { ascending: true })
       .order("scheduled_time", { ascending: true })
-      .limit(700);
+      .limit(1000);
 
     if (error) {
       console.error("[public-agenda] appointments error", { error });
@@ -104,31 +108,38 @@ serve(async (req) => {
     const flat: AgendaItem[] = [];
 
     for (const a of data ?? []) {
-      const items = (a as any).items ?? [];
-      const vaccines = items
-        .filter((it: any) => (it?.item?.category ?? "") === "vaccine")
-        .map((it: any) => ({
-          pet_name: it?.pet?.name ?? null,
-          vaccine: it?.item?.name ?? "",
-        }))
-        .filter((v: any) => typeof v.vaccine === "string" && v.vaccine.trim());
-
       const tutor_name = (a as any).tutor?.name ?? "—";
       const scheduled_date = String((a as any).scheduled_date);
       const scheduled_time = String((a as any).scheduled_time).slice(0, 5);
+      const status = String((a as any).status) as AgendaItem["status"];
 
-      if (vaccines.length === 0) {
-        flat.push({ scheduled_date, scheduled_time, tutor_name, pet_name: null, vaccine: "—" });
+      const items = ((a as any).items ?? []) as any[];
+      if (items.length === 0) {
+        flat.push({
+          appointment_id: String((a as any).id),
+          scheduled_date,
+          scheduled_time,
+          status,
+          tutor_name,
+          pet_name: null,
+          category: "—",
+          item_name: "—",
+          quantity: 1,
+        });
         continue;
       }
 
-      for (const v of vaccines) {
+      for (const it of items) {
         flat.push({
+          appointment_id: String((a as any).id),
           scheduled_date,
           scheduled_time,
+          status,
           tutor_name,
-          pet_name: v.pet_name,
-          vaccine: v.vaccine,
+          pet_name: it?.pet?.name ?? null,
+          category: String(it?.item?.category ?? "—"),
+          item_name: String(it?.item?.name ?? "—"),
+          quantity: Number(it?.quantity ?? 1),
         });
       }
     }
