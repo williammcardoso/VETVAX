@@ -18,6 +18,8 @@ export type VaccinationReportRow = {
   tutor_phone2: string | null;
   status: "APLICADO" | "CANCELADO";
   vaccines: string;
+  created_by: string | null;
+  responsible_name: string | null;
 };
 
 function toCsv(rows: Array<Record<string, any>>) {
@@ -68,6 +70,7 @@ export default function VaccinationsReportTable({
         hora: r.scheduled_time,
         tutor: r.tutor_name,
         vacinas: r.vaccines,
+        responsavel: r.responsible_name ?? "",
         status: r.status,
         appointment_id: r.appointment_id,
         checkout_id: r.checkout_id,
@@ -110,6 +113,7 @@ export default function VaccinationsReportTable({
             <TableHead className="w-[140px]">Data</TableHead>
             <TableHead className="w-[100px]">Hora</TableHead>
             <TableHead>Tutor</TableHead>
+            <TableHead className="hidden lg:table-cell">Responsável</TableHead>
             <TableHead>Vacina</TableHead>
             <TableHead className="w-[140px]">Status</TableHead>
             <TableHead className="w-[160px]"></TableHead>
@@ -119,7 +123,7 @@ export default function VaccinationsReportTable({
           {loading &&
             Array.from({ length: 8 }).map((_, i) => (
               <TableRow key={i}>
-                <TableCell colSpan={6}>
+                <TableCell colSpan={7}>
                   <Skeleton className="h-9 w-full rounded-[10px]" />
                 </TableCell>
               </TableRow>
@@ -137,6 +141,9 @@ export default function VaccinationsReportTable({
               <TableCell className="align-top">
                 <div className="text-sm font-medium leading-tight">{r.tutor_name}</div>
                 <div className="mt-0.5 text-[11px] text-muted-foreground">#{r.appointment_id.slice(0, 8)}</div>
+              </TableCell>
+              <TableCell className="hidden lg:table-cell align-top">
+                <div className="text-sm">{r.responsible_name ?? "—"}</div>
               </TableCell>
               <TableCell className="align-top">
                 <div className="text-sm">{r.vaccines || "—"}</div>
@@ -159,7 +166,7 @@ export default function VaccinationsReportTable({
 
           {empty && (
             <TableRow>
-              <TableCell colSpan={6} className="py-10">
+              <TableCell colSpan={7} className="py-10">
                 <div className="mx-auto max-w-sm text-center">
                   <div className="text-sm font-medium">Nenhum registro</div>
                   <p className="mt-1 text-xs text-muted-foreground">Ajuste os filtros para encontrar vacinações.</p>

@@ -80,10 +80,10 @@ export default function CheckoutDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-3xl">
+      <DialogContent className="rounded-[10px] border-[1.5px] border-border shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-2xl bg-muted">
+            <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-muted">
               <Syringe className="h-5 w-5" />
             </span>
             Dar baixa
@@ -98,11 +98,11 @@ export default function CheckoutDialog({
               onValueChange={(v) => form.setValue("status_result", v as Values["status_result"], { shouldValidate: true })}
               className="grid grid-cols-2 gap-2"
             >
-              <Label className="flex cursor-pointer items-center gap-2 rounded-2xl border bg-background px-3 py-2">
+              <Label className="flex cursor-pointer items-center gap-2 rounded-[10px] border-[1.5px] border-border bg-background px-3 py-2">
                 <RadioGroupItem value="APLICADO" />
                 Aplicado
               </Label>
-              <Label className="flex cursor-pointer items-center gap-2 rounded-2xl border bg-background px-3 py-2">
+              <Label className="flex cursor-pointer items-center gap-2 rounded-[10px] border-[1.5px] border-border bg-background px-3 py-2">
                 <RadioGroupItem value="CANCELADO" />
                 Cancelado
               </Label>
@@ -112,15 +112,15 @@ export default function CheckoutDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Data da baixa</Label>
-              <Input type="date" className="rounded-2xl" {...form.register("checkout_date")} />
+              <Input type="date" className="h-10 rounded-[10px] border-[1.5px]" {...form.register("checkout_date")} />
             </div>
             <div className="space-y-2">
               <Label>Próxima aplicação (opcional)</Label>
-              <Input type="date" className="rounded-2xl" {...form.register("next_due_date")} />
+              <Input type="date" className="h-10 rounded-[10px] border-[1.5px]" {...form.register("next_due_date")} />
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-2xl border bg-muted/20 px-3 py-3">
+          <div className="flex items-center justify-between rounded-[10px] border-[1.5px] border-border bg-muted/20 px-3 py-3">
             <div>
               <div className="text-sm font-medium">Criar lembrete para cada item</div>
               <div className="text-xs text-muted-foreground">
@@ -135,19 +135,19 @@ export default function CheckoutDialog({
 
           <div className="space-y-2">
             <Label>Observações</Label>
-            <Textarea className="rounded-2xl" rows={3} {...form.register("notes")} />
+            <Textarea className="rounded-[10px] border-[1.5px]" rows={3} {...form.register("notes")} />
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
               type="button"
               variant="secondary"
-              className="rounded-2xl"
+              className="h-10 rounded-[10px]"
               onClick={() => onOpenChange(false)}
             >
               Cancelar
             </Button>
-            <Button type="submit" className="rounded-2xl" disabled={checkout.isPending}>
+            <Button type="submit" className="h-10 rounded-[10px]" disabled={checkout.isPending}>
               {checkout.isPending ? "Salvando…" : "Confirmar baixa"}
             </Button>
           </div>

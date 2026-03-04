@@ -112,13 +112,13 @@ export default function Catalog() {
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Input
-            className="rounded-2xl sm:w-[320px]"
+            className="h-10 rounded-[10px] border-[1.5px] sm:w-[320px]"
             placeholder="Buscar item…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
           <Button
-            className="rounded-2xl"
+            className="h-10 rounded-[10px]"
             onClick={() => {
               setEditing(null);
               form.reset({
@@ -138,8 +138,8 @@ export default function Catalog() {
         </div>
       </div>
 
-      <Card className="rounded-3xl p-4 sm:p-5">
-        <div className="overflow-hidden rounded-2xl border">
+      <Card className="rounded-[10px] border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-5">
+        <div className="overflow-hidden rounded-[10px] border-[1.5px] border-border">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40">
@@ -181,7 +181,7 @@ export default function Catalog() {
                   <TableCell className="text-right">
                     <Button
                       variant="secondary"
-                      className="rounded-2xl"
+                      className="h-10 rounded-[10px]"
                       onClick={() => {
                         setEditing(it);
                         form.reset({
@@ -221,7 +221,7 @@ export default function Catalog() {
           if (!v) setEditing(null);
         }}
       >
-        <DialogContent className="rounded-3xl max-w-xl">
+        <DialogContent className="rounded-[10px] max-w-xl">
           <DialogHeader>
             <DialogTitle>{editing?.id ? "Editar item" : "Novo item"}</DialogTitle>
           </DialogHeader>
@@ -229,7 +229,7 @@ export default function Catalog() {
           <form className="mt-2 grid gap-4" onSubmit={form.handleSubmit((v) => upsert.mutate(v))}>
             <div className="grid gap-2">
               <Label>Nome</Label>
-              <Input className="rounded-2xl" {...form.register("name")} />
+              <Input className="h-10 rounded-[10px] border-[1.5px]" {...form.register("name")} />
               {form.formState.errors.name && (
                 <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
               )}
@@ -238,62 +238,63 @@ export default function Catalog() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Categoria</Label>
-                <Select
-                  value={form.watch("category")}
-                  onValueChange={(v) => form.setValue("category", v as Values["category"]) }
-                >
-                  <SelectTrigger className="rounded-2xl">
+                <Select value={form.watch("category")} onValueChange={(v) => form.setValue("category", v as any)}>
+                  <SelectTrigger className="h-10 rounded-[10px] border-[1.5px]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-2xl">
-                    <SelectItem value="vaccine">vacina</SelectItem>
-                    <SelectItem value="medication">medicação</SelectItem>
-                    <SelectItem value="other">outro</SelectItem>
+                  <SelectContent className="rounded-[10px]">
+                    <SelectItem value="vaccine">vaccine</SelectItem>
+                    <SelectItem value="medication">medication</SelectItem>
+                    <SelectItem value="other">other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="grid gap-2">
-                <Label>Origem padrão (opcional)</Label>
-                <Input className="rounded-2xl" placeholder="nacional / importada" {...form.register("default_origin")} />
+              <div className="flex items-center justify-between rounded-[10px] border-[1.5px] border-border bg-muted/20 px-3 py-3">
+                <div>
+                  <div className="text-sm font-medium">Ativo</div>
+                  <div className="text-xs text-muted-foreground">Itens inativos não aparecem no agendamento.</div>
+                </div>
+                <Switch checked={form.watch("is_active")} onCheckedChange={(v) => form.setValue("is_active", v)} />
               </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex items-center justify-between rounded-2xl border bg-muted/20 px-3 py-3">
+              <div className="flex items-center justify-between rounded-[10px] border-[1.5px] border-border bg-muted/20 px-3 py-3">
                 <div>
                   <div className="text-sm font-medium">Exige descrição</div>
-                  <div className="text-xs text-muted-foreground">Ex: “Outro”, “Medicações”.</div>
+                  <div className="text-xs text-muted-foreground">Solicita campo extra no agendamento/baixa.</div>
                 </div>
                 <Switch
                   checked={form.watch("requires_description")}
                   onCheckedChange={(v) => form.setValue("requires_description", v)}
                 />
               </div>
-
-              <div className="flex items-center justify-between rounded-2xl border bg-muted/20 px-3 py-3">
+              <div className="flex items-center justify-between rounded-[10px] border-[1.5px] border-border bg-muted/20 px-3 py-3">
                 <div>
-                  <div className="text-sm font-medium">Permite origem/marca</div>
-                  <div className="text-xs text-muted-foreground">Ex: anticion com marca.</div>
+                  <div className="text-sm font-medium">Permite origem</div>
+                  <div className="text-xs text-muted-foreground">Ex: nacional/importada.</div>
                 </div>
                 <Switch checked={form.watch("allows_origin")} onCheckedChange={(v) => form.setValue("allows_origin", v)} />
               </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-2xl border bg-muted/20 px-3 py-3">
-              <div>
-                <div className="text-sm font-medium">Ativo</div>
-                <div className="text-xs text-muted-foreground">Itens inativos não aparecem no agendamento.</div>
+            {form.watch("allows_origin") && (
+              <div className="grid gap-2">
+                <Label>Origem padrão (opcional)</Label>
+                <Input
+                  className="h-10 rounded-[10px] border-[1.5px]"
+                  placeholder="nacional / importada"
+                  {...form.register("default_origin")}
+                />
               </div>
-              <Switch checked={form.watch("is_active")}
-                onCheckedChange={(v) => form.setValue("is_active", v)} />
-            </div>
+            )}
 
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="secondary" className="rounded-2xl" onClick={() => setOpen(false)}>
+              <Button type="button" variant="secondary" className="h-10 rounded-[10px]" onClick={() => setOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" className="rounded-2xl" disabled={upsert.isPending}>
+              <Button type="submit" className="h-10 rounded-[10px]" disabled={upsert.isPending}>
                 {upsert.isPending ? "Salvando…" : "Salvar"}
               </Button>
             </div>

@@ -65,20 +65,17 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-[100svh] bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-xl rounded-3xl p-6 sm:p-8">
+      <Card className="w-full max-w-xl rounded-[10px] border-[1.5px] border-border p-6 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-8">
         <div className="text-xs font-medium tracking-widest text-muted-foreground">ONBOARDING</div>
         <h1 className="mt-2 text-2xl font-semibold">Crie sua organização</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Isso habilita o modo multi-tenant, RLS e seeds iniciais (catálogo + template Whats).
         </p>
 
-        <form
-          className="mt-6 grid gap-4"
-          onSubmit={form.handleSubmit((v) => createOrg.mutate(v))}
-        >
+        <form className="mt-6 grid gap-4" onSubmit={form.handleSubmit((v) => createOrg.mutate(v))}>
           <div className="grid gap-2">
             <Label>Nome da loja</Label>
-            <Input placeholder="Ex: Vet Center" {...form.register("store_name")} />
+            <Input className="h-10 rounded-[10px] border-[1.5px]" placeholder="Ex: Vet Center" {...form.register("store_name")} />
             {form.formState.errors.store_name && (
               <p className="text-xs text-destructive">{form.formState.errors.store_name.message}</p>
             )}
@@ -87,21 +84,21 @@ export default function Onboarding() {
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>Filial (opcional)</Label>
-              <Input placeholder="Ex: Matriz" {...form.register("branch_name")} />
+              <Input className="h-10 rounded-[10px] border-[1.5px]" placeholder="Ex: Matriz" {...form.register("branch_name")} />
             </div>
             <div className="grid gap-2">
               <Label>Seu nome (opcional)</Label>
-              <Input placeholder="Ex: Ana" {...form.register("display_name")} />
+              <Input className="h-10 rounded-[10px] border-[1.5px]" placeholder="Ex: Ana" {...form.register("display_name")} />
             </div>
           </div>
 
           <div className="grid gap-2">
             <Label>Telefone da loja (opcional)</Label>
-            <Input placeholder="Ex: +5511999999999" {...form.register("store_phone")} />
+            <Input className="h-10 rounded-[10px] border-[1.5px]" placeholder="Ex: (11) 99999-9999" {...form.register("store_phone")} />
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button type="submit" className="rounded-2xl" disabled={createOrg.isPending}>
+            <Button type="submit" className="h-10 rounded-[10px]" disabled={createOrg.isPending}>
               {createOrg.isPending ? "Criando…" : "Criar e começar"}
             </Button>
           </div>

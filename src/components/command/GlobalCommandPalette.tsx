@@ -81,7 +81,7 @@ export default function GlobalCommandPalette() {
     <>
       <button
         className={
-          "flex items-center gap-2 rounded-[12px] border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground " +
+          "flex items-center gap-2 rounded-[10px] border-[1.5px] border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground " +
           "hover:bg-muted/30"
         }
         onClick={() => setOpen(true)}
@@ -95,9 +95,9 @@ export default function GlobalCommandPalette() {
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="p-0 rounded-3xl overflow-hidden max-w-2xl">
+        <DialogContent className="p-0 rounded-[10px] overflow-hidden max-w-2xl border-[1.5px] border-border shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
           <Command>
-            <div className="border-b p-2">
+            <div className="border-b border-border p-2">
               <CommandInput placeholder="Buscar tutor ou ação…" value={q} onValueChange={setQ} />
             </div>
             <CommandList>
@@ -109,7 +109,7 @@ export default function GlobalCommandPalette() {
                 {quickActions.map((a) => (
                   <CommandItem
                     key={a.key}
-                    className="rounded-xl"
+                    className="rounded-[10px]"
                     onSelect={() => {
                       setOpen(false);
                       a.run();
@@ -127,7 +127,7 @@ export default function GlobalCommandPalette() {
                 {(tutors.data ?? []).map((t) => (
                   <CommandItem
                     key={t.id}
-                    className="rounded-xl"
+                    className="rounded-[10px]"
                     onSelect={() => {
                       setOpen(false);
                       nav(`/tutors/${t.id}`);

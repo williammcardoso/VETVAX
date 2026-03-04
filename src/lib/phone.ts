@@ -46,8 +46,18 @@ export function formatBrPhoneForDisplay(raw: string | null | undefined): string 
   return br;
 }
 
+function toWhatsDigits(phoneRaw: string) {
+  const d = onlyDigits(phoneRaw);
+  if (!d) return "";
+  // If already has BR country code
+  if (d.startsWith("55") && (d.length === 12 || d.length === 13)) return d;
+  // If it looks like BR without country code, add it
+  if (d.length === 10 || d.length === 11) return `55${d}`;
+  return d;
+}
+
 export function buildWhatsAppLink(phoneRaw: string, message: string) {
-  const digits = onlyDigits(phoneRaw);
+  const digits = toWhatsDigits(phoneRaw);
   const encoded = encodeURIComponent(message);
   return `https://wa.me/${digits}?text=${encoded}`;
 }

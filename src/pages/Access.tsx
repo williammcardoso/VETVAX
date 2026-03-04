@@ -174,7 +174,7 @@ export default function Access() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="rounded-3xl p-4 sm:p-6">
+        <Card className="rounded-[10px] border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
@@ -187,14 +187,14 @@ export default function Access() {
               <Badge variant="secondary" className="rounded-full">
                 {rows.length}
               </Badge>
-              <Button variant="secondary" className="h-9 rounded-2xl" onClick={() => setCreateUserOpen(true)}>
+              <Button variant="secondary" className="h-10 rounded-[10px]" onClick={() => setCreateUserOpen(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Novo usuário
               </Button>
             </div>
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-2xl border">
+          <div className="mt-4 overflow-hidden rounded-[10px] border-[1.5px] border-border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40">
@@ -207,7 +207,7 @@ export default function Access() {
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
                       <TableCell colSpan={2}>
-                        <Skeleton className="h-9 w-full rounded-xl" />
+                        <Skeleton className="h-9 w-full rounded-[10px]" />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -231,10 +231,10 @@ export default function Access() {
                         onValueChange={(v) => updateRole.mutate({ id: m.id, role: v as Role })}
                         disabled={updateRole.isPending || m.id === profile?.id}
                       >
-                        <SelectTrigger className="rounded-2xl">
+                        <SelectTrigger className="h-10 rounded-[10px] border-[1.5px]">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="rounded-2xl">
+                        <SelectContent className="rounded-[10px]">
                           <SelectItem value="admin">admin</SelectItem>
                           <SelectItem value="manager">manager</SelectItem>
                           <SelectItem value="staff">staff</SelectItem>
@@ -261,7 +261,7 @@ export default function Access() {
           </div>
         </Card>
 
-        <Card className="rounded-3xl p-4 sm:p-6">
+        <Card className="rounded-[10px] border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
@@ -270,12 +270,12 @@ export default function Access() {
               </div>
               <div className="mt-1 text-xs text-muted-foreground">Crie um convite e compartilhe o link.</div>
             </div>
-            <Button className="rounded-2xl" onClick={() => setInviteOpen(true)}>
+            <Button className="h-10 rounded-[10px]" onClick={() => setInviteOpen(true)}>
               Novo convite
             </Button>
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-2xl border">
+          <div className="mt-4 overflow-hidden rounded-[10px] border-[1.5px] border-border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40">
@@ -289,7 +289,7 @@ export default function Access() {
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
                       <TableCell colSpan={3}>
-                        <Skeleton className="h-9 w-full rounded-xl" />
+                        <Skeleton className="h-9 w-full rounded-[10px]" />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -330,7 +330,7 @@ export default function Access() {
                           <Button
                             variant="secondary"
                             size="icon"
-                            className="rounded-2xl"
+                            className="h-10 w-10 rounded-[10px]"
                             onClick={async () => {
                               try {
                                 await navigator.clipboard.writeText(acceptUrl);
@@ -345,7 +345,7 @@ export default function Access() {
 
                           <Button
                             variant="ghost"
-                            className="rounded-2xl"
+                            className="h-10 rounded-[10px]"
                             onClick={() => deactivateInvite.mutate(inv.id)}
                             disabled={deactivateInvite.isPending || !inv.is_active || !!inv.accepted_at}
                           >
@@ -372,7 +372,7 @@ export default function Access() {
       </div>
 
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-        <DialogContent className="rounded-3xl max-w-xl">
+        <DialogContent className="rounded-[10px] max-w-xl">
           <DialogHeader>
             <DialogTitle>Novo convite</DialogTitle>
           </DialogHeader>
@@ -380,7 +380,7 @@ export default function Access() {
           <form className="mt-2 grid gap-4" onSubmit={form.handleSubmit((v) => createInvite.mutate(v))}>
             <div className="grid gap-2">
               <Label>Email</Label>
-              <Input className="rounded-2xl" placeholder="pessoa@empresa.com" {...form.register("email")} />
+              <Input className="h-10 rounded-[10px] border-[1.5px]" placeholder="pessoa@empresa.com" {...form.register("email")} />
               {form.formState.errors.email && <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>}
             </div>
 
@@ -388,13 +388,14 @@ export default function Access() {
               <div className="grid gap-2">
                 <Label>Role</Label>
                 <Select value={form.watch("role")} onValueChange={(v) => form.setValue("role", v as Role)}>
-                  <SelectTrigger className="rounded-2xl">
+                  <SelectTrigger className="h-10 rounded-[10px] border-[1.5px]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-2xl">
+                  <SelectContent className="rounded-[10px]">
                     <SelectItem value="manager">manager</SelectItem>
                     <SelectItem value="staff">staff</SelectItem>
                     <SelectItem value="viewer">viewer</SelectItem>
+                    <SelectItem value="admin">admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -402,10 +403,10 @@ export default function Access() {
               <div className="grid gap-2">
                 <Label>Filial</Label>
                 <Select value={form.watch("branch_id") || "_none"} onValueChange={(v) => form.setValue("branch_id", v === "_none" ? "" : v)}>
-                  <SelectTrigger className="rounded-2xl">
+                  <SelectTrigger className="h-10 rounded-[10px] border-[1.5px]">
                     <SelectValue placeholder="Opcional" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-2xl">
+                  <SelectContent className="rounded-[10px]">
                     <SelectItem value="_none">Sem filial</SelectItem>
                     {(branches.data ?? []).map((b) => (
                       <SelectItem key={b.id} value={b.id}>
@@ -418,15 +419,15 @@ export default function Access() {
 
               <div className="grid gap-2">
                 <Label>Expira (dias)</Label>
-                <Input type="number" min={1} max={60} className="rounded-2xl" {...form.register("expires_days")} />
+                <Input type="number" min={1} max={60} className="h-10 rounded-[10px] border-[1.5px]" {...form.register("expires_days")} />
               </div>
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="secondary" className="rounded-2xl" onClick={() => setInviteOpen(false)}>
+              <Button type="button" variant="secondary" className="h-10 rounded-[10px]" onClick={() => setInviteOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" className="rounded-2xl" disabled={createInvite.isPending}>
+              <Button type="submit" className="h-10 rounded-[10px]" disabled={createInvite.isPending}>
                 {createInvite.isPending ? "Criando…" : "Criar convite"}
               </Button>
             </div>

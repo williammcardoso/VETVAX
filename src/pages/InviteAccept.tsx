@@ -52,7 +52,7 @@ export default function InviteAccept() {
 
   return (
     <div className="min-h-[100svh] bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-xl rounded-3xl p-6 sm:p-8">
+      <Card className="w-full max-w-xl rounded-[10px] border-[1.5px] border-border p-6 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-8">
         <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
           <KeyRound className="h-3.5 w-3.5" />
           Convite
@@ -89,8 +89,7 @@ export default function InviteAccept() {
             <p className="mt-2 text-sm text-muted-foreground">{errorMsg ?? "Tente novamente."}</p>
 
             <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button variant="secondary" className="rounded-2xl" onClick={() => nav("/dashboard")}
-              >
+              <Button variant="secondary" className="h-10 rounded-[10px]" onClick={() => nav("/dashboard")}>
                 Ir ao dashboard
               </Button>
             </div>

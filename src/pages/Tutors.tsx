@@ -65,21 +65,21 @@ export default function Tutors() {
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="w-full rounded-2xl pl-9 sm:w-[320px]"
+              className="h-10 w-full rounded-[10px] border-[1.5px] pl-9 sm:w-[320px]"
               placeholder="Buscar tutor…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
           </div>
-          <Button className="rounded-2xl" onClick={() => setOpenCreate(true)}>
+          <Button className="h-10 rounded-[10px]" onClick={() => setOpenCreate(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Novo tutor
           </Button>
         </div>
       </div>
 
-      <Card className="rounded-3xl p-4 sm:p-5">
-        <div className="overflow-hidden rounded-2xl border">
+      <Card className="rounded-[10px] border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-5">
+        <div className="overflow-hidden rounded-[10px] border-[1.5px] border-border">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40">
@@ -94,7 +94,7 @@ export default function Tutors() {
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell colSpan={4}>
-                      <Skeleton className="h-9 w-full rounded-xl" />
+                      <Skeleton className="h-9 w-full rounded-[10px]" />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -130,7 +130,7 @@ export default function Tutors() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button asChild variant="secondary" className="rounded-2xl" onClick={(e) => e.stopPropagation()}>
+                    <Button asChild variant="secondary" className="h-10 rounded-[10px]" onClick={(e) => e.stopPropagation()}>
                       <Link to={`/appointments/new?tutor=${t.id}`}>Agendar</Link>
                     </Button>
                   </TableCell>
@@ -145,7 +145,7 @@ export default function Tutors() {
                       <p className="mt-1 text-xs text-muted-foreground">
                         Cadastre o primeiro tutor para começar a agendar.
                       </p>
-                      <Button className="mt-4 rounded-2xl" onClick={() => setOpenCreate(true)}>
+                      <Button className="mt-4 h-10 rounded-[10px]" onClick={() => setOpenCreate(true)}>
                         <Plus className="mr-2 h-4 w-4" />
                         Novo tutor
                       </Button>

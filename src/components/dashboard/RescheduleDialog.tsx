@@ -97,10 +97,10 @@ export default function RescheduleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-3xl">
+      <DialogContent className="rounded-[10px] border-[1.5px] border-border shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-2xl bg-muted">
+            <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-muted">
               <RotateCcw className="h-5 w-5" />
             </span>
             Reagendar (duplicar)
@@ -111,11 +111,11 @@ export default function RescheduleDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Nova data</Label>
-              <Input type="date" className="rounded-2xl" {...form.register("scheduled_date")} />
+              <Input type="date" className="h-10 rounded-[10px] border-[1.5px]" {...form.register("scheduled_date")} />
             </div>
             <div className="space-y-2">
               <Label>Novo horário</Label>
-              <Input type="time" className="rounded-2xl" {...form.register("scheduled_time")} />
+              <Input type="time" className="h-10 rounded-[10px] border-[1.5px]" {...form.register("scheduled_time")} />
             </div>
           </div>
 
@@ -123,12 +123,12 @@ export default function RescheduleDialog({
             <Button
               type="button"
               variant="secondary"
-              className="rounded-2xl"
+              className="h-10 rounded-[10px]"
               onClick={() => onOpenChange(false)}
             >
               Cancelar
             </Button>
-            <Button type="submit" className="rounded-2xl" disabled={duplicate.isPending}>
+            <Button type="submit" className="h-10 rounded-[10px]" disabled={duplicate.isPending}>
               {duplicate.isPending ? "Duplicando…" : "Criar novo agendamento"}
             </Button>
           </div>

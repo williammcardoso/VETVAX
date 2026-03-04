@@ -30,7 +30,6 @@ function buildVaccinesLabel(appliedItemsSnapshot: any) {
     .map((it) => String(it?.catalog_name ?? it?.name ?? "").trim())
     .filter(Boolean);
 
-  // de-dup preserving order
   const seen = new Set<string>();
   const uniq: string[] = [];
   for (const v of vaccines) {
@@ -43,13 +42,33 @@ function buildVaccinesLabel(appliedItemsSnapshot: any) {
   return uniq.join(" • ");
 }
 
+async function lookupProfileNames(ids: string[]) {
+  const uniq = Array.from(new Set(ids)).filter(Boolean);
+  if (uniq.length === 0) return {} as Record<string, string>;
+
+  const { data: session } = await supabase.auth.getSession();
+  const jwt = session.session?.access_token;
+  if (!jwt) return {} as Record<string, string>;
+
+  const res = await fetch("https://nocwkogecmwwpodoqaos.supabase.co/functions/v1/profile-lookup", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      Authorization: `Bearer ${jwt}`,
+    },
+    body: JSON.stringify({ ids: uniq.slice(0, 50) }),
+  });
+
+  if (!res.ok) return {} as Record<string, string>;
+  const json = (await res.json()) as { ok: boolean; map?: Record<string, string> };
+  return json.map ?? ({} as Record<string, string>);
+}
+
 async function fetchReport(filters: FiltersState) {
-  // We use appointment_checkouts as the source of truth for "vaccinations".
-  // No schema changes; only reads + a controlled reopen action.
   let q = supabase
     .from("appointment_checkouts")
     .select(
-      "id, appointment_id, status_result, checkout_date, applied_items_snapshot, appointment:appointments(id, scheduled_date, scheduled_time, tutor_id, tutor:tutors(id, name, phone1, phone2))",
+      "id, appointment_id, status_result, checkout_date, applied_items_snapshot, created_by, appointment:appointments(id, scheduled_date, scheduled_time, tutor_id, tutor:tutors(id, name, phone1, phone2))",
     )
     .gte("checkout_date", filters.from)
     .lte("checkout_date", filters.to)
@@ -61,7 +80,7 @@ async function fetchReport(filters: FiltersState) {
   const { data, error } = await q;
   if (error) throw error;
 
-  const mapped: VaccinationReportRow[] = (data ?? []).map((r: any) => {
+  const mappedBase: VaccinationReportRow[] = (data ?? []).map((r: any) => {
     const appt = r.appointment;
     const tutor = appt?.tutor;
 
@@ -77,8 +96,18 @@ async function fetchReport(filters: FiltersState) {
       tutor_phone2: tutor?.phone2 ?? null,
       status: r.status_result,
       vaccines: buildVaccinesLabel(r.applied_items_snapshot),
+      created_by: r.created_by ?? null,
+      responsible_name: null,
     };
   });
+
+  const createdByIds = mappedBase.map((r) => r.created_by).filter(Boolean) as string[];
+  const nameMap = await lookupProfileNames(createdByIds);
+
+  const mapped = mappedBase.map((r) => ({
+    ...r,
+    responsible_name: r.created_by ? (nameMap[r.created_by] ?? null) : null,
+  }));
 
   const tutorTerm = filters.tutor.trim().toLowerCase();
   const vaccineTerm = filters.vaccineQuery.trim().toLowerCase();

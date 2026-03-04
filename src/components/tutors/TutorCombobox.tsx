@@ -49,7 +49,7 @@ export default function TutorCombobox({
           variant="secondary"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between rounded-2xl"
+          className="h-10 w-full justify-between rounded-[10px]"
         >
           <span className={cn("truncate", !value && "text-muted-foreground")}>
             {selected?.name ?? (value ? "Tutor selecionado" : "Selecione um tutor…")}
@@ -57,9 +57,9 @@ export default function TutorCombobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-60" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(520px,90vw)] p-0 rounded-2xl" align="start">
+      <PopoverContent className="w-[min(520px,90vw)] p-0 rounded-[10px] border-[1.5px]" align="start">
         <Command>
-          <div className="flex items-center gap-2 border-b px-3">
+          <div className="flex items-center gap-2 border-b border-border px-3">
             <Search className="h-4 w-4 text-muted-foreground" />
             <CommandInput placeholder="Buscar tutor…" value={q} onValueChange={setQ} />
           </div>
@@ -67,7 +67,7 @@ export default function TutorCombobox({
             <CommandEmpty>
               <div className="p-4 text-sm text-muted-foreground">
                 Nenhum tutor encontrado.
-                <Button className="mt-3 w-full rounded-2xl" onClick={onCreateNew}>
+                <Button className="mt-3 h-10 w-full rounded-[10px]" onClick={onCreateNew}>
                   <Plus className="mr-2 h-4 w-4" />
                   Criar novo tutor
                 </Button>
@@ -82,7 +82,7 @@ export default function TutorCombobox({
                     onChange(t.id);
                     setOpen(false);
                   }}
-                  className="rounded-xl"
+                  className="rounded-[10px]"
                 >
                   <Check className={cn("mr-2 h-4 w-4", value === t.id ? "opacity-100" : "opacity-0")} />
                   <div className="min-w-0">
@@ -94,8 +94,8 @@ export default function TutorCombobox({
                 </CommandItem>
               ))}
             </CommandGroup>
-            <div className="border-t p-2">
-              <Button variant="secondary" className="w-full rounded-2xl" onClick={onCreateNew}>
+            <div className="border-t border-border p-2">
+              <Button variant="secondary" className="h-10 w-full rounded-[10px]" onClick={onCreateNew}>
                 <Plus className="mr-2 h-4 w-4" />
                 Criar novo tutor
               </Button>

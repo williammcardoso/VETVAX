@@ -91,7 +91,7 @@ export default function PetUpsertDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-3xl">
+      <DialogContent className="rounded-[10px] border-[1.5px] border-border shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
         <DialogHeader>
           <DialogTitle>{initial?.id ? "Editar pet" : "Novo pet"}</DialogTitle>
         </DialogHeader>
@@ -99,17 +99,17 @@ export default function PetUpsertDialog({
         <form className="mt-2 grid gap-4" onSubmit={form.handleSubmit((v) => save.mutate(v))}>
           <div className="grid gap-2">
             <Label>Nome</Label>
-            <Input className="rounded-2xl" {...form.register("name")} />
+            <Input className="h-10 rounded-[10px] border-[1.5px]" {...form.register("name")} />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>Espécie</Label>
               <Select value={form.watch("species")} onValueChange={(v) => form.setValue("species", v as Values["species"]) }>
-                <SelectTrigger className="rounded-2xl">
+                <SelectTrigger className="h-10 rounded-[10px] border-[1.5px]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl">
+                <SelectContent className="rounded-[10px]">
                   <SelectItem value="dog">Cão</SelectItem>
                   <SelectItem value="cat">Gato</SelectItem>
                   <SelectItem value="other">Outro</SelectItem>
@@ -118,36 +118,36 @@ export default function PetUpsertDialog({
             </div>
             <div className="grid gap-2">
               <Label>Idade (texto)</Label>
-              <Input className="rounded-2xl" placeholder="Ex: 2 anos" {...form.register("age_text")} />
+              <Input className="h-10 rounded-[10px] border-[1.5px]" placeholder="Ex: 2 anos" {...form.register("age_text")} />
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>Data de nascimento (opcional)</Label>
-              <Input type="date" className="rounded-2xl" {...form.register("birth_date")} />
+              <Input type="date" className="h-10 rounded-[10px] border-[1.5px]" {...form.register("birth_date")} />
             </div>
             <div className="grid gap-2">
               <Label>Raça</Label>
-              <Input className="rounded-2xl" {...form.register("breed")} />
+              <Input className="h-10 rounded-[10px] border-[1.5px]" {...form.register("breed")} />
             </div>
           </div>
 
           <div className="grid gap-2">
             <Label>Cor</Label>
-            <Input className="rounded-2xl" {...form.register("color")} />
+            <Input className="h-10 rounded-[10px] border-[1.5px]" {...form.register("color")} />
           </div>
 
           <div className="grid gap-2">
             <Label>Observações</Label>
-            <Textarea className="rounded-2xl" rows={3} {...form.register("notes")} />
+            <Textarea className="rounded-[10px] border-[1.5px]" rows={3} {...form.register("notes")} />
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="secondary" className="rounded-2xl" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="secondary" className="h-10 rounded-[10px]" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" className="rounded-2xl" disabled={save.isPending}>
+            <Button type="submit" className="h-10 rounded-[10px]" disabled={save.isPending}>
               {save.isPending ? "Salvando…" : "Salvar"}
             </Button>
           </div>
