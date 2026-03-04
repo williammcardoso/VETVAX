@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, Filter } from "lucide-react";
+import { CalendarDays, Filter, TriangleAlert } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDateBr } from "@/lib/datetime";
+import { supabase } from "@/lib/supabase";
 
 type DayFilter = "all" | "saturday";
 
@@ -45,17 +46,19 @@ function groupByDate(items: Item[]): Group[] {
 }
 
 async function fetchPublicAgenda({ token, filter }: { token: string; filter: DayFilter }) {
-  const res = await fetch("https://nocwkogecmwwpodoqaos.supabase.co/functions/v1/public-agenda", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ token, filter }),
+  const { data, error } = await supabase.functions.invoke("public-agenda", {
+    body: { token, filter },
   });
 
-  if (!res.ok) {
-    throw new Error("Não foi possível carregar a agenda pública.");
+  if (error) {
+    throw new Error(error.message || "Não foi possível carregar a agenda pública.");
   }
 
-  const json = await res.json();
+  const json = data as { ok?: boolean; items?: Item[]; error?: string };
+  if (!json?.ok) {
+    throw new Error(json?.error || "Falha ao carregar a agenda pública.");
+  }
+
   return (json.items ?? []) as Item[];
 }
 
@@ -87,9 +90,7 @@ export default function AgendaPublica() {
             Agenda pública
           </div>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">Próximos agendamentos</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Visualização somente-leitura (sem login).
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Visualização somente-leitura (sem login).</p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -130,10 +131,22 @@ export default function AgendaPublica() {
           </Card>
         ) : items.isLoading ? (
           <div className="text-sm text-muted-foreground">Carregando…</div>
+        ) : items.isError ? (
+          <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-muted">
+                <TriangleAlert className="h-4 w-4" />
+              </span>
+              Não foi possível carregar
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">{(items.error as any)?.message ?? "Tente novamente."}</p>
+          </Card>
         ) : groups.length === 0 ? (
           <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
             <div className="text-sm font-semibold">Nenhum agendamento futuro</div>
-            <p className="mt-1 text-sm text-muted-foreground">Tente ajustar o filtro.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Verifique se existem agendamentos <span className="font-medium">PENDENTE</span> a partir de hoje.
+            </p>
           </Card>
         ) : (
           <div className="grid gap-4">
@@ -154,10 +167,7 @@ export default function AgendaPublica() {
 
                 <div className="mt-3 grid gap-2">
                   {g.items.map((it, idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-[10px] border-[1.5px] border-border bg-background px-3 py-2"
-                    >
+                    <div key={idx} className="rounded-[10px] border-[1.5px] border-border bg-background px-3 py-2">
                       <div className="flex items-start justify-between gap-3">
                         <div className="text-sm font-semibold text-primary">{it.scheduled_time}</div>
                         <div className="min-w-0 flex-1">

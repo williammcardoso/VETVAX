@@ -86,7 +86,10 @@ export default function UpcomingAppointmentsTable({
             ))}
 
           {rows.map((row) => {
-            const displayPhone = row.tutor_phone1 || row.tutor_phone2 ? formatBrPhoneForDisplay(row.tutor_phone1 ?? row.tutor_phone2) : "—";
+            const displayPhone =
+              row.tutor_phone1 || row.tutor_phone2
+                ? formatBrPhoneForDisplay(row.tutor_phone1 ?? row.tutor_phone2)
+                : "—";
             const address = formatTutorAddressLine(row as any);
 
             return (
@@ -104,7 +107,7 @@ export default function UpcomingAppointmentsTable({
                     <div className="min-w-0">
                       <div className="truncate text-sm font-bold leading-tight text-foreground">{row.tutor_name}</div>
                       <div className="mt-1 text-[11px] text-muted-foreground">{displayPhone}</div>
-                      {address ? <div className="mt-1 truncate text-[11px] text-muted-foreground">{address}</div> : null}
+                      {address ? <div className="mt-1 truncate text-[11px] text-slate-700">{address}</div> : null}
                     </div>
                   </div>
                 </TableCell>
@@ -113,12 +116,18 @@ export default function UpcomingAppointmentsTable({
                   {row.items?.length ? (
                     <div className="flex flex-wrap gap-1.5">
                       {row.items.slice(0, 4).map((it, idx) => (
-                        <Badge key={idx} variant="secondary" className="rounded-full border-[1.5px] border-slate-300 bg-white text-slate-800">
+                        <Badge
+                          key={idx}
+                          variant="secondary"
+                          className="rounded-full border-[1.5px] border-slate-300 bg-white text-slate-800"
+                        >
                           {it.quantity}× {it.item}
                         </Badge>
                       ))}
                       {(row.items?.length ?? 0) > 4 && (
-                        <Badge className="rounded-full border-[1.5px] border-slate-300 bg-white text-slate-800">+{(row.items?.length ?? 0) - 4}</Badge>
+                        <Badge className="rounded-full border-[1.5px] border-slate-300 bg-white text-slate-800">
+                          +{(row.items?.length ?? 0) - 4}
+                        </Badge>
                       )}
                     </div>
                   ) : (
@@ -143,7 +152,11 @@ export default function UpcomingAppointmentsTable({
                           <RotateCcw className="mr-2 h-4 w-4" strokeWidth={2} />
                           Reagendar (duplicar)
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="rounded-[8px]" onClick={() => openWhats.mutate(row)} disabled={openWhats.isPending}>
+                        <DropdownMenuItem
+                          className="rounded-[8px]"
+                          onClick={() => openWhats.mutate(row)}
+                          disabled={openWhats.isPending}
+                        >
                           <WhatsAppIcon className="mr-2 h-4 w-4" />
                           WhatsApp
                         </DropdownMenuItem>
@@ -169,7 +182,9 @@ export default function UpcomingAppointmentsTable({
                     {variant === "today" ? "Nenhum agendamento hoje" : "Nenhum agendamento futuro"}
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {variant === "today" ? "Se precisar, crie um novo agendamento." : "Quando houver agendamentos, eles aparecerão aqui em ordem cronológica."}
+                    {variant === "today"
+                      ? "Se precisar, crie um novo agendamento."
+                      : "Quando houver agendamentos, eles aparecerão aqui em ordem cronológica."}
                   </p>
                 </div>
               </TableCell>

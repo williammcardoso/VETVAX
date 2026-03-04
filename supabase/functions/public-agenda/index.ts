@@ -29,6 +29,11 @@ serve(async (req) => {
       return new Response("Missing token", { status: 400, headers: corsHeaders });
     }
 
+    console.log("[public-agenda] request", {
+      filter: filter ?? "all",
+      tokenLength: token.length,
+    });
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -56,8 +61,11 @@ serve(async (req) => {
     });
 
     if (!match?.org_id) {
+      console.warn("[public-agenda] invalid token", { tokenLength: token.length });
       return new Response("Invalid token", { status: 404, headers: corsHeaders });
     }
+
+    console.log("[public-agenda] matched org", { org_id: match.org_id });
 
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -65,7 +73,6 @@ serve(async (req) => {
     const dd = String(today.getDate()).padStart(2, "0");
     const todayIso = `${yyyy}-${mm}-${dd}`;
 
-    // Pull upcoming appointments + items + pets + vaccines
     const { data, error } = await admin
       .from("appointments")
       .select(
@@ -83,6 +90,8 @@ serve(async (req) => {
       console.error("[public-agenda] appointments error", { error });
       return new Response("Failed to load agenda", { status: 500, headers: corsHeaders });
     }
+
+    console.log("[public-agenda] appointments loaded", { count: (data ?? []).length, from: todayIso });
 
     const flat: AgendaItem[] = [];
 
@@ -118,11 +127,16 @@ serve(async (req) => {
 
     const filtered = (filter ?? "all") === "saturday"
       ? flat.filter((r) => {
-          // JS: 0=Sun ... 6=Sat
           const d = new Date(r.scheduled_date + "T00:00:00");
           return d.getDay() === 6;
         })
       : flat;
+
+    console.log("[public-agenda] items ready", {
+      flatCount: flat.length,
+      filteredCount: filtered.length,
+      filter: filter ?? "all",
+    });
 
     return Response.json({ ok: true, items: filtered }, { headers: corsHeaders });
   } catch (e) {

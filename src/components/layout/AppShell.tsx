@@ -213,7 +213,7 @@ export default function AppShell() {
 
       <SidebarInset className="bg-background">
         {/* Topbar integrado ao layout */}
-        <div className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
+        <div className="sticky top-0 z-40 border-b border-border bg-background">
           <div className="px-4 py-3 lg:px-6">
             <div className="mx-auto max-w-6xl">
               <div className="flex items-center gap-3">
