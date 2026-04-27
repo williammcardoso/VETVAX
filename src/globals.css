@@ -4,94 +4,83 @@
 
 @layer base {
   :root {
-    /* VetVAX — identidade mais forte (alto contraste) */
-    --brand: 221 83% 47%; /* #1D4ED8 */
-
-    /* Base mais branca (pedido do usuário) */
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%; /* slate-900 */
-
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-
-    --primary: var(--brand);
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 214 33% 95%; /* #EEF2F7 */
-    --secondary-foreground: 222 47% 11%;
-
-    --muted: 214 33% 95%;
-    --muted-foreground: 215 16% 47%; /* #64748B */
-
-    --accent: 221 83% 96%;
-    --accent-foreground: 222 47% 11%;
-
-    --destructive: 0 72% 51%; /* #DC2626 */
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 214 32% 84%; /* #CBD5E1 */
-    --input: 214 32% 84%;
-    --ring: var(--brand);
-
-    --radius: 0.75rem; /* 12px */
-
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: var(--brand);
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 221 83% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 84%;
-    --sidebar-ring: var(--brand);
-  }
-
-  /*
-    O VetVAX foi desenhado como SaaS claro.
-    Para evitar inconsistências (ex.: classe .dark aplicada por extensão/ambiente),
-    mantemos o mesmo sistema de cores no modo "dark".
-  */
-  .dark {
-    --brand: 221 83% 47%;
-
-    --background: 0 0% 100%;
+    --background: 210 33% 98%;
     --foreground: 222 47% 11%;
-
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-
-    --primary: var(--brand);
+    --primary: 175 77% 26%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 214 33% 95%;
+    --secondary: 210 40% 98%;
     --secondary-foreground: 222 47% 11%;
-
-    --muted: 214 33% 95%;
-    --muted-foreground: 215 16% 47%;
-
-    --accent: 221 83% 96%;
+    --muted: 210 40% 97%;
+    --muted-foreground: 215 20% 45%;
+    --accent: 172 76% 96%;
     --accent-foreground: 222 47% 11%;
-
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 214 32% 84%;
+    --border: 214 32% 90%;
     --input: 214 32% 84%;
-    --ring: var(--brand);
-
+    --ring: 175 77% 26%;
+    --radius: 12px;
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: var(--brand);
+    --sidebar-primary: 175 77% 26%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 221 83% 96%;
+    --sidebar-accent: 172 76% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 84%;
-    --sidebar-ring: var(--brand);
+    --sidebar-border: 214 32% 90%;
+    --sidebar-ring: 175 77% 26%;
+
+    --vetvax-bg: #f6f8fa;
+    --vetvax-surface: #ffffff;
+    --vetvax-surface-alt: #f9fafb;
+    --vetvax-border-soft: #e2e8f0;
+    --vetvax-border-medium: #cbd5e1;
+    --vetvax-text-main: #0f172a;
+    --vetvax-text-secondary: #475569;
+    --vetvax-text-tertiary: #64748b;
+    --vetvax-primary: #0f766e;
+    --vetvax-primary-hover: #115e59;
+    --vetvax-primary-soft: #ccfbf1;
+    --vetvax-primary-border: #99f6e4;
+    --vetvax-danger: #dc2626;
+    --vetvax-danger-soft: #fee2e2;
+    --vetvax-warning: #f59e0b;
+    --vetvax-warning-soft: #fef3c7;
+    --vetvax-success: #16a34a;
+    --vetvax-success-soft: #dcfce7;
+  }
+
+  .dark {
+    --background: 210 33% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 175 77% 26%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 98%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 97%;
+    --muted-foreground: 215 20% 45%;
+    --accent: 172 76% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 90%;
+    --input: 214 32% 84%;
+    --ring: 175 77% 26%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 175 77% 26%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 172 76% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 90%;
+    --sidebar-ring: 175 77% 26%;
   }
 }
 
@@ -106,18 +95,49 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image:
+      radial-gradient(circle at 85% 0%, rgba(15, 118, 110, 0.08), transparent 32%),
+      linear-gradient(to right, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+    background-size: auto, 32px 32px, 32px 32px;
+    background-color: var(--vetvax-bg);
+    color: var(--vetvax-text-main);
   }
 }
 
 @layer components {
+  .vetvax-page {
+    @apply mx-auto w-full max-w-[1280px] px-4 md:px-8;
+  }
+
+  .vetvax-page-title {
+    font-size: 28px;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+    color: var(--vetvax-text-main);
+  }
+
+  .vetvax-section-title {
+    @apply text-[18px] font-bold text-[var(--vetvax-text-main)];
+  }
+
+  .vetvax-label {
+    @apply text-[13px] font-semibold text-[var(--vetvax-text-secondary)];
+  }
+
+  .vetvax-help-text {
+    @apply text-[12px] text-[var(--vetvax-text-tertiary)];
+  }
+
   .vetvax-elevate {
     @apply transition-shadow duration-150 ease-out;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.06);
   }
 
   .vetvax-elevate:hover {
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
   }
 
   .vetvax-scroll {

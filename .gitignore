@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .dyad/
+
+# Supabase CLI cache (não versionar)
+supabase/.temp/

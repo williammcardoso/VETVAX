@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 
 const schema = z.object({
-  store_name: z.string().min(2, "Informe o nome da loja"),
+  store_name: z.string().min(2, "Informe o nome da clínica"),
   branch_name: z.string().optional(),
   display_name: z.string().optional(),
   store_phone: z.string().optional(),
@@ -51,13 +51,13 @@ export default function Onboarding() {
     },
     onSuccess: async () => {
       await refreshProfile();
-      toast({ title: "Organização criada", description: "Catálogo e templates seedados." });
+      toast({ title: "Clínica configurada", description: "Itens iniciais criados para começar." });
       nav("/dashboard", { replace: true });
     },
-    onError: (e: any) => {
+    onError: (e: unknown) => {
       toast({
-        title: "Falha no onboarding",
-        description: e?.message ?? "Tente novamente.",
+        title: "Falha ao configurar",
+        description: e instanceof Error ? e.message : "Tente novamente.",
         variant: "destructive",
       });
     },
@@ -66,15 +66,15 @@ export default function Onboarding() {
   return (
     <div className="min-h-[100svh] bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-xl rounded-[10px] border-[1.5px] border-border p-6 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-8">
-        <div className="text-xs font-medium tracking-widest text-muted-foreground">ONBOARDING</div>
-        <h1 className="mt-2 text-2xl font-semibold">Crie sua organização</h1>
+        <div className="text-xs font-medium tracking-widest text-muted-foreground">PRIMEIRO ACESSO</div>
+        <h1 className="mt-2 text-2xl font-semibold">Configure sua clínica</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Isso habilita o modo multi-tenant, RLS e seeds iniciais (catálogo + template Whats).
+          Informe os dados básicos para começar a usar agenda, tutores, vacinas e lembretes.
         </p>
 
         <form className="mt-6 grid gap-4" onSubmit={form.handleSubmit((v) => createOrg.mutate(v))}>
           <div className="grid gap-2">
-            <Label>Nome da loja</Label>
+            <Label>Nome da clínica</Label>
             <Input className="h-10 rounded-[10px] border-[1.5px]" placeholder="Ex: Vet Center" {...form.register("store_name")} />
             {form.formState.errors.store_name && (
               <p className="text-xs text-destructive">{form.formState.errors.store_name.message}</p>
@@ -93,7 +93,7 @@ export default function Onboarding() {
           </div>
 
           <div className="grid gap-2">
-            <Label>Telefone da loja (opcional)</Label>
+              <Label>Telefone da clínica (opcional)</Label>
             <Input className="h-10 rounded-[10px] border-[1.5px]" placeholder="Ex: (11) 99999-9999" {...form.register("store_phone")} />
           </div>
 

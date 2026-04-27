@@ -19,7 +19,7 @@ export default function ReopenCheckoutDialog({
 }) {
   const reopen = useMutation({
     mutationFn: async () => {
-      if (!row) return;
+      if (!row?.checkout_id) return;
 
       // Minimal "reopen": remove checkout record and set appointment back to PENDENTE.
       // This preserves core business rules and uses only permitted tables.

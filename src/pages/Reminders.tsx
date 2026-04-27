@@ -1,15 +1,23 @@
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Filter, RefreshCw, Search } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bell, Search } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Branch, DueReminderRow } from "@/types/vetvax";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import RemindersTable from "@/components/reminders/RemindersTable";
 import { dayjs } from "@/lib/datetime";
+import PageHeader from "@/components/layout/PageHeader";
+import DataToolbar from "@/components/vetvax/DataToolbar";
+import StatusBadge from "@/components/vetvax/StatusBadge";
+import RichListItem from "@/components/vetvax/RichListItem";
+import EmptyState from "@/components/vetvax/EmptyState";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import { buildWhatsAppLink } from "@/lib/phone";
+import { useWhatsMessage } from "@/components/dashboard/useWhatsMessage";
+import ResolveReminderDialog from "@/components/reminders/ResolveReminderDialog";
+import { useNavigate } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type DuePreset = "overdue" | "7d" | "30d" | "60d" | "all";
 
@@ -48,6 +56,10 @@ function dueRange(due: DuePreset) {
 
 export default function Reminders() {
   const qc = useQueryClient();
+  const { buildReminderMessage, pickPhone } = useWhatsMessage();
+  const nav = useNavigate();
+  const [resolveOpen, setResolveOpen] = useState(false);
+  const [resolveRow, setResolveRow] = useState<DueReminderRow | null>(null);
 
   const [filters, setFilters] = useState<Filters>(() => {
     try {
@@ -169,63 +181,45 @@ export default function Reminders() {
           ? `${count} resolvidos`
           : `${count} arquivados`;
 
+  const setStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: "FEITO" | "ARQUIVADO" }) => {
+      const { error } = await supabase.from("reminders").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => refetchAll(),
+  });
+
+  const list = useMemo(() => rows.data ?? [], [rows.data]);
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
-            <Bell className="h-3.5 w-3.5" />
-            Lembretes
-          </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Próximas aplicações</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Acompanhe vencidos, ativos, resolvidos e arquivados.</p>
-        </div>
+      <PageHeader
+        badge="Fila operacional"
+        title="Lembretes"
+        description="Priorize lembretes vencidos, resolva contatos e arquive pendências."
+      />
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative sm:w-[320px]">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="h-10 rounded-[10px] border-[1.5px] pl-9"
-              placeholder="Buscar tutor / telefone / pet…"
-              value={filters.q}
-              onChange={(e) => persist({ ...filters, q: e.target.value })}
-            />
-          </div>
-
-          <Button variant="secondary" className="h-10 rounded-[10px]" onClick={refetchAll}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Atualizar
-          </Button>
-        </div>
-      </div>
-
-      <Card className="rounded-[10px] border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="rounded-full">
-              {countLabel}
-            </Badge>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
+      <DataToolbar
+        sticky
+        leading={<StatusBadge>{countLabel}</StatusBadge>}
+        filters={
+          <>
             <Select value={filters.status} onValueChange={(v) => persist({ ...filters, status: v as StatusFilter })}>
-              <SelectTrigger className="h-10 rounded-[10px] border-[1.5px] w-full sm:w-[200px]">
+              <SelectTrigger className="w-[170px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="rounded-[10px]">
+              <SelectContent className="rounded-control">
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="ATIVO">Ativos</SelectItem>
                 <SelectItem value="FEITO">Resolvidos</SelectItem>
                 <SelectItem value="ARQUIVADO">Arquivados</SelectItem>
               </SelectContent>
             </Select>
-
             <Select value={filters.due} onValueChange={(v) => persist({ ...filters, due: v as DuePreset })}>
-              <SelectTrigger className="h-10 rounded-[10px] border-[1.5px] w-full sm:w-[210px]">
-                <Filter className="mr-2 h-4 w-4 opacity-70" />
+              <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Vencimento" />
               </SelectTrigger>
-              <SelectContent className="rounded-[10px]">
+              <SelectContent className="rounded-control">
                 <SelectItem value="overdue">Somente vencidos</SelectItem>
                 <SelectItem value="7d">Próximos 7 dias</SelectItem>
                 <SelectItem value="30d">Próximos 30 dias</SelectItem>
@@ -233,35 +227,22 @@ export default function Reminders() {
                 <SelectItem value="all">Todos</SelectItem>
               </SelectContent>
             </Select>
-
             <Select value={filters.reminderType} onValueChange={(v) => persist({ ...filters, reminderType: v as Filters["reminderType"] })}>
-              <SelectTrigger className="h-10 rounded-[10px] border-[1.5px] w-full sm:w-[190px]">
+              <SelectTrigger className="w-[170px]">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
-              <SelectContent className="rounded-[10px]">
+              <SelectContent className="rounded-control">
                 <SelectItem value="all">Todos os tipos</SelectItem>
                 <SelectItem value="vacina">Vacina</SelectItem>
                 <SelectItem value="medicação">Medicação</SelectItem>
                 <SelectItem value="outro">Outro</SelectItem>
               </SelectContent>
             </Select>
-
-            <Select value={filters.pet} onValueChange={(v) => persist({ ...filters, pet: v as Filters["pet"] })}>
-              <SelectTrigger className="h-10 rounded-[10px] border-[1.5px] w-full sm:w-[190px]">
-                <SelectValue placeholder="Pet" />
-              </SelectTrigger>
-              <SelectContent className="rounded-[10px]">
-                <SelectItem value="all">Tutor ou pet</SelectItem>
-                <SelectItem value="with_pet">Somente com pet</SelectItem>
-                <SelectItem value="without_pet">Somente tutor</SelectItem>
-              </SelectContent>
-            </Select>
-
             <Select value={filters.branchId} onValueChange={(v) => persist({ ...filters, branchId: v as Filters["branchId"] })}>
-              <SelectTrigger className="h-10 rounded-[10px] border-[1.5px] w-full sm:w-[210px]">
+              <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filial" />
               </SelectTrigger>
-              <SelectContent className="rounded-[10px]">
+              <SelectContent className="rounded-control">
                 <SelectItem value="all">Todas</SelectItem>
                 {(branches.data ?? []).map((b) => (
                   <SelectItem key={b.id} value={b.id}>
@@ -270,13 +251,103 @@ export default function Reminders() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        </div>
+            <div className="relative w-[260px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-vetvax-text-tertiary" />
+              <Input
+                className="pl-9"
+                placeholder="Buscar tutor, telefone ou pet..."
+                value={filters.q}
+                onChange={(e) => persist({ ...filters, q: e.target.value })}
+              />
+            </div>
+            <Button variant="outline" onClick={refetchAll}>
+              Atualizar
+            </Button>
+          </>
+        }
+      />
 
-        <div className="mt-4">
-          <RemindersTable loading={rows.isLoading} rows={rows.data ?? []} onChanged={refetchAll} />
+      <section className="rounded-card border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card">
+        <div className="space-y-3">
+          {rows.isLoading && Array.from({ length: 5 }).map((_, idx) => <Skeleton key={idx} className="h-[98px] rounded-card-md" />)}
+
+          {!rows.isLoading && list.length === 0 ? (
+            <EmptyState
+              icon={Bell}
+              title="Nenhum lembrete no filtro"
+              description="Ajuste os filtros para visualizar vencimentos e pendências de contato."
+            />
+          ) : null}
+
+          {list.map((row) => {
+            const overdueDays = Math.abs(dayjs().startOf("day").diff(dayjs(row.due_date), "day"));
+            const isOverdue = dayjs(row.due_date).isBefore(dayjs().startOf("day"));
+            return (
+              <RichListItem key={row.id} className="border border-vetvax-border-soft">
+                <div className="grid gap-3 md:grid-cols-[5px_1fr_auto] md:items-center">
+                  <div className={isOverdue ? "h-full rounded-pill bg-vetvax-danger" : "h-full rounded-pill bg-transparent"} />
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs text-vetvax-text-tertiary">{dayjs(row.due_date).format("DD/MM/YYYY")}</p>
+                      {isOverdue ? <StatusBadge tone="danger">vencido há {overdueDays}d</StatusBadge> : <StatusBadge tone="warning">a vencer</StatusBadge>}
+                    </div>
+                    <p className="text-sm font-bold text-vetvax-text-main">{row.tutor_name}</p>
+                    <p className="text-xs text-vetvax-text-secondary">
+                      {[row.tutor_phone1, row.tutor_phone2].filter(Boolean).join(" • ") || "Sem contato"} • {row.reminder_type}
+                    </p>
+                    {row.notes ? <p className="text-xs text-vetvax-text-tertiary">{row.notes}</p> : null}
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={async () => {
+                        const phone = pickPhone(row.tutor_phone1, row.tutor_phone2);
+                        if (!phone) return;
+                        const msg = await buildReminderMessage(row);
+                        window.open(buildWhatsAppLink(phone, msg), "_blank", "noopener,noreferrer");
+                      }}
+                    >
+                      <WhatsAppIcon className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setResolveRow(row);
+                        setResolveOpen(true);
+                      }}
+                    >
+                      Resolver
+                    </Button>
+                    <Button variant="outline" onClick={() => setStatus.mutate({ id: row.id, status: "ARQUIVADO" })}>
+                      Arquivar
+                    </Button>
+                  </div>
+                </div>
+              </RichListItem>
+            );
+          })}
         </div>
-      </Card>
+      </section>
+
+      <ResolveReminderDialog
+        open={resolveOpen}
+        row={resolveRow}
+        onOpenChange={(v) => {
+          setResolveOpen(v);
+          if (!v) setResolveRow(null);
+        }}
+        onOnlyResolve={(row) => {
+          setResolveOpen(false);
+          setResolveRow(null);
+          setStatus.mutate({ id: row.id, status: "FEITO" });
+        }}
+        onScheduleNow={(row) => {
+          setResolveOpen(false);
+          setResolveRow(null);
+          const date = dayjs().format("YYYY-MM-DD");
+          nav(`/appointments/new?tutor=${encodeURIComponent(row.tutor_id)}&resolveReminder=${encodeURIComponent(row.id)}&date=${encodeURIComponent(date)}`);
+        }}
+      />
     </div>
   );
 }

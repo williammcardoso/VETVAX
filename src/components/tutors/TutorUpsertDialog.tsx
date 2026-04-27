@@ -31,6 +31,10 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Tente novamente.";
+}
+
 function maskPhoneBR(value: string) {
   const d = (value ?? "").replace(/\D/g, "").slice(0, 11);
   if (!d) return "";
@@ -101,7 +105,6 @@ export default function TutorUpsertDialog({
       };
 
       if (initial?.id) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { org_id, created_by, ...updatePayload } = payload;
         const { data, error } = await supabase
           .from("tutors")
@@ -121,10 +124,10 @@ export default function TutorUpsertDialog({
       toast({ title: initial?.id ? "Tutor atualizado" : "Tutor criado" });
       onSaved(id);
     },
-    onError: (e: any) => {
+    onError: (e: unknown) => {
       toast({
         title: "Falha ao salvar tutor",
-        description: e?.message ?? "Tente novamente.",
+        description: getErrorMessage(e),
         variant: "destructive",
       });
     },
@@ -195,8 +198,9 @@ export default function TutorUpsertDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label>Tags (separadas por vírgula)</Label>
-            <Input className="h-10 rounded-[10px] border-[1.5px]" placeholder="cliente antigo, vip" {...form.register("tagsText")} />
+            <Label>Marcadores internos</Label>
+            <Input className="h-10 rounded-[10px] border-[1.5px]" placeholder="Ex: cliente antigo, vip" {...form.register("tagsText")} />
+            <p className="text-xs text-muted-foreground">Opcional. Separe por vírgula para facilitar buscas futuras.</p>
             <div className="flex flex-wrap gap-1">
               {(form.watch("tagsText") ?? "")
                 .split(",")

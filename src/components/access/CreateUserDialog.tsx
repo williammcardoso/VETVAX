@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { UserPlus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -7,10 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import type { Branch } from "@/types/vetvax";
 
 const schema = z.object({
   username: z
@@ -19,11 +17,13 @@ const schema = z.object({
     .regex(/^[a-zA-Z0-9._-]+$/, "Use apenas letras, números, . _ -"),
   display_name: z.string().min(2, "Informe o nome"),
   password: z.string().min(6, "Mínimo 6 caracteres"),
-  role: z.enum(["admin", "manager", "staff", "viewer"]).default("staff"),
-  branch_id: z.string().optional().nullable(),
 });
 
 type Values = z.infer<typeof schema>;
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Tente novamente.";
+}
 
 export default function CreateUserDialog({
   open,
@@ -34,27 +34,12 @@ export default function CreateUserDialog({
   onOpenChange: (v: boolean) => void;
   onCreated: () => void;
 }) {
-  const branches = useQuery({
-    queryKey: ["branches", "active"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("branches")
-        .select("id, org_id, name, is_active")
-        .eq("is_active", true)
-        .order("name", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as Branch[];
-    },
-  });
-
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
       username: "",
       display_name: "",
       password: "",
-      role: "staff",
-      branch_id: "",
     },
   });
 
@@ -74,8 +59,6 @@ export default function CreateUserDialog({
           username: values.username,
           password: values.password,
           display_name: values.display_name,
-          role: values.role,
-          branch_id: values.branch_id ? values.branch_id : null,
         }),
       });
 
@@ -88,12 +71,12 @@ export default function CreateUserDialog({
     },
     onSuccess: async () => {
       toast({ title: "Usuário criado" });
-      form.reset({ username: "", display_name: "", password: "", role: "staff", branch_id: "" });
+      form.reset({ username: "", display_name: "", password: "" });
       onCreated();
       onOpenChange(false);
     },
-    onError: (e: any) => {
-      toast({ title: "Falha ao criar usuário", description: e?.message ?? "Tente novamente.", variant: "destructive" });
+    onError: (e: unknown) => {
+      toast({ title: "Falha ao criar usuário", description: getErrorMessage(e), variant: "destructive" });
     },
   });
 
@@ -126,40 +109,6 @@ export default function CreateUserDialog({
             <Label>Senha</Label>
             <Input className="h-10 rounded-[10px] border-[1.5px]" type="password" {...form.register("password")} />
             {form.formState.errors.password && <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>}
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Role</Label>
-              <Select value={form.watch("role")} onValueChange={(v) => form.setValue("role", v as any)}>
-                <SelectTrigger className="h-10 rounded-[10px] border-[1.5px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-[10px]">
-                  <SelectItem value="admin">admin</SelectItem>
-                  <SelectItem value="manager">manager</SelectItem>
-                  <SelectItem value="staff">staff</SelectItem>
-                  <SelectItem value="viewer">viewer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Filial</Label>
-              <Select value={form.watch("branch_id") || "_none"} onValueChange={(v) => form.setValue("branch_id", v === "_none" ? "" : v)}>
-                <SelectTrigger className="h-10 rounded-[10px] border-[1.5px]">
-                  <SelectValue placeholder="Opcional" />
-                </SelectTrigger>
-                <SelectContent className="rounded-[10px]">
-                  <SelectItem value="_none">Sem filial</SelectItem>
-                  {(branches.data ?? []).map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">

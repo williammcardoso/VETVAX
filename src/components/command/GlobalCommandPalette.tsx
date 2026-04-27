@@ -14,6 +14,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type TutorLite = { id: string; name: string; phone1: string | null; phone2: string | null };
 
@@ -32,7 +33,7 @@ function useHotkey(callback: () => void) {
   }, [callback]);
 }
 
-export default function GlobalCommandPalette() {
+export default function GlobalCommandPalette({ className, placeholder = "Buscar cliente, telefone ou vacina..." }: { className?: string; placeholder?: string }) {
   const nav = useNavigate();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -69,7 +70,7 @@ export default function GlobalCommandPalette() {
       },
       {
         key: "tutors",
-        label: "Abrir Tutores",
+        label: "Abrir Clientes",
         icon: Users,
         run: () => nav("/tutors"),
       },
@@ -80,17 +81,17 @@ export default function GlobalCommandPalette() {
   return (
     <>
       <button
-        className={
-          "flex items-center gap-2 rounded-[10px] border-[1.5px] border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground " +
-          "hover:bg-muted/30"
-        }
+        className={cn(
+          "flex h-10 w-[260px] items-center gap-2 rounded-control border border-vetvax-border-soft bg-[#f8fafc] px-3 text-left text-sm text-vetvax-text-tertiary hover:bg-vetvax-surface-alt",
+          className,
+        )}
         onClick={() => setOpen(true)}
         type="button"
       >
         <Search className="h-4 w-4" />
-        <span className="hidden sm:inline">Buscar…</span>
-        <Badge variant="secondary" className="ml-1 hidden sm:inline-flex rounded-full text-[10px]">
-          ⌘K
+        <span className="truncate">{placeholder}</span>
+        <Badge variant="secondary" className="ml-auto hidden rounded-[8px] px-1.5 py-1 text-[10px] sm:inline-flex">
+          Ctrl+K
         </Badge>
       </button>
 
@@ -123,7 +124,7 @@ export default function GlobalCommandPalette() {
 
               <CommandSeparator />
 
-              <CommandGroup heading="Tutores">
+              <CommandGroup heading="Clientes">
                 {(tutors.data ?? []).map((t) => (
                   <CommandItem
                     key={t.id}

@@ -12,11 +12,36 @@ type AgendaItem = {
   scheduled_time: string;
   status: "PENDENTE" | "APLICADO" | "CANCELADO";
   tutor_name: string;
+  tutor_address: string | null;
   pet_name: string | null;
   category: string;
   item_name: string;
   quantity: number;
 };
+
+type PublicAgendaRow = {
+  id: string;
+  scheduled_date: string;
+  scheduled_time: string;
+  status: AgendaItem["status"];
+  tutor?: {
+    name?: string | null;
+    street?: string | null;
+    number?: string | null;
+    neighborhood?: string | null;
+    city?: string | null;
+    uf?: string | null;
+  } | null;
+  items?: Array<{
+    quantity?: number | null;
+    pet?: { name?: string | null } | null;
+    item?: { name?: string | null; category?: string | null } | null;
+  }> | null;
+};
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
 
 function todayIsoInSaoPaulo() {
   // Avoid UTC date drift: appointments.scheduled_date is a DATE, so we should compare using the org's timezone.
@@ -29,24 +54,33 @@ function todayIsoInSaoPaulo() {
   }).format(new Date());
 }
 
+function formatAddress(tutor: PublicAgendaRow["tutor"]) {
+  if (!tutor) return null;
+  const streetPart = [tutor.street, tutor.number].filter(Boolean).join(", ");
+  const regionPart = [tutor.neighborhood, tutor.city].filter(Boolean).join(" • ");
+  const uf = tutor.uf ? String(tutor.uf).toUpperCase() : "";
+  const tail = [regionPart, uf].filter(Boolean).join(regionPart && uf ? " • " : "");
+  return [streetPart, tail].filter(Boolean).join(streetPart && tail ? " • " : "") || null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { token, filter } = (await req.json().catch(() => ({}))) as {
-      token?: string;
+    const { filter, status, from, to } = (await req.json().catch(() => ({}))) as {
       filter?: "all" | "saturday";
+      status?: "all" | "PENDENTE" | "APLICADO" | "CANCELADO";
+      from?: string;
+      to?: string;
     };
-
-    if (!token || typeof token !== "string") {
-      return new Response("Missing token", { status: 400, headers: corsHeaders });
-    }
 
     console.log("[public-agenda] request", {
       filter: filter ?? "all",
-      tokenLength: token.length,
+      status: status ?? "PENDENTE",
+      hasFrom: !!from,
+      hasTo: !!to,
     });
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -59,44 +93,41 @@ serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
 
-    const { data: settings, error: settingsErr } = await admin
-      .from("org_settings")
-      .select("org_id, branding")
-      .eq("is_active", true)
-      .limit(200);
-
-    if (settingsErr) {
-      console.error("[public-agenda] org_settings error", { settingsErr });
-      return new Response("Failed to load settings", { status: 500, headers: corsHeaders });
-    }
-
-    const match = (settings ?? []).find((s: any) => {
-      const t = s?.branding?.public_agenda_token;
-      return typeof t === "string" && t === token;
-    });
-
-    if (!match?.org_id) {
-      console.warn("[public-agenda] invalid token", { tokenLength: token.length });
-      return new Response("Invalid token", { status: 404, headers: corsHeaders });
-    }
-
-    console.log("[public-agenda] matched org", { org_id: match.org_id });
-
     const todayIso = todayIsoInSaoPaulo();
-    console.log("[public-agenda] date filter", { todayIso });
+    const configuredOrgId = (Deno.env.get("PUBLIC_AGENDA_ORG_ID") ?? "").trim();
+    console.log("[public-agenda] date filter", { todayIso, hasConfiguredOrg: !!configuredOrgId });
 
-    // IMPORTANT: public agenda should show *all* upcoming appointments (not only PENDENTE and not only vaccines).
-    const { data, error } = await admin
+    // Public read-only agenda: show all active appointments by default.
+    // Date filters are optional, so old pending appointments remain visible.
+    let query = admin
       .from("appointments")
       .select(
-        "id, org_id, scheduled_date, scheduled_time, status, is_active, tutor:tutors(name), items:appointment_items(quantity, pet:pets(name), item:catalog_items(name, category))",
+        "id, scheduled_date, scheduled_time, status, is_active, tutor:tutors(name, street, number, neighborhood, city, uf), items:appointment_items(quantity, pet:pets(name), item:catalog_items(name, category))",
       )
-      .eq("org_id", match.org_id)
       .eq("is_active", true)
-      .gte("scheduled_date", todayIso)
       .order("scheduled_date", { ascending: true })
       .order("scheduled_time", { ascending: true })
       .limit(1000);
+
+    if (!status || status === "PENDENTE") {
+      query = query.eq("status", "PENDENTE");
+    } else if (status !== "all") {
+      query = query.eq("status", status);
+    }
+
+    if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) {
+      query = query.gte("scheduled_date", from);
+    }
+
+    if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) {
+      query = query.lte("scheduled_date", to);
+    }
+
+    if (configuredOrgId) {
+      query = query.eq("org_id", configuredOrgId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("[public-agenda] appointments error", { error });
@@ -107,20 +138,22 @@ serve(async (req) => {
 
     const flat: AgendaItem[] = [];
 
-    for (const a of data ?? []) {
-      const tutor_name = (a as any).tutor?.name ?? "—";
-      const scheduled_date = String((a as any).scheduled_date);
-      const scheduled_time = String((a as any).scheduled_time).slice(0, 5);
-      const status = String((a as any).status) as AgendaItem["status"];
+    for (const a of ((data ?? []) as PublicAgendaRow[])) {
+      const tutor_name = a.tutor?.name ?? "—";
+      const tutor_address = formatAddress(a.tutor);
+      const scheduled_date = String(a.scheduled_date);
+      const scheduled_time = String(a.scheduled_time).slice(0, 5);
+      const status = String(a.status) as AgendaItem["status"];
 
-      const items = ((a as any).items ?? []) as any[];
+      const items = a.items ?? [];
       if (items.length === 0) {
         flat.push({
-          appointment_id: String((a as any).id),
+          appointment_id: String(a.id),
           scheduled_date,
           scheduled_time,
           status,
           tutor_name,
+          tutor_address,
           pet_name: null,
           category: "—",
           item_name: "—",
@@ -131,15 +164,16 @@ serve(async (req) => {
 
       for (const it of items) {
         flat.push({
-          appointment_id: String((a as any).id),
+          appointment_id: String(a.id),
           scheduled_date,
           scheduled_time,
           status,
           tutor_name,
+          tutor_address,
           pet_name: it?.pet?.name ?? null,
           category: String(it?.item?.category ?? "—"),
           item_name: String(it?.item?.name ?? "—"),
-          quantity: Number(it?.quantity ?? 1),
+          quantity: Number(it.quantity ?? 1),
         });
       }
     }
@@ -159,7 +193,8 @@ serve(async (req) => {
 
     return Response.json({ ok: true, items: filtered }, { headers: corsHeaders });
   } catch (e) {
-    console.error("[public-agenda] error", { message: (e as any)?.message ?? String(e) });
-    return Response.json({ ok: false, error: (e as any)?.message ?? String(e) }, { status: 500, headers: corsHeaders });
+    const message = getErrorMessage(e);
+    console.error("[public-agenda] error", { message });
+    return Response.json({ ok: false, error: message }, { status: 500, headers: corsHeaders });
   }
 });

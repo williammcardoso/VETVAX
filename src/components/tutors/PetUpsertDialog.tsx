@@ -25,6 +25,10 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Tente novamente.";
+}
+
 export default function PetUpsertDialog({
   open,
   onOpenChange,
@@ -70,7 +74,6 @@ export default function PetUpsertDialog({
       };
 
       if (initial?.id) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { org_id, ...updatePayload } = payload;
         const { error } = await supabase.from("pets").update(updatePayload).eq("id", initial.id);
         if (error) throw error;
@@ -84,8 +87,8 @@ export default function PetUpsertDialog({
       toast({ title: initial?.id ? "Pet atualizado" : "Pet criado" });
       onSaved();
     },
-    onError: (e: any) => {
-      toast({ title: "Falha ao salvar pet", description: e?.message, variant: "destructive" });
+    onError: (e: unknown) => {
+      toast({ title: "Falha ao salvar pet", description: getErrorMessage(e), variant: "destructive" });
     },
   });
 

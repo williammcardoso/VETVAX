@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateBr, formatTimeBr } from "@/lib/datetime";
+import { dayjs } from "@/lib/datetime";
 import CheckoutDialog from "@/components/dashboard/CheckoutDialog";
 import RescheduleDialog from "@/components/dashboard/RescheduleDialog";
 import { buildWhatsAppLink, formatBrPhoneForDisplay } from "@/lib/phone";
@@ -91,11 +92,17 @@ export default function UpcomingAppointmentsTable({
                 ? formatBrPhoneForDisplay(row.tutor_phone1 ?? row.tutor_phone2)
                 : "—";
             const address = formatTutorAddressLine(row as any);
+            const isOverdue = row.scheduled_date < dayjs().format("YYYY-MM-DD");
 
             return (
-              <TableRow key={row.id} className="group transition-colors hover:bg-slate-50">
+              <TableRow key={row.id} className={isOverdue ? "group bg-red-50/50 transition-colors hover:bg-red-50" : "group transition-colors hover:bg-slate-50"}>
                 <TableCell className="align-top py-4">
-                  <div className="text-xs font-semibold text-foreground">{formatDateBr(row.scheduled_date)}</div>
+                  <div className="flex flex-col gap-1">
+                    <div className="text-xs font-semibold text-foreground">{formatDateBr(row.scheduled_date)}</div>
+                    {isOverdue ? (
+                      <Badge className="w-fit rounded-full border-0 bg-red-600 text-[10px] text-white">Atrasado</Badge>
+                    ) : null}
+                  </div>
                   <div className="mt-1 text-[12px] font-bold text-primary">{formatTimeBr(row.scheduled_time)}</div>
                 </TableCell>
 
@@ -179,12 +186,12 @@ export default function UpcomingAppointmentsTable({
                     <XCircle className="h-5 w-5 text-muted-foreground" strokeWidth={2} />
                   </div>
                   <div className="mt-3 text-sm font-semibold">
-                    {variant === "today" ? "Nenhum agendamento hoje" : "Nenhum agendamento futuro"}
+                    {variant === "today" ? "Nenhum agendamento hoje" : "Nenhum agendamento pendente"}
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {variant === "today"
                       ? "Se precisar, crie um novo agendamento."
-                      : "Quando houver agendamentos, eles aparecerão aqui em ordem cronológica."}
+                      : "Quando houver pendências, elas aparecerão aqui em ordem cronológica."}
                   </p>
                 </div>
               </TableCell>

@@ -57,15 +57,3 @@ export function RequireOnboarding({ children }: PropsWithChildren) {
 
   return <>{children}</>;
 }
-
-export function RequireRole({
-  allow,
-  children,
-}: PropsWithChildren<{ allow: Array<"admin" | "manager" | "staff" | "viewer"> }>) {
-  const { profile, loading } = useAuth();
-
-  if (loading) return null;
-  if (!profile || !allow.includes(profile.role)) return <Navigate to="/dashboard" replace />;
-
-  return <>{children}</>;
-}

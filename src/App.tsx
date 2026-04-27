@@ -4,10 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/components/auth/AuthProvider";
-import { RequireAuth, RequireOnboarding, RequireRole } from "@/components/auth/RouteGuards";
+import { RequireAuth, RequireOnboarding } from "@/components/auth/RouteGuards";
 import Login from "@/pages/Login";
 import Onboarding from "@/pages/Onboarding";
-import InviteAccept from "@/pages/InviteAccept";
 import NotFound from "@/pages/NotFound";
 import AppShell from "@/components/layout/AppShell";
 import Dashboard from "@/pages/Dashboard";
@@ -20,6 +19,7 @@ import Settings from "@/pages/Settings";
 import Access from "@/pages/Access";
 import Reminders from "@/pages/Reminders";
 import AgendaPublica from "@/pages/AgendaPublica";
+import Profile from "@/pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -33,14 +33,6 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/agenda-publica" element={<AgendaPublica />} />
-            <Route
-              path="/invite"
-              element={
-                <RequireAuth>
-                  <InviteAccept />
-                </RequireAuth>
-              }
-            />
             <Route
               path="/onboarding"
               element={
@@ -67,31 +59,10 @@ const App = () => (
               <Route path="appointments/new" element={<AppointmentNew />} />
               <Route path="reminders" element={<Reminders />} />
               <Route path="reports" element={<Reports />} />
-
-              <Route
-                path="catalog"
-                element={
-                  <RequireRole allow={["admin"]}>
-                    <Catalog />
-                  </RequireRole>
-                }
-              />
-              <Route
-                path="settings"
-                element={
-                  <RequireRole allow={["admin", "manager"]}>
-                    <Settings />
-                  </RequireRole>
-                }
-              />
-              <Route
-                path="access"
-                element={
-                  <RequireRole allow={["admin"]}>
-                    <Access />
-                  </RequireRole>
-                }
-              />
+              <Route path="catalog" element={<Catalog />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="access" element={<Access />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
 
             <Route path="/home" element={<Navigate to="/" replace />} />

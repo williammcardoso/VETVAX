@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Shield } from "lucide-react";
+import { ListPlus, Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
@@ -12,10 +12,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/auth/AuthProvider";
+import PageHeader from "@/components/layout/PageHeader";
+import EmptyState from "@/components/vetvax/EmptyState";
+import ActionButton from "@/components/vetvax/ActionButton";
 
 const schema = z.object({
   name: z.string().min(2, "Informe o nome"),
@@ -28,11 +31,23 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
+const categoryLabels: Record<Values["category"], string> = {
+  vaccine: "Vacina",
+  medication: "Medicação",
+  other: "Outro",
+};
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Tente novamente.";
+}
+
 export default function Catalog() {
   const qc = useQueryClient();
+  const { profile } = useAuth();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CatalogItem | null>(null);
+  const [typeFilter, setTypeFilter] = useState<"all" | Values["category"]>("all");
 
   const items = useQuery({
     queryKey: ["catalog", "admin", q],
@@ -82,7 +97,8 @@ export default function Catalog() {
         return;
       }
 
-      const { error } = await supabase.from("catalog_items").insert(payload);
+      if (!profile?.org_id) throw new Error("Sem organização no perfil");
+      const { error } = await supabase.from("catalog_items").insert({ ...payload, org_id: profile.org_id });
       if (error) throw error;
     },
     onSuccess: async () => {
@@ -91,34 +107,26 @@ export default function Catalog() {
       setEditing(null);
       await qc.invalidateQueries({ queryKey: ["catalog"] });
     },
-    onError: (e: any) => {
-      toast({ title: "Falha ao salvar item", description: e?.message, variant: "destructive" });
+    onError: (e: unknown) => {
+      toast({ title: "Falha ao salvar item", description: getErrorMessage(e), variant: "destructive" });
     },
   });
 
-  const rows = useMemo(() => items.data ?? [], [items.data]);
+  const rows = useMemo(() => {
+    const base = items.data ?? [];
+    if (typeFilter === "all") return base;
+    return base.filter((item) => item.category === typeFilter);
+  }, [items.data, typeFilter]);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
-            <Shield className="h-3.5 w-3.5" />
-            Admin
-          </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Catálogo</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Itens configuráveis por organização (vacinas, medicações, outros).</p>
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Input
-            className="h-10 rounded-[10px] border-[1.5px] sm:w-[320px]"
-            placeholder="Buscar item…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <Button
-            className="h-10 rounded-[10px]"
+      <PageHeader
+        badge="Gestão de itens"
+        title="Catálogo"
+        description="Gerencie vacinas, medicamentos e itens usados nos agendamentos."
+        actions={
+          <ActionButton
+            emphasis="primary"
             onClick={() => {
               setEditing(null);
               form.reset({
@@ -132,85 +140,85 @@ export default function Catalog() {
               setOpen(true);
             }}
           >
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="h-4 w-4" />
             Novo item
-          </Button>
+          </ActionButton>
+        }
+      />
+
+      <Card className="rounded-card border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card">
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <Input
+            className="md:w-[340px]"
+            placeholder="Buscar item..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { id: "all", label: "Todos" },
+              { id: "vaccine", label: "Vacinas" },
+              { id: "medication", label: "Medicações" },
+              { id: "other", label: "Outros" },
+            ].map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => setTypeFilter(chip.id as typeof typeFilter)}
+                className={`rounded-pill border px-3 py-1.5 text-xs font-bold ${
+                  typeFilter === chip.id
+                    ? "border-vetvax-primary-border bg-vetvax-primary-soft text-vetvax-primary"
+                    : "border-vetvax-border-soft bg-vetvax-surface-alt text-vetvax-text-secondary"
+                }`}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <Card className="rounded-[10px] border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-5">
-        <div className="overflow-hidden rounded-[10px] border-[1.5px] border-border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/40">
-                <TableHead>Item</TableHead>
-                <TableHead className="hidden md:table-cell">Regras</TableHead>
-                <TableHead className="w-[140px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((it) => (
-                <TableRow key={it.id} className="hover:bg-muted/30">
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm font-medium">{it.name}</div>
-                      {!it.is_active && (
-                        <Badge variant="secondary" className="rounded-full">
-                          inativo
-                        </Badge>
-                      )}
-                      <Badge className="rounded-full" variant="secondary">
-                        {it.category}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      {it.requires_description ? (
-                        <Badge variant="secondary" className="rounded-full">
-                          exige descrição
-                        </Badge>
-                      ) : null}
-                      {it.allows_origin ? (
-                        <Badge variant="secondary" className="rounded-full">
-                          permite origem
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="secondary"
-                      className="h-10 rounded-[10px]"
-                      onClick={() => {
-                        setEditing(it);
-                        form.reset({
-                          name: it.name,
-                          category: it.category,
-                          requires_description: it.requires_description,
-                          allows_origin: it.allows_origin,
-                          default_origin: it.default_origin ?? "",
-                          is_active: it.is_active,
-                        });
-                        setOpen(true);
-                      }}
-                    >
-                      Editar
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+        <div className="space-y-2">
+          {rows.map((it) => (
+            <article key={it.id} className="flex flex-col gap-3 rounded-card-md border border-vetvax-border-soft bg-vetvax-surface-alt p-4 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-bold text-vetvax-text-main">{it.name}</p>
+                  <Badge variant="secondary">{categoryLabels[it.category]}</Badge>
+                  {!it.is_active ? <Badge variant="outline">Inativo</Badge> : null}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {it.requires_description ? <Badge variant="outline">Exige descrição</Badge> : null}
+                  {it.allows_origin ? <Badge variant="outline">Permite origem</Badge> : null}
+                  {it.default_origin ? <Badge variant="outline">Origem: {it.default_origin}</Badge> : null}
+                </div>
+              </div>
+              <ActionButton
+                emphasis="secondary"
+                onClick={() => {
+                  setEditing(it);
+                  form.reset({
+                    name: it.name,
+                    category: it.category,
+                    requires_description: it.requires_description,
+                    allows_origin: it.allows_origin,
+                    default_origin: it.default_origin ?? "",
+                    is_active: it.is_active,
+                  });
+                  setOpen(true);
+                }}
+              >
+                Editar
+              </ActionButton>
+            </article>
+          ))}
 
-              {!items.isLoading && rows.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={3} className="py-10 text-center">
-                    <div className="text-sm font-medium">Nada no catálogo</div>
-                    <p className="mt-1 text-xs text-muted-foreground">No onboarding já criamos itens iniciais — verifique seu RLS/seed.</p>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          {!items.isLoading && rows.length === 0 ? (
+            <EmptyState
+              icon={ListPlus}
+              title="Nada no catálogo"
+              description="Cadastre vacinas, medicações ou outros itens para usar nos agendamentos."
+            />
+          ) : null}
         </div>
       </Card>
 
@@ -238,14 +246,14 @@ export default function Catalog() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Categoria</Label>
-                <Select value={form.watch("category")} onValueChange={(v) => form.setValue("category", v as any)}>
+                <Select value={form.watch("category")} onValueChange={(v) => form.setValue("category", v as Values["category"])}>
                   <SelectTrigger className="h-10 rounded-[10px] border-[1.5px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-[10px]">
-                    <SelectItem value="vaccine">vaccine</SelectItem>
-                    <SelectItem value="medication">medication</SelectItem>
-                    <SelectItem value="other">other</SelectItem>
+                    <SelectItem value="vaccine">Vacina</SelectItem>
+                    <SelectItem value="medication">Medicação</SelectItem>
+                    <SelectItem value="other">Outro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

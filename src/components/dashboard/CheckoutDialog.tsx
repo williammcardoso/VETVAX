@@ -67,6 +67,7 @@ export default function CheckoutDialog({
     },
     onSuccess: () => {
       toast({ title: "Baixa registrada" });
+      onOpenChange(false);
       onChanged();
     },
     onError: (e: any) => {

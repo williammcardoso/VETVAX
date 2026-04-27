@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { Plus, Search, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -12,25 +12,33 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import TutorUpsertDialog from "@/components/tutors/TutorUpsertDialog";
 import { formatBrPhoneForDisplay } from "@/lib/phone";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import PageHeader from "@/components/layout/PageHeader";
+import EmptyState from "@/components/vetvax/EmptyState";
 
 export default function Tutors() {
   const nav = useNavigate();
   const qc = useQueryClient();
 
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<10 | 20 | 50>(10);
   const [openCreate, setOpenCreate] = useState(false);
 
   const tutors = useQuery({
-    queryKey: ["tutors", "list", q],
+    queryKey: ["tutors", "list", q, page, pageSize],
     queryFn: async () => {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
       let query = supabase
         .from("tutors")
         .select(
           "id, org_id, branch_id, name, street, number, complement, neighborhood, city, uf, phone1, phone2, notes, tags, contact_consent, is_active, created_at",
+          { count: "exact" },
         )
         .eq("is_active", true)
         .order("name", { ascending: true })
-        .limit(200);
+        .range(from, to);
 
       const term = q.trim();
       if (term) {
@@ -39,51 +47,72 @@ export default function Tutors() {
         );
       }
 
-      const { data, error } = await query;
+      const { data, count, error } = await query;
       if (error) throw error;
-      return (data ?? []) as Tutor[];
+      return {
+        rows: (data ?? []) as Tutor[],
+        count: count ?? 0,
+      };
     },
   });
 
-  const rows = useMemo(() => tutors.data ?? [], [tutors.data]);
+  const rows = useMemo(() => tutors.data?.rows ?? [], [tutors.data?.rows]);
+  const total = tutors.data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  useEffect(() => {
+    setPage(1);
+  }, [q, pageSize]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
-            <Users className="h-3.5 w-3.5" />
-            Base de clientes (tutores)
-          </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Tutores</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Busque por nome, telefone ou região. Abra um tutor para gerenciar pets e histórico.
-          </p>
-        </div>
+      <PageHeader
+        badge="Relacionamento"
+        title="Clientes"
+        description="Busque por nome, telefone ou região. Abra um cliente para gerenciar pets e histórico."
+        actions={
+          <Button onClick={() => setOpenCreate(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo cliente
+          </Button>
+        }
+      />
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Card className="rounded-card border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card">
+        <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="relative w-full md:w-[320px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-vetvax-text-tertiary" />
             <Input
-              className="h-10 w-full rounded-[10px] border-[1.5px] pl-9 sm:w-[320px]"
-              placeholder="Buscar tutor…"
+              className="pl-9"
+              placeholder="Buscar cliente..."
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
           </div>
-          <Button className="h-10 rounded-[10px]" onClick={() => setOpenCreate(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo tutor
-          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-vetvax-text-tertiary">Por página</span>
+            <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v) as 10 | 20 | 50)}>
+              <SelectTrigger className="w-[96px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-control">
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
 
-      <Card className="rounded-[10px] border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-5">
-        <div className="overflow-hidden rounded-[10px] border-[1.5px] border-border">
+        <div className="overflow-hidden rounded-card-md border border-vetvax-border-soft">
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/40">
-                <TableHead>Tutor</TableHead>
+              <TableRow className="bg-vetvax-surface-alt">
+                <TableHead>Cliente</TableHead>
                 <TableHead className="hidden md:table-cell">Contato</TableHead>
                 <TableHead className="hidden lg:table-cell">Região</TableHead>
                 <TableHead className="w-[120px]"></TableHead>
@@ -94,7 +123,7 @@ export default function Tutors() {
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell colSpan={4}>
-                      <Skeleton className="h-9 w-full rounded-[10px]" />
+                      <Skeleton className="h-10 w-full rounded-control" />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -102,7 +131,7 @@ export default function Tutors() {
               {(rows ?? []).map((t) => (
                 <TableRow
                   key={t.id}
-                  className="cursor-pointer hover:bg-muted/30"
+                  className="cursor-pointer hover:bg-vetvax-surface-alt"
                   onClick={() => nav(`/tutors/${t.id}`)}
                 >
                   <TableCell>
@@ -130,7 +159,7 @@ export default function Tutors() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button asChild variant="secondary" className="h-10 rounded-[10px]" onClick={(e) => e.stopPropagation()}>
+                    <Button asChild variant="outline" onClick={(e) => e.stopPropagation()}>
                       <Link to={`/appointments/new?tutor=${t.id}`}>Agendar</Link>
                     </Button>
                   </TableCell>
@@ -140,21 +169,39 @@ export default function Tutors() {
               {!tutors.isLoading && rows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={4} className="py-10">
-                    <div className="mx-auto max-w-sm text-center">
-                      <div className="text-sm font-medium">Nenhum tutor encontrado</div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Cadastre o primeiro tutor para começar a agendar.
-                      </p>
-                      <Button className="mt-4 h-10 rounded-[10px]" onClick={() => setOpenCreate(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Novo tutor
-                      </Button>
-                    </div>
+                    <EmptyState
+                      icon={Users}
+                      title="Nenhum cliente encontrado"
+                      description="Cadastre o primeiro cliente para começar a agendar."
+                      action={
+                        <Button onClick={() => setOpenCreate(true)}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Novo cliente
+                        </Button>
+                      }
+                    />
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <p className="text-xs text-vetvax-text-tertiary">
+            Mostrando {(page - 1) * pageSize + (rows.length ? 1 : 0)}-{(page - 1) * pageSize + rows.length} de {total} clientes
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              Anterior
+            </Button>
+            <span className="text-xs font-semibold text-vetvax-text-secondary">
+              Página {page} de {totalPages}
+            </span>
+            <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+              Próxima
+            </Button>
+          </div>
         </div>
       </Card>
 

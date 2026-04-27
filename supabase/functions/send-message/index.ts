@@ -11,9 +11,17 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const expectedSecret = Deno.env.get("SEND_MESSAGE_SECRET") ?? "";
 
     if (!supabaseUrl || !serviceRoleKey) {
       return new Response("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY", { status: 500 });
+    }
+
+    if (expectedSecret) {
+      const token = req.headers.get("Authorization")?.replace("Bearer ", "").trim();
+      if (token !== expectedSecret) {
+        return new Response("Unauthorized", { status: 401 });
+      }
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
@@ -46,8 +54,9 @@ serve(async (req) => {
       messages: data ?? [],
     });
   } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
     return Response.json(
-      { ok: false, error: (e as any)?.message ?? String(e) },
+      { ok: false, error: message },
       { status: 500 },
     );
   }

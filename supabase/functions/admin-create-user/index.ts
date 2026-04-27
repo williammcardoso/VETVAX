@@ -13,6 +13,10 @@ function normalizeUsername(raw: string) {
   return cleaned;
 }
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -51,7 +55,7 @@ serve(async (req) => {
 
     const { data: myProfile, error: profErr } = await client
       .from("profiles")
-      .select("id, org_id, role")
+      .select("id, org_id, branch_id, role")
       .eq("id", userData.user.id)
       .maybeSingle();
 
@@ -60,15 +64,14 @@ serve(async (req) => {
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
 
-    if (!myProfile?.org_id || myProfile.role !== "admin") {
-      return new Response("Forbidden", { status: 403, headers: corsHeaders });
+    if (!myProfile?.org_id) {
+      return new Response("Usuario sem organizacao", { status: 403, headers: corsHeaders });
     }
 
     const body = (await req.json().catch(() => ({}))) as {
       username?: string;
       password?: string;
       display_name?: string;
-      role?: "admin" | "manager" | "staff" | "viewer";
       branch_id?: string | null;
     };
 
@@ -106,8 +109,8 @@ serve(async (req) => {
     const { error: upsertErr } = await admin.from("profiles").upsert({
       id: newUserId,
       org_id: myProfile.org_id,
-      branch_id: body.branch_id ?? null,
-      role: body.role ?? "staff",
+      branch_id: body.branch_id ?? myProfile.branch_id ?? null,
+      role: "admin",
       display_name: body.display_name ?? username,
     });
 
@@ -125,7 +128,8 @@ serve(async (req) => {
       { headers: corsHeaders },
     );
   } catch (e) {
-    console.error("[admin-create-user] error", { message: (e as any)?.message ?? String(e) });
-    return Response.json({ ok: false, error: (e as any)?.message ?? String(e) }, { status: 500, headers: corsHeaders });
+    const message = getErrorMessage(e);
+    console.error("[admin-create-user] error", { message });
+    return Response.json({ ok: false, error: message }, { status: 500, headers: corsHeaders });
   }
 });

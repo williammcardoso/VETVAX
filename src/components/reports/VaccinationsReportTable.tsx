@@ -7,25 +7,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateBr, formatTimeBr } from "@/lib/datetime";
 
 export type VaccinationReportRow = {
-  checkout_id: string;
+  checkout_id: string | null;
   appointment_id: string;
-  checkout_date: string;
+  checkout_date: string | null;
   scheduled_date: string;
   scheduled_time: string;
   tutor_id: string;
   tutor_name: string;
   tutor_phone1: string | null;
   tutor_phone2: string | null;
-  status: "APLICADO" | "CANCELADO";
+  status: "PENDENTE" | "APLICADO" | "CANCELADO";
   vaccines: string;
   created_by: string | null;
   responsible_name: string | null;
 };
 
-function toCsv(rows: Array<Record<string, any>>) {
+type CsvValue = string | number | boolean | null | undefined;
+
+function toCsv(rows: Array<Record<string, CsvValue>>) {
   if (!rows.length) return "";
   const headers = Object.keys(rows[0]);
-  const escape = (v: any) => {
+  const escape = (v: CsvValue) => {
     const s = v === null || v === undefined ? "" : String(v);
     const needs = /[",\n]/.test(s);
     const escaped = s.replace(/"/g, '""');
@@ -65,15 +67,15 @@ export default function VaccinationsReportTable({
     setExporting(true);
     try {
       const flat = rows.map((r) => ({
-        data_baixa: r.checkout_date,
+        data_baixa: r.checkout_date ?? "",
         data_agendamento: r.scheduled_date,
         hora: r.scheduled_time,
         tutor: r.tutor_name,
         vacinas: r.vaccines,
         responsavel: r.responsible_name ?? "",
-        status: r.status,
+        status: r.status === "APLICADO" ? "Aplicado" : r.status === "CANCELADO" ? "Cancelado" : "Pendente",
         appointment_id: r.appointment_id,
-        checkout_id: r.checkout_id,
+        checkout_id: r.checkout_id ?? "",
       }));
       const csv = toCsv(flat);
       const filename = `vetvax_vacinacoes_${new Date().toISOString().slice(0, 10)}.csv`;
@@ -87,17 +89,16 @@ export default function VaccinationsReportTable({
   const rendered = useMemo(() => rows, [rows]);
 
   return (
-    <div className="overflow-hidden rounded-[10px] border-[1.5px] border-border">
-      <div className="flex flex-col gap-2 border-b border-border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="overflow-hidden rounded-card-md border border-vetvax-border-soft">
+      <div className="flex flex-col gap-2 border-b border-vetvax-border-soft bg-vetvax-surface-alt p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="rounded-full">
+          <Badge variant="secondary" className="rounded-pill">
             {rows.length} registros
           </Badge>
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
-            className="h-10 rounded-[10px]"
+            variant="outline"
             onClick={exportCsv}
             disabled={loading || exporting || rows.length === 0}
           >
@@ -107,9 +108,9 @@ export default function VaccinationsReportTable({
         </div>
       </div>
 
-      <Table>
+      <Table className="[&_tr]:border-vetvax-border-soft">
         <TableHeader>
-          <TableRow className="bg-muted/40">
+          <TableRow className="bg-vetvax-surface-alt">
             <TableHead className="w-[140px]">Data</TableHead>
             <TableHead className="w-[100px]">Hora</TableHead>
             <TableHead>Tutor</TableHead>
@@ -124,42 +125,50 @@ export default function VaccinationsReportTable({
             Array.from({ length: 8 }).map((_, i) => (
               <TableRow key={i}>
                 <TableCell colSpan={7}>
-                  <Skeleton className="h-9 w-full rounded-[10px]" />
+                  <Skeleton className="h-14 w-full rounded-control" />
                 </TableCell>
               </TableRow>
             ))}
 
           {rendered.map((r) => (
-            <TableRow key={r.checkout_id} className="hover:bg-muted/30">
+            <TableRow key={r.checkout_id ?? r.appointment_id} className="h-[72px] hover:bg-vetvax-surface-alt">
               <TableCell className="align-top">
-                <div className="text-xs font-semibold">{formatDateBr(r.checkout_date)}</div>
-                <div className="mt-0.5 text-[11px] text-muted-foreground">agend.: {formatDateBr(r.scheduled_date)}</div>
+                <div className="text-xs font-semibold">{formatDateBr(r.scheduled_date)}</div>
+                <div className="mt-0.5 text-[11px] text-vetvax-text-tertiary">
+                  {r.checkout_date ? `baixa: ${formatDateBr(r.checkout_date)}` : "em aberto"}
+                </div>
               </TableCell>
               <TableCell className="align-top">
-                <div className="text-xs font-semibold text-primary">{formatTimeBr(r.scheduled_time)}</div>
+                <div className="text-xs font-semibold text-vetvax-primary">{formatTimeBr(r.scheduled_time)}</div>
               </TableCell>
               <TableCell className="align-top">
-                <div className="text-sm font-medium leading-tight">{r.tutor_name}</div>
-                <div className="mt-0.5 text-[11px] text-muted-foreground">#{r.appointment_id.slice(0, 8)}</div>
+                <div className="text-sm font-bold leading-tight text-vetvax-text-main">{r.tutor_name}</div>
+                <div className="mt-0.5 font-mono text-[11px] text-vetvax-text-tertiary">atendimento {r.appointment_id.slice(0, 8)}</div>
               </TableCell>
               <TableCell className="hidden lg:table-cell align-top">
-                <div className="text-sm">{r.responsible_name ?? "—"}</div>
+                <div className="text-sm text-vetvax-text-secondary">{r.responsible_name ?? "—"}</div>
               </TableCell>
               <TableCell className="align-top">
-                <div className="text-sm">{r.vaccines || "—"}</div>
+                <div className="text-sm text-vetvax-text-secondary">{r.vaccines || "—"}</div>
               </TableCell>
               <TableCell className="align-top">
-                {r.status === "APLICADO" ? (
-                  <Badge className="rounded-full border-0 bg-emerald-600 text-white">APLICADO</Badge>
+                {r.status === "PENDENTE" ? (
+                  <Badge className="rounded-pill border-transparent bg-vetvax-warning-soft text-vetvax-warning">Pendente</Badge>
+                ) : r.status === "APLICADO" ? (
+                  <Badge className="rounded-pill border-transparent bg-vetvax-success-soft text-vetvax-success">Aplicado</Badge>
                 ) : (
-                  <Badge className="rounded-full border-0 bg-red-600 text-white">CANCELADO</Badge>
+                  <Badge className="rounded-pill border-transparent bg-vetvax-danger-soft text-vetvax-danger">Cancelado</Badge>
                 )}
               </TableCell>
               <TableCell className="text-right align-top">
-                <Button variant="secondary" className="h-10 rounded-[10px]" onClick={() => onReopen(r)}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Reabrir
-                </Button>
+                {r.checkout_id ? (
+                  <Button variant="outline" onClick={() => onReopen(r)}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reabrir
+                  </Button>
+                ) : (
+                  <span className="text-xs text-vetvax-text-tertiary">Sem baixa</span>
+                )}
               </TableCell>
             </TableRow>
           ))}
@@ -169,7 +178,7 @@ export default function VaccinationsReportTable({
               <TableCell colSpan={7} className="py-10">
                 <div className="mx-auto max-w-sm text-center">
                   <div className="text-sm font-medium">Nenhum registro</div>
-                  <p className="mt-1 text-xs text-muted-foreground">Ajuste os filtros para encontrar vacinações.</p>
+                  <p className="mt-1 text-xs text-vetvax-text-tertiary">Ajuste os filtros para encontrar vacinações.</p>
                 </div>
               </TableCell>
             </TableRow>
