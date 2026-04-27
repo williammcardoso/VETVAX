@@ -13,8 +13,8 @@ export default function SummaryCard({
 }) {
   return (
     <aside className={sticky ? "lg:sticky lg:top-[96px]" : ""}>
-      <div className="rounded-card border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card">
-        <h3 className="text-base font-bold text-vetvax-text-main">{title}</h3>
+      <div className="rounded-[16px] border border-vetvax-border-soft bg-gradient-to-b from-white to-vetvax-surface-panel/40 p-5 shadow-vetvax-card ring-1 ring-black/[0.02] transition-[box-shadow,border-color] duration-vetvax hover:border-vetvax-border-medium/60 hover:shadow-vetvax-card-hover">
+        <h3 className="text-[15px] font-semibold tracking-tight text-vetvax-text-main">{title}</h3>
         <div className="mt-4 space-y-3">{children}</div>
         {footer ? <div className="mt-5 space-y-2">{footer}</div> : null}
       </div>

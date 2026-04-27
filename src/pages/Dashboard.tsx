@@ -247,11 +247,13 @@ export default function Dashboard() {
         description="Acompanhe pendências, atrasos, lembretes e aplicações em uma visão operacional."
       />
 
-      <section className="rounded-[24px] bg-[#0f172a] p-6 text-white shadow-vetvax-card">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <section className="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[#0b1220] via-[#0f172a] to-[#0d4f4a] p-6 text-white shadow-vetvax-card ring-1 ring-white/10">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-teal-400/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-10 h-52 w-52 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-xl font-bold">Hoje, o que precisa acontecer?</h2>
-            <p className="mt-1 text-sm text-white/70">{todayPendingCount} ações operacionais aguardando atendimento.</p>
+            <h2 className="text-xl font-semibold tracking-tight">Hoje, o que precisa acontecer?</h2>
+            <p className="mt-1 text-sm text-white/75">{todayPendingCount} ações operacionais aguardando atendimento.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <MetricTile label="Pendentes" value={todayPendingCount} tone="inverse" />
@@ -269,7 +271,7 @@ export default function Dashboard() {
       </section>
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
-        <section className="min-w-0 rounded-card border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card">
+        <section className="min-w-0 rounded-[16px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="vetvax-section-title">Prioridade operacional</h2>
@@ -427,7 +429,7 @@ export default function Dashboard() {
           ) : null}
         </section>
 
-        <aside className="min-w-0 rounded-card border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card">
+        <aside className="min-w-0 rounded-[16px] border border-vetvax-border-soft bg-gradient-to-b from-white to-vetvax-surface-panel/50 p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="vetvax-section-title">Lembretes críticos</h2>
             <StatusBadge tone="danger">{criticalReminders.length}</StatusBadge>
@@ -437,7 +439,10 @@ export default function Dashboard() {
               Array.from({ length: 4 }).map((_, idx) => <Skeleton key={idx} className="h-16 rounded-card-md" />)}
             {!reminders.isLoading &&
               criticalReminders.map((row) => (
-                <div key={row.id} className="rounded-card-md border border-vetvax-border-soft bg-vetvax-surface-alt p-3">
+                <div
+                  key={row.id}
+                  className="rounded-[14px] border border-vetvax-border-soft bg-vetvax-surface-panel/80 p-3 shadow-sm transition-[border-color,box-shadow,transform] duration-vetvax hover:-translate-y-px hover:border-amber-200/80 hover:shadow-md"
+                >
                   <div className="flex items-start gap-2">
                     <span className="mt-1 h-2 w-2 rounded-full bg-vetvax-danger" />
                     <div className="min-w-0 flex-1">

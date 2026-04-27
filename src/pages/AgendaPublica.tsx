@@ -193,7 +193,7 @@ export default function AgendaPublica() {
   ] as const;
 
   return (
-    <div className="min-h-[100svh] bg-[linear-gradient(180deg,#f8fafc_0%,#f5f8fb_42%,#ffffff_100%)]">
+    <div className="min-h-[100svh] bg-gradient-to-b from-vetvax-bg via-vetvax-surface-alt/40 to-white">
       <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 sm:py-6 lg:max-w-6xl lg:px-8 lg:py-7">
         {/* Hero compacto: não domina a viewport — produto premium editorial */}
         <section className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_16px_48px_rgba(15,23,42,0.07)]">

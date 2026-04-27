@@ -41,11 +41,11 @@ export default function Topbar({
   const notifCount = useMemo(() => (reminders.data?.length ?? 0) + (appointments.data?.length ?? 0), [appointments.data?.length, reminders.data?.length]);
 
   return (
-    <header className="sticky top-0 z-30 h-[72px] border-b border-vetvax-border-soft bg-[rgba(255,255,255,0.82)] px-4 backdrop-blur-[14px] md:px-8">
+    <header className="sticky top-0 z-30 h-[72px] border-b border-vetvax-border-soft bg-white/80 px-4 shadow-vetvax-topbar backdrop-blur-[16px] md:px-8">
       <div className="vetvax-page flex h-full items-center justify-between !px-0">
         <div className="flex min-w-0 items-center gap-3">
           <Button variant="outline" size="icon" className="h-10 w-10 md:hidden" onClick={onOpenMenu}>
-            <Menu className="h-4 w-4" />
+            <Menu className="h-[18px] w-[18px] stroke-[2]" />
           </Button>
           <p className="truncate text-sm">
             <span className="text-vetvax-text-tertiary">VetVAX</span>
@@ -57,7 +57,7 @@ export default function Topbar({
         <div className="flex items-center gap-2">
           <GlobalCommandPalette className="hidden lg:flex" />
           <Button variant="outline" size="icon" className="relative h-10 w-10">
-            <Bell className="h-4 w-4" />
+            <Bell className="h-[18px] w-[18px] stroke-[2] text-vetvax-text-secondary" />
             {notifCount > 0 ? (
               <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-pill bg-vetvax-primary px-1 text-[10px] font-bold text-white">
                 {Math.min(99, notifCount)}
@@ -67,7 +67,7 @@ export default function Topbar({
           <button
             type="button"
             onClick={() => nav("/profile")}
-            className="hidden h-10 items-center gap-2 rounded-pill border border-vetvax-border-soft bg-white px-2.5 hover:bg-vetvax-surface-alt md:flex"
+            className="hidden h-10 items-center gap-2 rounded-pill border border-vetvax-border-soft bg-white px-2.5 shadow-sm transition-[background-color,box-shadow,border-color] duration-vetvax hover:border-vetvax-border-medium hover:bg-vetvax-surface-panel hover:shadow md:flex"
           >
             <Avatar className="h-7 w-7">
               <AvatarFallback className="bg-vetvax-primary-soft text-xs font-bold text-vetvax-primary">{initials}</AvatarFallback>
@@ -75,7 +75,7 @@ export default function Topbar({
             <span className="max-w-[140px] truncate text-sm font-semibold text-vetvax-text-main">{profile?.display_name ?? "Usuário"}</span>
           </button>
           <Button className="h-[42px] rounded-control" onClick={() => nav("/appointments/new")}>
-            <Plus className="h-4 w-4" />
+            <Plus className="h-[18px] w-[18px] stroke-[2]" />
             <span className="hidden sm:inline">Novo agendamento</span>
           </Button>
         </div>

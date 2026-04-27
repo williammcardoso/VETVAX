@@ -60,42 +60,71 @@ export default function Login() {
   });
 
   return (
-    <div className="min-h-[100svh] bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md rounded-[10px] border-[1.5px] border-border bg-card shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
-        <div className="p-6 sm:p-8">
+    <div className="grid min-h-[100svh] bg-vetvax-bg lg:grid-cols-[minmax(0,1.15fr)_minmax(0,520px)]">
+      <div className="relative hidden overflow-hidden lg:block">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0b1220] via-[#0f172a] to-[#0d4f4a]" />
+        <div className="pointer-events-none absolute -left-24 top-1/4 h-[420px] w-[420px] rounded-full bg-teal-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 right-0 h-[360px] w-[360px] rounded-full bg-blue-500/15 blur-3xl" />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.14]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, rgba(255,255,255,0.14) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.12) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
+        <div className="relative z-10 flex h-full flex-col justify-between p-10 text-white">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-[10px] bg-primary text-primary-foreground font-semibold">
+            <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-white/10 text-lg font-extrabold text-white shadow-[0_12px_40px_rgba(0,0,0,0.25)] ring-1 ring-white/15 backdrop-blur-sm">
               V
             </div>
-            <div>
-              <div className="text-xs font-medium tracking-widest text-muted-foreground">VETVAX</div>
-              <h1 className="mt-1 text-xl font-semibold tracking-tight">Acesso ao sistema</h1>
+            <div className="h-px flex-1 max-w-[120px] bg-gradient-to-r from-white/35 to-transparent" />
+          </div>
+          <div className="space-y-4 pb-4">
+            <div className="h-2 w-2 rounded-full bg-teal-300/90" />
+            <div className="flex gap-2 opacity-80">
+              <span className="h-1.5 w-10 rounded-pill bg-white/25" />
+              <span className="h-1.5 w-6 rounded-pill bg-white/15" />
             </div>
           </div>
-
-          <form className="mt-6 space-y-4" onSubmit={form.handleSubmit((v) => signIn.mutate(v))}>
-            <div className="space-y-2">
-              <Label htmlFor="username">Usuário</Label>
-              <Input id="username" className="h-10 rounded-[10px] border-[1.5px]" placeholder="ex: william" {...form.register("username")} />
-              {form.formState.errors.username && (
-                <p className="text-xs text-destructive">{form.formState.errors.username.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input id="password" className="h-10 rounded-[10px] border-[1.5px]" type="password" {...form.register("password")} />
-              {form.formState.errors.password && (
-                <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
-              )}
-            </div>
-
-            <Button type="submit" className="h-10 w-full rounded-[10px]" disabled={signIn.isPending}>
-              {signIn.isPending ? "Entrando…" : "Entrar"}
-            </Button>
-          </form>
         </div>
-      </Card>
+      </div>
+
+      <div className="flex items-center justify-center p-4 sm:p-8">
+        <Card className="w-full max-w-md border-vetvax-border-soft bg-white/95 shadow-vetvax-card ring-1 ring-black/[0.03] backdrop-blur-sm">
+          <div className="p-6 sm:p-8">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-[12px] bg-vetvax-primary text-sm font-extrabold text-white shadow-vetvax-button">V</div>
+              <div>
+                <div className="text-xs font-semibold tracking-widest text-vetvax-text-tertiary">VETVAX</div>
+                <h1 className="mt-1 text-xl font-semibold tracking-tight text-vetvax-text-main">Acesso ao sistema</h1>
+              </div>
+            </div>
+
+            <form className="mt-6 space-y-4" onSubmit={form.handleSubmit((v) => signIn.mutate(v))}>
+              <div className="space-y-2">
+                <Label htmlFor="username">Usuário</Label>
+                <Input id="username" placeholder="ex: william" {...form.register("username")} />
+                {form.formState.errors.username && (
+                  <p className="text-xs text-destructive">{form.formState.errors.username.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input id="password" type="password" {...form.register("password")} />
+                {form.formState.errors.password && (
+                  <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
+                )}
+              </div>
+
+              <Button type="submit" className="h-11 w-full" disabled={signIn.isPending}>
+                {signIn.isPending ? "Entrando…" : "Entrar"}
+              </Button>
+            </form>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -26,6 +26,7 @@ export default {
           bg: "var(--vetvax-bg)",
           surface: "var(--vetvax-surface)",
           "surface-alt": "var(--vetvax-surface-alt)",
+          "surface-panel": "var(--vetvax-surface-panel)",
           "border-soft": "var(--vetvax-border-soft)",
           "border-medium": "var(--vetvax-border-medium)",
           "text-main": "var(--vetvax-text-main)",
@@ -41,6 +42,8 @@ export default {
           "warning-soft": "var(--vetvax-warning-soft)",
           success: "var(--vetvax-success)",
           "success-soft": "var(--vetvax-success-soft)",
+          info: "var(--vetvax-info)",
+          "info-soft": "var(--vetvax-info-soft)",
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -96,9 +99,14 @@ export default {
         pill: "999px",
       },
       boxShadow: {
-        "vetvax-card": "0 20px 45px rgba(15, 23, 42, 0.06)",
-        "vetvax-card-hover": "0 24px 60px rgba(15, 23, 42, 0.10)",
-        "vetvax-button": "0 10px 20px rgba(15, 118, 110, 0.18)",
+        "vetvax-card": "0 16px 40px rgba(15, 23, 42, 0.075), 0 1px 0 rgba(255, 255, 255, 0.65) inset",
+        "vetvax-card-hover": "0 22px 52px rgba(15, 23, 42, 0.11), 0 1px 0 rgba(255, 255, 255, 0.7) inset",
+        "vetvax-button": "0 10px 22px rgba(15, 118, 110, 0.22), 0 1px 0 rgba(255, 255, 255, 0.12) inset",
+        "vetvax-topbar": "0 1px 0 rgba(15, 23, 42, 0.06)",
+        "vetvax-dialog": "0 28px 70px rgba(15, 23, 42, 0.18)",
+      },
+      transitionDuration: {
+        vetvax: "180ms",
       },
       keyframes: {
         "accordion-down": {

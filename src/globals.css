@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 210 33% 98%;
+    --background: 220 24% 97%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
@@ -12,34 +12,35 @@
     --popover-foreground: 222 47% 11%;
     --primary: 175 77% 26%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 98%;
+    --secondary: 214 32% 96%;
     --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 97%;
-    --muted-foreground: 215 20% 45%;
-    --accent: 172 76% 96%;
+    --muted: 214 28% 96%;
+    --muted-foreground: 215 18% 38%;
+    --accent: 172 55% 94%;
     --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 90%;
-    --input: 214 32% 84%;
-    --ring: 175 77% 26%;
-    --radius: 12px;
-    --sidebar-background: 0 0% 100%;
+    --border: 214 24% 90%;
+    --input: 214 22% 88%;
+    --ring: 175 77% 32%;
+    --radius: 14px;
+    --sidebar-background: 216 33% 99%;
     --sidebar-foreground: 222 47% 11%;
     --sidebar-primary: 175 77% 26%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 172 76% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 90%;
-    --sidebar-ring: 175 77% 26%;
+    --sidebar-accent: 168 42% 94%;
+    --sidebar-accent-foreground: 175 40% 22%;
+    --sidebar-border: 214 24% 90%;
+    --sidebar-ring: 175 77% 32%;
 
-    --vetvax-bg: #f6f8fa;
+    --vetvax-bg: #f4f7fa;
     --vetvax-surface: #ffffff;
-    --vetvax-surface-alt: #f9fafb;
-    --vetvax-border-soft: #e2e8f0;
+    --vetvax-surface-alt: #f8fafc;
+    --vetvax-surface-panel: #fafbfc;
+    --vetvax-border-soft: #e6eaf0;
     --vetvax-border-medium: #cbd5e1;
     --vetvax-text-main: #0f172a;
-    --vetvax-text-secondary: #475569;
+    --vetvax-text-secondary: #334155;
     --vetvax-text-tertiary: #64748b;
     --vetvax-primary: #0f766e;
     --vetvax-primary-hover: #115e59;
@@ -47,14 +48,16 @@
     --vetvax-primary-border: #99f6e4;
     --vetvax-danger: #dc2626;
     --vetvax-danger-soft: #fee2e2;
-    --vetvax-warning: #f59e0b;
-    --vetvax-warning-soft: #fef3c7;
-    --vetvax-success: #16a34a;
+    --vetvax-warning: #d97706;
+    --vetvax-warning-soft: #fffbeb;
+    --vetvax-success: #15803d;
     --vetvax-success-soft: #dcfce7;
+    --vetvax-info: #1d4ed8;
+    --vetvax-info-soft: #eff6ff;
   }
 
   .dark {
-    --background: 210 33% 98%;
+    --background: 220 24% 97%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
@@ -62,25 +65,25 @@
     --popover-foreground: 222 47% 11%;
     --primary: 175 77% 26%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 98%;
+    --secondary: 214 32% 96%;
     --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 97%;
-    --muted-foreground: 215 20% 45%;
-    --accent: 172 76% 96%;
+    --muted: 214 28% 96%;
+    --muted-foreground: 215 18% 38%;
+    --accent: 172 55% 94%;
     --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 90%;
-    --input: 214 32% 84%;
-    --ring: 175 77% 26%;
-    --sidebar-background: 0 0% 100%;
+    --border: 214 24% 90%;
+    --input: 214 22% 88%;
+    --ring: 175 77% 32%;
+    --sidebar-background: 216 33% 99%;
     --sidebar-foreground: 222 47% 11%;
     --sidebar-primary: 175 77% 26%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 172 76% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 90%;
-    --sidebar-ring: 175 77% 26%;
+    --sidebar-accent: 168 42% 94%;
+    --sidebar-accent-foreground: 175 40% 22%;
+    --sidebar-border: 214 24% 90%;
+    --sidebar-ring: 175 77% 32%;
   }
 }
 
@@ -96,13 +99,15 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    background-image:
-      radial-gradient(circle at 85% 0%, rgba(15, 118, 110, 0.08), transparent 32%),
-      linear-gradient(to right, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
-    background-size: auto, 32px 32px, 32px 32px;
     background-color: var(--vetvax-bg);
     color: var(--vetvax-text-main);
+    background-image:
+      radial-gradient(1200px 520px at 12% -8%, rgba(15, 118, 110, 0.09), transparent 55%),
+      radial-gradient(900px 480px at 92% 0%, rgba(37, 99, 235, 0.06), transparent 50%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(244, 247, 250, 0) 38%),
+      linear-gradient(to right, rgba(15, 23, 42, 0.028) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(15, 23, 42, 0.028) 1px, transparent 1px);
+    background-size: auto, auto, auto, 40px 40px, 40px 40px;
   }
 }
 
@@ -112,19 +117,19 @@
   }
 
   .vetvax-page-title {
-    font-size: 28px;
-    line-height: 1.15;
-    letter-spacing: -0.03em;
-    font-weight: 800;
+    font-size: clamp(1.375rem, 1.15rem + 0.6vw, 1.75rem);
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    font-weight: 700;
     color: var(--vetvax-text-main);
   }
 
   .vetvax-section-title {
-    @apply text-[18px] font-bold text-[var(--vetvax-text-main)];
+    @apply text-[17px] font-semibold text-[var(--vetvax-text-main)] tracking-tight;
   }
 
   .vetvax-label {
-    @apply text-[13px] font-semibold text-[var(--vetvax-text-secondary)];
+    @apply text-[13px] font-medium text-[var(--vetvax-text-secondary)];
   }
 
   .vetvax-help-text {
@@ -132,12 +137,14 @@
   }
 
   .vetvax-elevate {
-    @apply transition-shadow duration-150 ease-out;
-    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.06);
+    @apply transition-[box-shadow,transform,border-color] duration-200 ease-out;
+    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.07);
+    border-color: var(--vetvax-border-soft);
   }
 
   .vetvax-elevate:hover {
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
+    box-shadow: 0 22px 50px rgba(15, 23, 42, 0.11);
+    transform: translateY(-1px);
   }
 
   .vetvax-scroll {
@@ -150,14 +157,14 @@
   }
 
   .vetvax-scroll::-webkit-scrollbar-thumb {
-    background: rgba(100, 116, 139, 0.35);
+    background: rgba(100, 116, 139, 0.38);
     border-radius: 999px;
     border: 3px solid rgba(255, 255, 255, 0);
     background-clip: padding-box;
   }
 
   .vetvax-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(100, 116, 139, 0.5);
+    background: rgba(71, 85, 105, 0.52);
     border: 3px solid rgba(255, 255, 255, 0);
     background-clip: padding-box;
   }

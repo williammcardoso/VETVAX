@@ -32,7 +32,7 @@ export default function AppLayout() {
 
         <div className="min-w-0 flex-1 md:ml-[248px]">
           <Topbar pageName={meta.name} onOpenMenu={() => setMobileOpen(true)} />
-          <main className="vetvax-page py-8">
+          <main className="vetvax-page py-7 md:py-9">
             <Outlet />
           </main>
         </div>

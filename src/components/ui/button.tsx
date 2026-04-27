@@ -5,16 +5,16 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control text-sm font-semibold ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control text-sm font-semibold ring-offset-background transition-[color,background-color,box-shadow,transform,border-color] duration-vetvax ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-vetvax-primary/35 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg]:pointer-events-none [&_svg]:size-[18px] [&_svg]:shrink-0 [&_svg]:stroke-[2]",
   {
     variants: {
       variant: {
-        default: "bg-vetvax-primary text-white shadow-vetvax-button hover:bg-vetvax-primary-hover",
-        destructive: "bg-vetvax-danger text-white hover:bg-[#b91c1c]",
-        outline: "border border-vetvax-border-soft bg-white text-vetvax-text-main hover:bg-vetvax-surface-alt",
-        secondary: "bg-vetvax-surface-alt text-vetvax-text-secondary hover:bg-[#edf2f7]",
-        ghost: "text-vetvax-text-secondary hover:bg-vetvax-surface-alt hover:text-vetvax-text-main",
-        link: "text-primary underline-offset-4 hover:underline",
+        default: "bg-vetvax-primary text-white shadow-vetvax-button hover:bg-vetvax-primary-hover hover:shadow-[0_12px_28px_rgba(15,118,110,0.28)]",
+        destructive: "bg-vetvax-danger text-white shadow-sm hover:bg-[#b91c1c] hover:shadow-md",
+        outline: "border border-vetvax-border-soft bg-white text-vetvax-text-main shadow-sm hover:border-vetvax-border-medium hover:bg-vetvax-surface-panel",
+        secondary: "border border-transparent bg-vetvax-surface-alt text-vetvax-text-secondary hover:bg-[#eef2f6] hover:text-vetvax-text-main",
+        ghost: "text-vetvax-text-secondary hover:bg-vetvax-surface-alt/90 hover:text-vetvax-text-main",
+        link: "text-primary underline-offset-4 hover:underline active:scale-100",
       },
       size: {
         default: "h-10 px-4 py-2",
