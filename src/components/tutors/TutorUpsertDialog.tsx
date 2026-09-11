@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import type { Tutor } from "@/types/vetvax";
@@ -76,6 +77,25 @@ export default function TutorUpsertDialog({
       contact_consent: initial?.contact_consent ?? true,
     },
   });
+
+  useEffect(() => {
+    if (!open) return;
+    form.reset({
+      name: initial?.name ?? "",
+      phone1: initial?.phone1 ?? "",
+      phone2: initial?.phone2 ?? "",
+      street: initial?.street ?? "",
+      number: initial?.number ?? "",
+      complement: initial?.complement ?? "",
+      neighborhood: initial?.neighborhood ?? "",
+      city: initial?.city ?? "Itapira",
+      uf: initial?.uf ?? "SP",
+      notes: initial?.notes ?? "",
+      tagsText: initial?.tags?.join(", ") ?? "",
+      contact_consent: initial?.contact_consent ?? true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initial?.id]);
 
   const save = useMutation({
     mutationFn: async (values: Values) => {

@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import type { Pet } from "@/types/vetvax";
@@ -56,6 +57,20 @@ export default function PetUpsertDialog({
       notes: initial?.notes ?? "",
     },
   });
+
+  useEffect(() => {
+    if (!open) return;
+    form.reset({
+      name: initial?.name ?? "",
+      species: initial?.species ?? "dog",
+      age_text: initial?.age_text ?? "",
+      birth_date: initial?.birth_date ?? "",
+      breed: initial?.breed ?? "",
+      color: initial?.color ?? "",
+      notes: initial?.notes ?? "",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initial?.id]);
 
   const save = useMutation({
     mutationFn: async (values: Values) => {

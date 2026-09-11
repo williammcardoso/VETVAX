@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { CalendarPlus, ClipboardList, PawPrint, Phone, UserCircle2 } from "lucide-react";
+import { Bell, CalendarPlus, ClipboardList, PawPrint, Phone, Syringe, UserCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Pet, Tutor } from "@/types/vetvax";
 import { Card } from "@/components/ui/card";
@@ -9,11 +9,38 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBrPhoneForDisplay, buildWhatsAppLink } from "@/lib/phone";
+import { formatDateBr } from "@/lib/datetime";
 import { toast } from "@/hooks/use-toast";
 import PetUpsertDialog from "@/components/tutors/PetUpsertDialog";
 import TutorUpsertDialog from "@/components/tutors/TutorUpsertDialog";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { formatTutorAddressLine } from "@/lib/address";
+import StatusBadge from "@/components/vetvax/StatusBadge";
+import RichListItem from "@/components/vetvax/RichListItem";
+
+function getItemTone(itemName: string) {
+  const palette = [
+    "border-[#ddd6fe] bg-[#f5f3ff] text-[#5b21b6]",
+    "border-[#fed7aa] bg-[#fff7ed] text-[#c2410c]",
+    "border-[#bbf7d0] bg-[#f0fdf4] text-[#166534]",
+    "border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8]",
+    "border-[#fecdd3] bg-[#fff1f2] text-[#be123c]",
+    "border-[#a7f3d0] bg-[#ecfeff] text-[#0f766e]",
+    "border-[#fde68a] bg-[#fffbeb] text-[#b45309]",
+  ];
+  const value = itemName.toLowerCase();
+  if (value.includes("v8") || value.includes("v10") || value.includes("polivalente")) return "border-[#ddd6fe] bg-[#f5f3ff] text-[#5b21b6]";
+  if (value.includes("raiva") || value.includes("antirr")) return "border-[#fed7aa] bg-[#fff7ed] text-[#c2410c]";
+  if (value.includes("giardia") || value.includes("verm")) return "border-[#bbf7d0] bg-[#f0fdf4] text-[#166534]";
+  if (value.includes("lepto") || value.includes("gripe") || value.includes("influenza")) return "border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8]";
+  if (value.includes("fiv") || value.includes("felv")) return "border-[#fecdd3] bg-[#fff1f2] text-[#be123c]";
+  const hash = value.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return palette[hash % palette.length];
+}
+
+type TimelineEntry =
+  | { kind: "record"; date: string; sortKey: string; data: any }
+  | { kind: "reminder"; date: string; sortKey: string; data: any };
 
 export default function TutorDetail() {
   const { id } = useParams();
@@ -65,7 +92,7 @@ export default function TutorDetail() {
           .limit(15),
         supabase
           .from("reminders")
-          .select("id, due_date, status, reminder_type, last_sent_at, send_count, notes, created_at")
+          .select("id, due_date, status, reminder_type, item_name, last_sent_at, send_count, notes, created_at")
           .eq("tutor_id", tutorId)
           .order("due_date", { ascending: false })
           .limit(15),
@@ -86,6 +113,22 @@ export default function TutorDetail() {
     if (!t) return null;
     return t.phone1 || t.phone2;
   }, [tutor.data]);
+
+  const timeline = useMemo<TimelineEntry[]>(() => {
+    const records = (history.data?.records ?? []).map((r: any) => ({
+      kind: "record" as const,
+      date: r.applied_date,
+      sortKey: `${r.applied_date}Z`,
+      data: r,
+    }));
+    const reminders = (history.data?.reminders ?? []).map((r: any) => ({
+      kind: "reminder" as const,
+      date: r.due_date,
+      sortKey: `${r.due_date}A`,
+      data: r,
+    }));
+    return [...records, ...reminders].sort((a, b) => b.sortKey.localeCompare(a.sortKey));
+  }, [history.data]);
 
   const openWhats = useMutation({
     mutationFn: async () => {
@@ -259,6 +302,7 @@ export default function TutorDetail() {
                     {p.species}
                     {p.age_text ? ` • ${p.age_text}` : ""}
                     {p.breed ? ` • ${p.breed}` : ""}
+                    {p.color ? ` • ${p.color}` : ""}
                   </div>
                   {p.notes ? <div className="mt-3 line-clamp-2 text-xs text-muted-foreground">{p.notes}</div> : null}
                 </button>
@@ -284,59 +328,87 @@ export default function TutorDetail() {
         </TabsContent>
 
         <TabsContent value="history" className="mt-4">
-          <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
-            <div className="text-sm font-semibold">Timeline (últimos 15)</div>
+          <Card className="rounded-[16px] border border-vetvax-border-soft bg-gradient-to-b from-white to-vetvax-surface-panel/40 p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
+            <div className="flex items-center justify-between">
+              <h2 className="vetvax-section-title">Linha do tempo</h2>
+              <StatusBadge>{timeline.length} registro(s)</StatusBadge>
+            </div>
+
             <div className="mt-4 grid gap-3">
-              {(history.data?.records ?? []).map((r: any) => (
-                <div key={r.id} className="rounded-[10px] border-[1.5px] border-border bg-card p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium">Aplicação registrada</div>
-                    {r.next_due_date ? (
-                      <Badge variant="secondary" className="rounded-full">
-                        próxima: {r.next_due_date}
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">{r.applied_date}</div>
-                  {r.items?.length ? (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {r.items.map((it: any, idx: number) => (
-                        <Badge key={idx} variant="secondary" className="rounded-full text-[11px]">
-                          {it.quantity}x {it.item}
-                        </Badge>
-                      ))}
+              {timeline.map((entry) => {
+                if (entry.kind === "record") {
+                  const r = entry.data;
+                  return (
+                    <RichListItem key={`rec-${r.id}`} className="!min-h-0 border-vetvax-success-soft/70 bg-gradient-to-r from-white to-vetvax-success-soft/20">
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-vetvax-success-soft text-vetvax-success">
+                          <Syringe className="h-4.5 w-4.5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-bold text-vetvax-text-main">
+                              Aplicação registrada <span className="font-normal text-vetvax-text-tertiary">· {formatDateBr(r.applied_date)}</span>
+                            </p>
+                            {r.next_due_date ? (
+                              <StatusBadge tone="warning">próxima: {formatDateBr(r.next_due_date)}</StatusBadge>
+                            ) : null}
+                          </div>
+                          {r.items?.length ? (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {r.items.map((it: any, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className={`inline-flex items-center rounded-pill border px-2.5 py-1 text-[11px] font-bold leading-none ${getItemTone(it.item)}`}
+                                >
+                                  {it.quantity}x {it.item}
+                                  {it.pet_name ? ` • ${it.pet_name}` : ""}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                          {r.notes ? <p className="mt-2 text-xs italic text-vetvax-text-tertiary">{r.notes}</p> : null}
+                        </div>
+                      </div>
+                    </RichListItem>
+                  );
+                }
+
+                const r = entry.data;
+                const reminderTone = r.status === "ATIVO" ? "warning" : r.status === "FEITO" ? "success" : "default";
+                return (
+                  <RichListItem key={`rem-${r.id}`} className="!min-h-0">
+                    <div className="flex items-start gap-3">
+                      <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-vetvax-warning-soft text-vetvax-warning">
+                        <Bell className="h-4.5 w-4.5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-bold text-vetvax-text-main">
+                            Lembrete <span className="font-normal text-vetvax-text-tertiary">· vence {formatDateBr(r.due_date)}</span>
+                          </p>
+                          <StatusBadge tone={reminderTone as "warning" | "success" | "default"}>
+                            {r.status === "ATIVO" ? "ativo" : r.status === "FEITO" ? "resolvido" : "arquivado"}
+                          </StatusBadge>
+                        </div>
+                        <p className="mt-1 text-xs font-semibold text-vetvax-text-secondary">{r.item_name ?? r.reminder_type}</p>
+                        {r.notes ? <p className="mt-1 text-xs italic text-vetvax-text-tertiary">{r.notes}</p> : null}
+                      </div>
                     </div>
-                  ) : null}
-                  {r.notes ? <div className="mt-2 text-xs text-muted-foreground">{r.notes}</div> : null}
-                </div>
-              ))}
+                  </RichListItem>
+                );
+              })}
 
-              {(history.data?.reminders ?? []).map((r: any) => (
-                <div key={r.id} className="rounded-[10px] border-[1.5px] border-border bg-muted/10 p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium">Lembrete • {r.status}</div>
-                    <Badge variant="secondary" className="rounded-full">
-                      {r.reminder_type}
-                    </Badge>
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">Vence: {r.due_date}</div>
-                  {r.notes ? <div className="mt-2 text-xs text-muted-foreground">{r.notes}</div> : null}
+              {!history.isLoading && timeline.length === 0 && (
+                <div className="rounded-[14px] border border-dashed border-vetvax-border-soft bg-vetvax-surface-panel/60 p-6 text-center">
+                  <div className="text-sm font-medium">Sem histórico ainda</div>
+                  <p className="mt-1 text-xs text-vetvax-text-tertiary">
+                    Registre uma aplicação para este tutor e o sistema começará a construir a timeline.
+                  </p>
+                  <Button asChild className="mt-4 rounded-[10px]">
+                    <Link to={`/vaccinations/new?tutor=${t.id}`}>Registrar aplicação</Link>
+                  </Button>
                 </div>
-              ))}
-
-              {!history.isLoading &&
-                (history.data?.records?.length ?? 0) === 0 &&
-                (history.data?.reminders?.length ?? 0) === 0 && (
-                  <div className="rounded-[10px] border-[1.5px] border-border bg-muted/10 p-6 text-center">
-                    <div className="text-sm font-medium">Sem histórico ainda</div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Registre uma aplicação para este tutor e o sistema começará a construir a timeline.
-                    </p>
-                    <Button asChild className="mt-4 rounded-[10px]">
-                      <Link to={`/vaccinations/new?tutor=${t.id}`}>Registrar aplicação</Link>
-                    </Button>
-                  </div>
-                )}
+              )}
             </div>
           </Card>
         </TabsContent>

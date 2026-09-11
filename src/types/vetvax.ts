@@ -133,6 +133,7 @@ export type VaccinationRecordItem = {
   item: string;
   category: "vaccine" | "medication" | "other";
   pet_id: string | null;
+  pet_name: string | null;
   brand: string | null;
   lot: string | null;
   expires_on: string | null;

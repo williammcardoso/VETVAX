@@ -441,6 +441,7 @@ export default function Dashboard() {
                             className={`inline-flex max-w-full items-center truncate rounded-pill border px-2 py-0.5 text-[10px] font-bold leading-none ${getItemTone(it.item)}`}
                           >
                             {it.quantity}x {it.item}
+                            {it.pet_name ? ` • ${it.pet_name}` : ""}
                           </span>
                         ))}
                       </div>
