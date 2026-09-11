@@ -8,14 +8,12 @@ import { z } from "zod";
 import { supabase } from "@/lib/supabase";
 import type { CatalogItem, Pet } from "@/types/vetvax";
 import { dayjs } from "@/lib/datetime";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import TutorCombobox from "@/components/tutors/TutorCombobox";
 import TutorUpsertDialog from "@/components/tutors/TutorUpsertDialog";
@@ -32,44 +30,28 @@ const itemSchema = z.object({
   quantity: z.coerce.number().int().min(1, "Qtd. > 0"),
   pet_id: z.string().optional().nullable(),
   free_description: z.string().optional().nullable(),
-  price_cents: z.coerce.number().int().optional().nullable(),
-  brand: z.string().optional().nullable(),
-  lot: z.string().optional().nullable(),
-  expires_on: z.string().optional().nullable(),
 });
 
 const schema = z.object({
   tutor_id: z.string().uuid("Selecione um tutor"),
-  scheduled_date: z.string().min(10, "Informe a data"),
-  scheduled_time: z.string().min(4, "Informe o horário"),
+  applied_date: z.string().min(10, "Informe a data"),
   notes: z.string().optional().nullable(),
   separate_by_pet: z.boolean().default(false),
   items: z.array(itemSchema).min(1, "Adicione ao menos 1 item"),
+  next_due_date: z.string().optional().nullable(),
+  create_item_reminders: z.boolean().default(false),
 });
 
 type Values = z.infer<typeof schema>;
-type BusyTimeRow = { scheduled_time: string };
 
 function useQueryParam(name: string) {
   const { search } = useLocation();
   return useMemo(() => new URLSearchParams(search).get(name), [search, name]);
 }
 
-function buildTimeSlots() {
-  const slots: string[] = [];
-  for (let h = 8; h <= 18; h++) {
-    for (const m of [0, 30]) {
-      if (h === 18 && m > 0) continue;
-      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-    }
-  }
-  return slots;
-}
-
-export default function AppointmentNew() {
+export default function VaccinationNew() {
   const nav = useNavigate();
   const tutorParam = useQueryParam("tutor");
-  const dateParam = useQueryParam("date");
   const resolveReminderParam = useQueryParam("resolveReminder");
 
   const [openNewTutor, setOpenNewTutor] = useState(false);
@@ -92,22 +74,21 @@ export default function AppointmentNew() {
     resolver: zodResolver(schema),
     defaultValues: {
       tutor_id: tutorParam ?? "",
-      scheduled_date: dateParam ?? dayjs().format("YYYY-MM-DD"),
-      scheduled_time: "09:00",
+      applied_date: dayjs().format("YYYY-MM-DD"),
       notes: "",
       separate_by_pet: false,
       items: [{ catalog_item_id: "", quantity: 1, pet_id: null, free_description: null }],
+      next_due_date: "",
+      create_item_reminders: false,
     },
   });
 
   useEffect(() => {
     if (tutorParam) form.setValue("tutor_id", tutorParam);
-    if (dateParam) form.setValue("scheduled_date", dateParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tutorParam, dateParam]);
+  }, [tutorParam]);
 
   const tutorId = form.watch("tutor_id");
-  const scheduledDate = form.watch("scheduled_date");
 
   const pets = useQuery({
     queryKey: ["pets", "byTutor", tutorId],
@@ -124,24 +105,6 @@ export default function AppointmentNew() {
     },
   });
 
-  const busyTimes = useQuery({
-    queryKey: ["appointments", "busyTimes", scheduledDate],
-    enabled: !!scheduledDate,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("appointments")
-        .select("scheduled_time")
-        .eq("scheduled_date", scheduledDate)
-        .eq("status", "PENDENTE")
-        .eq("is_active", true);
-      if (error) throw error;
-      return new Set(((data ?? []) as BusyTimeRow[]).map((r) => String(r.scheduled_time).slice(0, 5)));
-    },
-  });
-
-  const timeSlots = useMemo(() => buildTimeSlots(), []);
-  const selectedTimeBusy = (busyTimes.data?.has(form.watch("scheduled_time")) ?? false) && !!form.watch("scheduled_time");
-
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "items" });
 
   const save = useMutation({
@@ -154,22 +117,19 @@ export default function AppointmentNew() {
         }
       }
 
-      const { data, error } = await supabase.rpc("create_appointment_with_items", {
+      const { data, error } = await supabase.rpc("register_vaccination", {
         payload: {
           tutor_id: values.tutor_id,
-          scheduled_date: values.scheduled_date,
-          scheduled_time: values.scheduled_time,
-          channel: "store",
+          applied_date: values.applied_date,
           notes: values.notes,
+          next_due_date: values.next_due_date || null,
+          create_item_reminders: values.create_item_reminders,
+          reference_reminder_id: resolveReminderParam || null,
           items: values.items.map((it) => ({
             catalog_item_id: it.catalog_item_id,
             quantity: it.quantity,
             pet_id: values.separate_by_pet ? it.pet_id : null,
             free_description: it.free_description,
-            price_cents: it.price_cents,
-            brand: it.brand,
-            lot: it.lot,
-            expires_on: it.expires_on,
             metadata: {},
           })),
         },
@@ -177,15 +137,12 @@ export default function AppointmentNew() {
       if (error) throw error;
       return data as string;
     },
-    onSuccess: async () => {
-      if (resolveReminderParam) {
-        await supabase.from("reminders").update({ status: "FEITO" }).eq("id", resolveReminderParam);
-      }
-      toast({ title: "Agendamento criado" });
+    onSuccess: () => {
+      toast({ title: "Aplicação registrada" });
       nav("/dashboard");
     },
     onError: (e: unknown) => {
-      toast({ title: "Falha ao criar", description: e instanceof Error ? e.message : "Tente novamente.", variant: "destructive" });
+      toast({ title: "Falha ao registrar", description: e instanceof Error ? e.message : "Tente novamente.", variant: "destructive" });
     },
   });
 
@@ -201,10 +158,10 @@ export default function AppointmentNew() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <PageHeader
-        title="Novo agendamento"
-        description="Selecione tutor, horário e itens do atendimento."
+        title="Registrar aplicação"
+        description="Cadastre a vacina aplicada agora. O sistema cuida do lembrete da próxima dose."
         actions={
           <Button asChild variant="outline">
             <Link to="/dashboard">Voltar</Link>
@@ -212,13 +169,9 @@ export default function AppointmentNew() {
         }
       />
 
-      <form className="grid gap-6 lg:grid-cols-[2fr_320px]" onSubmit={form.handleSubmit((v) => save.mutate(v))}>
+      <form className="vetvax-fade-in grid gap-6 lg:grid-cols-[minmax(0,2fr)_320px]" onSubmit={form.handleSubmit((v) => save.mutate(v))}>
         <div className="space-y-5">
-          <FormSection
-            step="1"
-            title="Tutor e horário"
-            description="Defina o tutor, a data e o horário do atendimento."
-          >
+          <FormSection step="1" title="Tutor e data" description="Defina o tutor e a data em que a aplicação aconteceu.">
             <div className="grid gap-4">
               <div className="grid gap-2">
                 <Label className="vetvax-label">Tutor</Label>
@@ -230,69 +183,39 @@ export default function AppointmentNew() {
                 {form.formState.errors.tutor_id && <p className="text-xs text-destructive">{form.formState.errors.tutor_id.message}</p>}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label className="vetvax-label">Data</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className={cn("w-full justify-start text-left font-medium", !scheduledDate && "text-vetvax-text-tertiary")}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {scheduledDate ? dayjs(scheduledDate).format("DD/MM/YYYY") : "Selecionar data"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto rounded-control p-3" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={scheduledDate ? new Date(scheduledDate + "T00:00:00") : undefined}
-                        onSelect={(d) => {
-                          if (!d) return;
-                          form.setValue("scheduled_date", dayjs(d).format("YYYY-MM-DD"), { shouldValidate: true });
-                        }}
-                        initialFocus
-                        className="rounded-control"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  {form.formState.errors.scheduled_date && <p className="text-xs text-destructive">{form.formState.errors.scheduled_date.message}</p>}
-                </div>
-
-                <div className="grid gap-2">
-                  <Label className="vetvax-label">Hora</Label>
-                  <div className="space-y-2">
-                    <Select value={form.watch("scheduled_time")} onValueChange={(v) => form.setValue("scheduled_time", v, { shouldValidate: true })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecionar horário" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-control">
-                        {timeSlots.map((t) => {
-                          const busy = busyTimes.data?.has(t) ?? false;
-                          return (
-                            <SelectItem key={t} value={t} disabled={busy}>
-                              <div className="flex w-full items-center justify-between gap-3">
-                                <span>{t}</span>
-                                {busy ? <span className="text-xs text-vetvax-text-tertiary">ocupado</span> : null}
-                              </div>
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                    {selectedTimeBusy ? (
-                      <Badge className="w-fit border-transparent bg-vetvax-warning-soft text-vetvax-warning">Horário ocupado</Badge>
-                    ) : null}
-                  </div>
-                  {form.formState.errors.scheduled_time && <p className="text-xs text-destructive">{form.formState.errors.scheduled_time.message}</p>}
-                </div>
+              <div className="grid gap-2 sm:w-[240px]">
+                <Label className="vetvax-label">Data da aplicação</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-medium", !form.watch("applied_date") && "text-vetvax-text-tertiary")}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {form.watch("applied_date") ? dayjs(form.watch("applied_date")).format("DD/MM/YYYY") : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto rounded-control p-3" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={form.watch("applied_date") ? new Date(form.watch("applied_date") + "T00:00:00") : undefined}
+                      onSelect={(d) => {
+                        if (!d) return;
+                        form.setValue("applied_date", dayjs(d).format("YYYY-MM-DD"), { shouldValidate: true });
+                      }}
+                      initialFocus
+                      className="rounded-control"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {form.formState.errors.applied_date && <p className="text-xs text-destructive">{form.formState.errors.applied_date.message}</p>}
               </div>
 
-              <div className="flex items-center justify-between rounded-card-md border border-vetvax-border-soft bg-vetvax-surface-alt px-3 py-3">
+              <div className="flex items-center justify-between rounded-[14px] border border-vetvax-border-soft bg-gradient-to-r from-vetvax-surface-panel to-vetvax-surface-alt px-4 py-3.5">
                 <div>
                   <p className="text-sm font-semibold text-vetvax-text-main">Vincular itens aos pets</p>
-                  <p className="vetvax-help-text">Ative quando precisar indicar exatamente qual pet receberá cada item.</p>
+                  <p className="vetvax-help-text">Ative quando precisar indicar exatamente qual pet recebeu cada item.</p>
                 </div>
                 <Switch checked={separateByPet} onCheckedChange={(v) => form.setValue("separate_by_pet", v)} />
               </div>
@@ -301,8 +224,8 @@ export default function AppointmentNew() {
 
           <FormSection
             step="2"
-            title="Itens do atendimento"
-            description="Adicione vacinas, medicações e itens aplicados no atendimento."
+            title="Itens aplicados"
+            description="Adicione as vacinas, medicações e itens aplicados."
             actions={
               <ActionButton
                 type="button"
@@ -321,7 +244,7 @@ export default function AppointmentNew() {
                 const needsDesc = !!cat?.requires_description;
 
                 return (
-                  <div key={f.id} className="rounded-card-md border border-vetvax-border-soft bg-vetvax-surface-alt p-4">
+                  <div key={f.id} className="rounded-[14px] border border-vetvax-border-soft bg-vetvax-surface-panel/80 p-4 shadow-sm">
                     <div className="grid gap-3 sm:grid-cols-12 sm:items-end">
                       <div className="grid gap-2 sm:col-span-5">
                         <Label className="vetvax-label">Item</Label>
@@ -384,7 +307,27 @@ export default function AppointmentNew() {
             </div>
           </FormSection>
 
-          <FormSection step="3" title="Observações">
+          <FormSection step="3" title="Próxima aplicação" description="Opcional: já deixe agendado o lembrete da próxima dose.">
+            <div className="grid gap-4">
+              <div className="grid gap-2 sm:w-[240px]">
+                <Label className="vetvax-label">Data prevista (opcional)</Label>
+                <Input type="date" {...form.register("next_due_date")} />
+              </div>
+
+              <div className="flex items-center justify-between rounded-[14px] border border-vetvax-border-soft bg-gradient-to-r from-vetvax-surface-panel to-vetvax-surface-alt px-4 py-3.5">
+                <div>
+                  <p className="text-sm font-semibold text-vetvax-text-main">Criar lembrete para cada item</p>
+                  <p className="vetvax-help-text">Mais fiel: cria lembretes separados por item/pet quando existir.</p>
+                </div>
+                <Switch
+                  checked={form.watch("create_item_reminders")}
+                  onCheckedChange={(v) => form.setValue("create_item_reminders", v)}
+                />
+              </div>
+            </div>
+          </FormSection>
+
+          <FormSection step="4" title="Observações">
             <Textarea rows={5} className="min-h-[120px]" placeholder="Informações importantes para a equipe..." {...form.register("notes")} />
           </FormSection>
         </div>
@@ -395,7 +338,7 @@ export default function AppointmentNew() {
           footer={
             <>
               <ActionButton type="submit" emphasis="primary" className="h-11 w-full" disabled={save.isPending}>
-                {save.isPending ? "Criando..." : "Criar agendamento"}
+                {save.isPending ? "Registrando..." : "Registrar aplicação"}
               </ActionButton>
               <ActionButton asChild type="button" emphasis="secondary" className="w-full">
                 <Link to="/dashboard">Voltar</Link>
@@ -409,18 +352,14 @@ export default function AppointmentNew() {
               <span className="max-w-[180px] truncate font-semibold text-vetvax-text-main">{selectedTutor.data ?? "Não selecionado"}</span>
             </div>
             <div className="flex items-center justify-between border-b border-vetvax-border-soft pb-2">
-              <span className="text-vetvax-text-tertiary">Data e hora</span>
+              <span className="text-vetvax-text-tertiary">Data</span>
               <span className="font-semibold text-vetvax-text-main">
-                {form.watch("scheduled_date") ? dayjs(form.watch("scheduled_date")).format("DD/MM/YYYY") : "--"} {form.watch("scheduled_time") || ""}
+                {form.watch("applied_date") ? dayjs(form.watch("applied_date")).format("DD/MM/YYYY") : "--"}
               </span>
             </div>
-            <div className="flex items-center justify-between border-b border-vetvax-border-soft pb-2">
+            <div className="flex items-center justify-between">
               <span className="text-vetvax-text-tertiary">Itens</span>
               <span className="font-semibold text-vetvax-text-main">{fields.length}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-vetvax-text-tertiary">Valor</span>
-              <span className="font-semibold text-vetvax-text-main">Em breve</span>
             </div>
           </div>
         </SummaryCard>

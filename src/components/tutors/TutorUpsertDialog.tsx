@@ -69,11 +69,11 @@ export default function TutorUpsertDialog({
       number: initial?.number ?? "",
       complement: initial?.complement ?? "",
       neighborhood: initial?.neighborhood ?? "",
-      city: initial?.city ?? "",
-      uf: initial?.uf ?? "",
+      city: initial?.city ?? "Itapira",
+      uf: initial?.uf ?? "SP",
       notes: initial?.notes ?? "",
       tagsText: initial?.tags?.join(", ") ?? "",
-      contact_consent: initial?.contact_consent ?? false,
+      contact_consent: initial?.contact_consent ?? true,
     },
   });
 

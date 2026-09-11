@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import type { DueReminderRow, OrgSettings, UpcomingAppointmentRow } from "@/types/vetvax";
+import type { DueReminderRow, MessageTemplate, OrgSettings } from "@/types/vetvax";
 import { supabase } from "@/lib/supabase";
 import { renderTemplate } from "@/lib/template";
-import { formatDateBr, formatTimeBr } from "@/lib/datetime";
+import { formatDateBr } from "@/lib/datetime";
 
 async function fetchOrgSettings() {
   const { data, error } = await supabase
@@ -13,21 +13,23 @@ async function fetchOrgSettings() {
   return (data?.[0] ?? null) as OrgSettings | null;
 }
 
-async function fetchDefaultTemplate() {
+const REMINDER_TEMPLATE_NAME = "Lembrete - padrão";
+
+async function fetchWhatsTemplates() {
   const { data, error } = await supabase
     .from("message_templates")
-    .select("id, name, body")
+    .select("id, org_id, name, channel, body, is_active, created_at, updated_at")
     .eq("channel", "whatsapp")
     .eq("is_active", true)
     .order("created_at", { ascending: true })
-    .limit(1);
+    .limit(30);
   if (error) throw error;
-  return (data?.[0] ?? null) as { id: string; name: string; body: string } | null;
+  return (data ?? []) as MessageTemplate[];
 }
 
 export function useWhatsMessage() {
   const org = useQuery({ queryKey: ["org", "settings"], queryFn: fetchOrgSettings });
-  const template = useQuery({ queryKey: ["org", "whats-template"], queryFn: fetchDefaultTemplate });
+  const templates = useQuery({ queryKey: ["org", "whats-template"], queryFn: fetchWhatsTemplates });
 
   const pickPhone = (p1: string | null | undefined, p2: string | null | undefined) => {
     return (p1 && p1.trim() ? p1 : null) ?? (p2 && p2.trim() ? p2 : null);
@@ -35,8 +37,13 @@ export function useWhatsMessage() {
 
   const buildReminderMessage = async (row: DueReminderRow) => {
     const storeName = org.data?.store_name ?? "VetVAX";
+    const reminderTemplate =
+      templates.data?.find((t) => t.name === REMINDER_TEMPLATE_NAME) ??
+      templates.data?.find((t) => t.name.toLowerCase().includes("lembrete")) ??
+      templates.data?.[0] ??
+      null;
     const body =
-      template.data?.body ??
+      reminderTemplate?.body ??
       "Olá {{tutor_name}}! Aqui é da {{store_name}}. Passando para lembrar da próxima aplicação em {{due_date}}.";
 
     return renderTemplate(body, {
@@ -47,19 +54,5 @@ export function useWhatsMessage() {
     });
   };
 
-  const buildAppointmentMessage = async (row: UpcomingAppointmentRow) => {
-    const storeName = org.data?.store_name ?? "VetVAX";
-    const items = row.items?.map((it) => `${it.quantity}× ${it.item}`).join(", ") ?? "";
-
-    return [
-      `Olá ${row.tutor_name}! Aqui é da ${storeName}.`,
-      `Confirmando seu agendamento para ${formatDateBr(row.scheduled_date)} às ${formatTimeBr(row.scheduled_time)}.`,
-      items ? `Itens: ${items}.` : null,
-      "Se precisar reagendar, é só responder por aqui.",
-    ]
-      .filter(Boolean)
-      .join("\n");
-  };
-
-  return { pickPhone, buildReminderMessage, buildAppointmentMessage, loading: org.isLoading || template.isLoading };
+  return { pickPhone, buildReminderMessage, loading: org.isLoading || templates.isLoading };
 }

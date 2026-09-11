@@ -63,10 +63,10 @@ export default function GlobalCommandPalette({ className, placeholder = "Buscar 
   const quickActions = useMemo(
     () => [
       {
-        key: "new-appointment",
-        label: "Novo agendamento",
+        key: "new-vaccination",
+        label: "Registrar aplicação",
         icon: CalendarPlus,
-        run: () => nav("/appointments/new"),
+        run: () => nav("/vaccinations/new"),
       },
       {
         key: "tutors",
@@ -74,8 +74,14 @@ export default function GlobalCommandPalette({ className, placeholder = "Buscar 
         icon: Users,
         run: () => nav("/tutors"),
       },
+      {
+        key: "search-term",
+        label: q.trim() ? `Buscar "${q.trim()}" em Clientes` : "Buscar em Clientes",
+        icon: Search,
+        run: () => nav(`/tutors${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ""}`),
+      },
     ],
-    [nav],
+    [nav, q],
   );
 
   return (

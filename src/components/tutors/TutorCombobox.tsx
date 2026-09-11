@@ -7,7 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
-type TutorLite = { id: string; name: string; phone1: string | null; phone2: string | null };
+type TutorLite = {
+  id: string;
+  name: string;
+  phone1: string | null;
+  phone2: string | null;
+  street: string | null;
+  number: string | null;
+  neighborhood: string | null;
+};
 
 export default function TutorCombobox({
   value,
@@ -26,13 +34,17 @@ export default function TutorCombobox({
     queryFn: async () => {
       let query = supabase
         .from("tutors")
-        .select("id, name, phone1, phone2")
+        .select("id, name, phone1, phone2, street, number, neighborhood")
         .eq("is_active", true)
         .order("name", { ascending: true })
         .limit(50);
 
       const term = q.trim();
-      if (term) query = query.or(`name.ilike.%${term}%,phone1.ilike.%${term}%,phone2.ilike.%${term}%`);
+      if (term) {
+        query = query.or(
+          `name.ilike.%${term}%,phone1.ilike.%${term}%,phone2.ilike.%${term}%,street.ilike.%${term}%,number.ilike.%${term}%,neighborhood.ilike.%${term}%`,
+        );
+      }
 
       const { data, error } = await query;
       if (error) throw error;
@@ -77,7 +89,7 @@ export default function TutorCombobox({
               {(tutors.data ?? []).map((t) => (
                 <CommandItem
                   key={t.id}
-                  value={`${t.name} ${t.phone1 ?? ""} ${t.phone2 ?? ""}`}
+                  value={`${t.name} ${t.phone1 ?? ""} ${t.phone2 ?? ""} ${t.street ?? ""} ${t.number ?? ""} ${t.neighborhood ?? ""}`}
                   onSelect={() => {
                     onChange(t.id);
                     setOpen(false);
@@ -87,6 +99,9 @@ export default function TutorCombobox({
                   <Check className={cn("mr-2 h-4 w-4", value === t.id ? "opacity-100" : "opacity-0")} />
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium">{t.name}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {[t.street, t.number, t.neighborhood].filter(Boolean).join(", ") || "endereço não informado"}
+                    </div>
                     <div className="truncate text-xs text-muted-foreground">
                       {(t.phone1 ?? t.phone2) ? [t.phone1, t.phone2].filter(Boolean).join(" • ") : "sem telefone"}
                     </div>

@@ -56,12 +56,12 @@ export default function TutorDetail() {
   const history = useQuery({
     queryKey: ["tutors", tutorId, "history"],
     queryFn: async () => {
-      const [apptsRes, remRes] = await Promise.all([
+      const [recordsRes, remRes] = await Promise.all([
         supabase
-          .from("appointments")
-          .select("id, scheduled_date, scheduled_time, status, channel, notes, created_at")
+          .from("vw_vaccination_records")
+          .select("id, applied_date, next_due_date, notes, items")
           .eq("tutor_id", tutorId)
-          .order("scheduled_date", { ascending: false })
+          .order("applied_date", { ascending: false })
           .limit(15),
         supabase
           .from("reminders")
@@ -71,11 +71,11 @@ export default function TutorDetail() {
           .limit(15),
       ]);
 
-      if (apptsRes.error) throw apptsRes.error;
+      if (recordsRes.error) throw recordsRes.error;
       if (remRes.error) throw remRes.error;
 
       return {
-        appointments: apptsRes.data ?? [],
+        records: recordsRes.data ?? [],
         reminders: remRes.data ?? [],
       };
     },
@@ -126,7 +126,7 @@ export default function TutorDetail() {
   const addressLine = formatTutorAddressLine(t);
 
   return (
-    <div className="space-y-6">
+    <div className="vetvax-fade-in space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
@@ -155,9 +155,9 @@ export default function TutorDetail() {
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Button asChild variant="secondary" className="rounded-[10px]">
-            <Link to={`/appointments/new?tutor=${t.id}`}>
+            <Link to={`/vaccinations/new?tutor=${t.id}`}>
               <CalendarPlus className="mr-2 h-4 w-4" />
-              Novo agendamento
+              Registrar aplicação
             </Link>
           </Button>
           <Button variant="secondary" className="rounded-[10px]" onClick={() => openWhats.mutate()} disabled={openWhats.isPending}>
@@ -171,7 +171,7 @@ export default function TutorDetail() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)] lg:col-span-2">
+        <Card className="vetvax-card-polish rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)] lg:col-span-2">
           <div className="text-sm font-semibold">Contato e endereço</div>
           <div className="mt-3 grid gap-2 text-sm">
             <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
@@ -191,13 +191,13 @@ export default function TutorDetail() {
           </div>
         </Card>
 
-        <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
+        <Card className="vetvax-card-polish rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
           <div className="text-sm font-semibold">Atalhos</div>
           <div className="mt-3 grid gap-2">
             <Button asChild className="rounded-[10px]">
-              <Link to={`/appointments/new?tutor=${t.id}`}>
+              <Link to={`/vaccinations/new?tutor=${t.id}`}>
                 <ClipboardList className="mr-2 h-4 w-4" />
-                Agendar em 20s
+                Registrar em 20s
               </Link>
             </Button>
             <Button
@@ -287,18 +287,27 @@ export default function TutorDetail() {
           <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
             <div className="text-sm font-semibold">Timeline (últimos 15)</div>
             <div className="mt-4 grid gap-3">
-              {(history.data?.appointments ?? []).map((a: any) => (
-                <div key={a.id} className="rounded-[10px] border-[1.5px] border-border bg-card p-4">
+              {(history.data?.records ?? []).map((r: any) => (
+                <div key={r.id} className="rounded-[10px] border-[1.5px] border-border bg-card p-4">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium">Agendamento • {a.status}</div>
-                    <Badge variant="secondary" className="rounded-full">
-                      {a.channel}
-                    </Badge>
+                    <div className="text-sm font-medium">Aplicação registrada</div>
+                    {r.next_due_date ? (
+                      <Badge variant="secondary" className="rounded-full">
+                        próxima: {r.next_due_date}
+                      </Badge>
+                    ) : null}
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {a.scheduled_date} {a.scheduled_time}
-                  </div>
-                  {a.notes ? <div className="mt-2 text-xs text-muted-foreground">{a.notes}</div> : null}
+                  <div className="mt-1 text-xs text-muted-foreground">{r.applied_date}</div>
+                  {r.items?.length ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {r.items.map((it: any, idx: number) => (
+                        <Badge key={idx} variant="secondary" className="rounded-full text-[11px]">
+                          {it.quantity}x {it.item}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : null}
+                  {r.notes ? <div className="mt-2 text-xs text-muted-foreground">{r.notes}</div> : null}
                 </div>
               ))}
 
@@ -316,15 +325,15 @@ export default function TutorDetail() {
               ))}
 
               {!history.isLoading &&
-                (history.data?.appointments?.length ?? 0) === 0 &&
+                (history.data?.records?.length ?? 0) === 0 &&
                 (history.data?.reminders?.length ?? 0) === 0 && (
                   <div className="rounded-[10px] border-[1.5px] border-border bg-muted/10 p-6 text-center">
                     <div className="text-sm font-medium">Sem histórico ainda</div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Crie um agendamento para este tutor e o sistema começará a construir a timeline.
+                      Registre uma aplicação para este tutor e o sistema começará a construir a timeline.
                     </p>
                     <Button asChild className="mt-4 rounded-[10px]">
-                      <Link to={`/appointments/new?tutor=${t.id}`}>Novo agendamento</Link>
+                      <Link to={`/vaccinations/new?tutor=${t.id}`}>Registrar aplicação</Link>
                     </Button>
                   </div>
                 )}

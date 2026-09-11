@@ -12,19 +12,19 @@
     --popover-foreground: 222 47% 11%;
     --primary: 175 77% 26%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 214 32% 96%;
+    --secondary: 214 26% 96%;
     --secondary-foreground: 222 47% 11%;
-    --muted: 214 28% 96%;
-    --muted-foreground: 215 18% 38%;
-    --accent: 172 55% 94%;
+    --muted: 214 28% 95%;
+    --muted-foreground: 215 18% 42%;
+    --accent: 160 40% 94%;
     --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
     --border: 214 24% 90%;
     --input: 214 22% 88%;
-    --ring: 175 77% 32%;
+    --ring: 160 84% 36%;
     --radius: 14px;
-    --sidebar-background: 216 33% 99%;
+    --sidebar-background: 210 24% 98%;
     --sidebar-foreground: 222 47% 11%;
     --sidebar-primary: 175 77% 26%;
     --sidebar-primary-foreground: 0 0% 100%;
@@ -33,27 +33,27 @@
     --sidebar-border: 214 24% 90%;
     --sidebar-ring: 175 77% 32%;
 
-    --vetvax-bg: #f4f7fa;
+    --vetvax-bg: #f4f7fb;
     --vetvax-surface: #ffffff;
     --vetvax-surface-alt: #f8fafc;
     --vetvax-surface-panel: #fafbfc;
     --vetvax-border-soft: #e6eaf0;
     --vetvax-border-medium: #cbd5e1;
     --vetvax-text-main: #0f172a;
-    --vetvax-text-secondary: #334155;
+    --vetvax-text-secondary: #475569;
     --vetvax-text-tertiary: #64748b;
-    --vetvax-primary: #0f766e;
-    --vetvax-primary-hover: #115e59;
-    --vetvax-primary-soft: #ccfbf1;
-    --vetvax-primary-border: #99f6e4;
-    --vetvax-danger: #dc2626;
+    --vetvax-primary: #10b981;
+    --vetvax-primary-hover: #059669;
+    --vetvax-primary-soft: rgba(16, 185, 129, 0.14);
+    --vetvax-primary-border: rgba(16, 185, 129, 0.3);
+    --vetvax-danger: #ef4444;
     --vetvax-danger-soft: #fee2e2;
-    --vetvax-warning: #d97706;
-    --vetvax-warning-soft: #fffbeb;
-    --vetvax-success: #15803d;
+    --vetvax-warning: #f59e0b;
+    --vetvax-warning-soft: rgba(245, 158, 11, 0.16);
+    --vetvax-success: #10b981;
     --vetvax-success-soft: #dcfce7;
-    --vetvax-info: #1d4ed8;
-    --vetvax-info-soft: #eff6ff;
+    --vetvax-info: #3b82f6;
+    --vetvax-info-soft: rgba(59, 130, 246, 0.14);
   }
 
   .dark {
@@ -75,8 +75,8 @@
     --destructive-foreground: 0 0% 100%;
     --border: 214 24% 90%;
     --input: 214 22% 88%;
-    --ring: 175 77% 32%;
-    --sidebar-background: 216 33% 99%;
+    --ring: 160 84% 36%;
+    --sidebar-background: 210 24% 98%;
     --sidebar-foreground: 222 47% 11%;
     --sidebar-primary: 175 77% 26%;
     --sidebar-primary-foreground: 0 0% 100%;
@@ -102,12 +102,10 @@
     background-color: var(--vetvax-bg);
     color: var(--vetvax-text-main);
     background-image:
-      radial-gradient(1200px 520px at 12% -8%, rgba(15, 118, 110, 0.09), transparent 55%),
-      radial-gradient(900px 480px at 92% 0%, rgba(37, 99, 235, 0.06), transparent 50%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(244, 247, 250, 0) 38%),
-      linear-gradient(to right, rgba(15, 23, 42, 0.028) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(15, 23, 42, 0.028) 1px, transparent 1px);
-    background-size: auto, auto, auto, 40px 40px, 40px 40px;
+      radial-gradient(1200px 520px at 12% -8%, rgba(16, 185, 129, 0.07), transparent 55%),
+      radial-gradient(900px 480px at 92% 0%, rgba(59, 130, 246, 0.045), transparent 50%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(244, 247, 250, 0) 40%);
+    background-size: auto, auto, auto;
   }
 }
 
@@ -117,9 +115,9 @@
   }
 
   .vetvax-page-title {
-    font-size: clamp(1.375rem, 1.15rem + 0.6vw, 1.75rem);
-    line-height: 1.2;
-    letter-spacing: -0.025em;
+    font-size: clamp(1.45rem, 1.2rem + 0.6vw, 1.85rem);
+    line-height: 1.15;
+    letter-spacing: -0.03em;
     font-weight: 700;
     color: var(--vetvax-text-main);
   }
@@ -147,6 +145,20 @@
     transform: translateY(-1px);
   }
 
+  .vetvax-card-polish {
+    @apply transition-[box-shadow,transform,border-color,background-color] duration-200 ease-out;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  }
+
+  .vetvax-card-polish:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.1);
+  }
+
+  .vetvax-fade-in {
+    animation: vetvax-fade-in 220ms ease-out;
+  }
+
   .vetvax-scroll {
     scrollbar-gutter: stable;
   }
@@ -167,5 +179,16 @@
     background: rgba(71, 85, 105, 0.52);
     border: 3px solid rgba(255, 255, 255, 0);
     background-clip: padding-box;
+  }
+}
+
+@keyframes vetvax-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

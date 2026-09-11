@@ -41,6 +41,48 @@ export type OrgSettings = {
   branding: Record<string, unknown>;
 };
 
+export type MessageTemplate = {
+  id: string;
+  org_id: string;
+  name: string;
+  channel: "whatsapp" | "email";
+  body: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PriceListItem = {
+  id: string;
+  org_id: string;
+  vaccine_name: string;
+  price_cents: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type QuoteTemplate = {
+  id: string;
+  org_id: string;
+  name: string;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type QuoteTemplateItem = {
+  id: string;
+  org_id: string;
+  quote_template_id: string;
+  price_list_item_id: string;
+  quantity: number;
+  unit_price_cents: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Tutor = {
   id: string;
   org_id: string;
@@ -86,20 +128,30 @@ export type CatalogItem = {
   is_active: boolean;
 };
 
-export type UpcomingAppointmentRow = {
+export type VaccinationRecordItem = {
+  quantity: number;
+  item: string;
+  category: "vaccine" | "medication" | "other";
+  pet_id: string | null;
+  brand: string | null;
+  lot: string | null;
+  expires_on: string | null;
+};
+
+export type VaccinationRecordRow = {
   id: string;
   org_id: string;
   branch_id: string | null;
   tutor_id: string;
-  scheduled_date: string;
-  scheduled_time: string;
-  channel: "store" | "phone" | "whatsapp" | "other";
-  status: "PENDENTE" | "APLICADO" | "CANCELADO";
+  applied_date: string;
+  next_due_date: string | null;
   notes: string | null;
+  created_by: string | null;
+  created_at: string;
   tutor_name: string;
   tutor_phone1: string | null;
   tutor_phone2: string | null;
-  items: Array<{ quantity: number; item: string; pet_id: string | null }> | null;
+  items: VaccinationRecordItem[] | null;
 };
 
 export type DueReminderRow = {
@@ -110,6 +162,7 @@ export type DueReminderRow = {
   pet_id: string | null;
   due_date: string;
   reference_appointment_id: string | null;
+  reference_record_id: string | null;
   last_applied_at: string | null;
   reminder_type: string;
   message_template_id: string | null;
@@ -125,9 +178,9 @@ export type DueReminderRow = {
 
 export type DashboardKpis = {
   org_id: string;
-  pending_today: number;
-  pending_7d: number;
+  applied_today: number;
+  applied_7d: number;
   applied_month: number;
-  cancelled_month: number;
+  active_reminders: number;
   overdue_reminders: number;
 };

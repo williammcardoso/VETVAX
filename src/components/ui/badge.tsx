@@ -12,9 +12,9 @@ const badgeVariants = cva(
         secondary: "border-transparent bg-slate-100/90 text-slate-700 hover:bg-slate-200/80",
         destructive: "bg-vetvax-danger-soft text-vetvax-danger hover:bg-red-100/90",
         outline: "border-vetvax-border-soft bg-white text-vetvax-text-main shadow-sm hover:bg-vetvax-surface-panel",
-        success: "bg-vetvax-success-soft text-vetvax-success",
-        warning: "bg-vetvax-warning-soft text-vetvax-warning",
-        info: "bg-vetvax-info-soft text-vetvax-info",
+        success: "bg-[rgba(16,185,129,0.14)] text-[#047857]",
+        warning: "bg-[rgba(245,158,11,0.16)] text-[#b45309]",
+        info: "bg-[rgba(59,130,246,0.14)] text-[#1d4ed8]",
       },
     },
     defaultVariants: {

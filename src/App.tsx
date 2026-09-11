@@ -12,13 +12,13 @@ import AppShell from "@/components/layout/AppShell";
 import Dashboard from "@/pages/Dashboard";
 import Tutors from "@/pages/Tutors";
 import TutorDetail from "@/pages/TutorDetail";
-import AppointmentNew from "@/pages/AppointmentNew";
+import VaccinationNew from "@/pages/VaccinationNew";
 import Reports from "@/pages/Reports";
 import Catalog from "@/pages/Catalog";
+import PriceList from "@/pages/PriceList";
 import Settings from "@/pages/Settings";
 import Access from "@/pages/Access";
 import Reminders from "@/pages/Reminders";
-import AgendaPublica from "@/pages/AgendaPublica";
 import Profile from "@/pages/Profile";
 
 const queryClient = new QueryClient();
@@ -32,7 +32,6 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/agenda-publica" element={<AgendaPublica />} />
             <Route
               path="/onboarding"
               element={
@@ -56,10 +55,11 @@ const App = () => (
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="tutors" element={<Tutors />} />
               <Route path="tutors/:id" element={<TutorDetail />} />
-              <Route path="appointments/new" element={<AppointmentNew />} />
+              <Route path="vaccinations/new" element={<VaccinationNew />} />
               <Route path="reminders" element={<Reminders />} />
               <Route path="reports" element={<Reports />} />
               <Route path="catalog" element={<Catalog />} />
+              <Route path="prices" element={<PriceList />} />
               <Route path="settings" element={<Settings />} />
               <Route path="access" element={<Access />} />
               <Route path="profile" element={<Profile />} />

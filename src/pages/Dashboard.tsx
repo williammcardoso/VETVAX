@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clock3, MoreHorizontal, Search, Syringe, UserPlus, Users } from "lucide-react";
+import { Bell, Clock3, MoreHorizontal, Search, Syringe, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import type { DashboardKpis, DueReminderRow, UpcomingAppointmentRow } from "@/types/vetvax";
+import type { DashboardKpis, DueReminderRow, VaccinationRecordRow } from "@/types/vetvax";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { dayjs } from "@/lib/datetime";
@@ -12,28 +12,14 @@ import StatusBadge from "@/components/vetvax/StatusBadge";
 import RichListItem from "@/components/vetvax/RichListItem";
 import EmptyState from "@/components/vetvax/EmptyState";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { formatTutorAddressLine } from "@/lib/address";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { buildWhatsAppLink } from "@/lib/phone";
 import { useWhatsMessage } from "@/components/dashboard/useWhatsMessage";
-import CheckoutDialog from "@/components/dashboard/CheckoutDialog";
-import RescheduleDialog from "@/components/dashboard/RescheduleDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
-import type { Tutor } from "@/types/vetvax";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 type Filters = {
   q: string;
@@ -83,17 +69,15 @@ async function fetchKpis() {
 
 async function fetchBusinessKpis() {
   const monthStart = dayjs().startOf("month").format("YYYY-MM-DD");
-  const monthEnd = dayjs().endOf("month").format("YYYY-MM-DD");
 
   const [totalClients, newClients, appliedMonth, activeReminders] = await Promise.all([
     supabase.from("tutors").select("id", { count: "exact", head: true }).eq("is_active", true),
     supabase.from("tutors").select("id", { count: "exact", head: true }).eq("is_active", true).gte("created_at", `${monthStart}T00:00:00`),
     supabase
-      .from("appointment_checkouts")
+      .from("vaccination_records")
       .select("id", { count: "exact", head: true })
-      .eq("status_result", "APLICADO")
-      .gte("checkout_date", monthStart)
-      .lte("checkout_date", monthEnd),
+      .eq("is_active", true)
+      .gte("applied_date", monthStart),
     supabase.from("reminders").select("id", { count: "exact", head: true }).eq("status", "ATIVO").eq("is_active", true),
   ]);
 
@@ -113,10 +97,7 @@ async function fetchBusinessKpis() {
 export default function Dashboard() {
   const qc = useQueryClient();
   const nav = useNavigate();
-  const { buildAppointmentMessage, pickPhone } = useWhatsMessage();
-  const [checkoutId, setCheckoutId] = useState<string | null>(null);
-  const [rescheduleId, setRescheduleId] = useState<string | null>(null);
-  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
+  const { buildReminderMessage, pickPhone } = useWhatsMessage();
   const [priorityPage, setPriorityPage] = useState(1);
   const [priorityPageSize, setPriorityPageSize] = useState<10 | 20 | 30 | 50 | 100>(20);
 
@@ -132,26 +113,6 @@ export default function Dashboard() {
 
   const kpis = useQuery({ queryKey: ["dashboard", "kpis"], queryFn: fetchKpis });
   const businessKpis = useQuery({ queryKey: ["dashboard", "business-kpis"], queryFn: fetchBusinessKpis });
-
-  const upcoming = useQuery({
-    queryKey: ["dashboard", "upcoming", filters.q],
-    queryFn: async () => {
-      let q = supabase
-        .from("vw_upcoming_appointments")
-        .select("*")
-        .order("scheduled_date", { ascending: true })
-        .order("scheduled_time", { ascending: true });
-
-      const term = filters.q.trim();
-      if (term) {
-        q = q.or(`tutor_name.ilike.%${term}%,tutor_phone1.ilike.%${term}%,tutor_phone2.ilike.%${term}%`);
-      }
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as UpcomingAppointmentRow[];
-    },
-  });
 
   const reminders = useQuery({
     queryKey: ["dashboard", "reminders", filters.q],
@@ -169,6 +130,20 @@ export default function Dashboard() {
     },
   });
 
+  const recentRecords = useQuery({
+    queryKey: ["dashboard", "recent-records"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vw_vaccination_records")
+        .select("*")
+        .order("applied_date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return (data ?? []) as VaccinationRecordRow[];
+    },
+  });
+
   const remindersSorted = useMemo(() => {
     const list = reminders.data ?? [];
     const today = dayjs().format("YYYY-MM-DD");
@@ -180,15 +155,15 @@ export default function Dashboard() {
     });
   }, [reminders.data]);
 
-  const overdueAppointments = useMemo(() => {
+  const overdueReminders = useMemo(() => {
     const today = dayjs().format("YYYY-MM-DD");
-    return (upcoming.data ?? []).filter((row) => row.scheduled_date < today).length;
-  }, [upcoming.data]);
+    return remindersSorted.filter((row) => row.due_date < today).length;
+  }, [remindersSorted]);
 
   const onRefetch = async () => {
     await Promise.all([
-      qc.invalidateQueries({ queryKey: ["dashboard", "upcoming"] }),
       qc.invalidateQueries({ queryKey: ["dashboard", "reminders"] }),
+      qc.invalidateQueries({ queryKey: ["dashboard", "recent-records"] }),
       qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] }),
       qc.invalidateQueries({ queryKey: ["dashboard", "business-kpis"] }),
     ]);
@@ -203,14 +178,11 @@ export default function Dashboard() {
     }
   };
 
-  const todayPendingCount = (upcoming.data ?? []).length;
-  const criticalReminders = remindersSorted.slice(0, 5);
-  const filteredRows = upcoming.data ?? [];
-  const priorityTotalPages = Math.max(1, Math.ceil(filteredRows.length / priorityPageSize));
+  const priorityTotalPages = Math.max(1, Math.ceil(remindersSorted.length / priorityPageSize));
   const priorityRows = useMemo(() => {
     const start = (priorityPage - 1) * priorityPageSize;
-    return filteredRows.slice(start, start + priorityPageSize);
-  }, [filteredRows, priorityPage, priorityPageSize]);
+    return remindersSorted.slice(start, start + priorityPageSize);
+  }, [remindersSorted, priorityPage, priorityPageSize]);
 
   useEffect(() => {
     setPriorityPage(1);
@@ -220,19 +192,18 @@ export default function Dashboard() {
     if (priorityPage > priorityTotalPages) setPriorityPage(priorityTotalPages);
   }, [priorityPage, priorityTotalPages]);
 
-  const cancelAppointment = useMutation({
+  const archiveReminder = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("appointments").update({ status: "CANCELADO" }).eq("id", id);
+      const { error } = await supabase.from("reminders").update({ status: "ARQUIVADO" }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: async () => {
-      setCancelConfirmId(null);
-      toast({ title: "Atendimento cancelado" });
+      toast({ title: "Lembrete arquivado" });
       await onRefetch();
     },
     onError: (error: unknown) => {
       toast({
-        title: "Não foi possível cancelar",
+        title: "Não foi possível arquivar",
         description: error instanceof Error ? error.message : "Tente novamente.",
         variant: "destructive",
       });
@@ -240,11 +211,11 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7 overflow-x-hidden">
       <PageHeader
         badge="Operação"
         title="Central de vacinação"
-        description="Acompanhe pendências, atrasos, lembretes e aplicações em uma visão operacional."
+        description="Acompanhe lembretes vencidos, próximas doses e as últimas aplicações registradas."
       />
 
       <section className="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[#0b1220] via-[#0f172a] to-[#0d4f4a] p-6 text-white shadow-vetvax-card ring-1 ring-white/10">
@@ -252,46 +223,48 @@ export default function Dashboard() {
         <div className="pointer-events-none absolute -bottom-24 left-10 h-52 w-52 rounded-full bg-blue-500/10 blur-3xl" />
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight">Hoje, o que precisa acontecer?</h2>
-            <p className="mt-1 text-sm text-white/75">{todayPendingCount} ações operacionais aguardando atendimento.</p>
+            <h2 className="text-xl font-semibold tracking-tight">Hoje, quem precisa de contato?</h2>
+            <p className="mt-1 text-sm text-white/75">{remindersSorted.length} lembretes ativos aguardando ação.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <MetricTile label="Pendentes" value={todayPendingCount} tone="inverse" />
-            <MetricTile label="Atrasados" value={overdueAppointments} tone="inverse" />
-            <MetricTile label="Lembretes" value={kpis.data?.overdue_reminders ?? 0} tone="inverse" />
+            <MetricTile label="Vencidos" value={overdueReminders} tone="inverse" />
+            <MetricTile label="Lembretes ativos" value={kpis.data?.active_reminders ?? 0} tone="inverse" />
+            <MetricTile label="Aplicadas hoje" value={kpis.data?.applied_today ?? 0} tone="inverse" />
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricTile label="Clientes ativos" value={businessKpis.data?.totalClients ?? 0} icon={Users} />
-        <MetricTile label="Novos no mês" value={businessKpis.data?.newClientsMonth ?? 0} icon={UserPlus} />
-        <MetricTile label="Vacinas no mês" value={businessKpis.data?.vaccinesMonth ?? 0} icon={Syringe} />
-        <MetricTile label="Lembretes ativos" value={businessKpis.data?.activeReminders ?? 0} icon={Clock3} />
+      <section className="rounded-[18px] border border-vetvax-border-soft/80 bg-white/80 p-3 shadow-[0_10px_26px_rgba(15,23,42,0.05)] backdrop-blur-sm sm:p-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricTile label="Clientes ativos" value={businessKpis.data?.totalClients ?? 0} icon={Users} tone="info" />
+          <MetricTile label="Novos no mês" value={businessKpis.data?.newClientsMonth ?? 0} icon={UserPlus} tone="success" />
+          <MetricTile label="Vacinas no mês" value={businessKpis.data?.vaccinesMonth ?? 0} icon={Syringe} tone="warning" />
+          <MetricTile label="Lembretes ativos" value={businessKpis.data?.activeReminders ?? 0} icon={Clock3} tone="danger" />
+        </div>
       </section>
 
-      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
-        <section className="min-w-0 rounded-[16px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,280px)] lg:items-start">
+        <section className="min-w-0 rounded-[16px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card ring-1 ring-black/[0.02] lg:h-full">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="vetvax-section-title">Prioridade operacional</h2>
-              <p className="mt-1 text-xs text-vetvax-text-tertiary">Atendimentos pendentes com foco nos atrasados. ({filteredRows.length} registros)</p>
+              <h2 className="vetvax-section-title">Lembretes por vencer</h2>
+              <p className="mt-1 text-xs text-vetvax-text-tertiary">Priorize contatos com vencidos primeiro. ({remindersSorted.length} registros)</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
               <div className="relative w-full sm:w-[280px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-vetvax-text-tertiary" />
                 <Input
                   className="pl-9"
-                  placeholder="Buscar cliente / telefone..."
+                  placeholder="Buscar cliente / telefone / pet..."
                   value={filters.q}
                   onChange={(e) => persist({ ...filters, q: e.target.value })}
                 />
               </div>
-              <Button variant="outline" onClick={onRefetch}>
+              <Button variant="outline" className="shrink-0" onClick={onRefetch}>
                 Atualizar
               </Button>
               <Select value={String(priorityPageSize)} onValueChange={(v) => setPriorityPageSize(Number(v) as 10 | 20 | 30 | 50 | 100)}>
-                <SelectTrigger className="w-[96px]">
+                <SelectTrigger className="w-[96px] shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-control">
@@ -306,34 +279,25 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-2">
-            {upcoming.isLoading &&
+            {reminders.isLoading &&
               Array.from({ length: 5 }).map((_, idx) => <Skeleton key={idx} className="h-[84px] rounded-card-md" />)}
 
-            {!upcoming.isLoading && (upcoming.data?.length ?? 0) === 0 && (
+            {!reminders.isLoading && (reminders.data?.length ?? 0) === 0 && (
               <EmptyState
-                icon={Clock3}
-                title="Sem pendências no momento"
-                description="Quando novos agendamentos pendentes surgirem, eles aparecerão nesta fila."
+                icon={Bell}
+                title="Sem lembretes ativos"
+                description="Quando uma aplicação tiver próxima dose prevista, o lembrete aparece aqui."
               />
             )}
 
             {priorityRows.map((row) => {
-              const isOverdue = row.scheduled_date < dayjs().format("YYYY-MM-DD");
-              const rowAddressData: Pick<Tutor, "street" | "number" | "city" | "neighborhood" | "uf"> = {
-                street: (row as UpcomingAppointmentRow & Partial<Pick<Tutor, "street">>).street ?? null,
-                number: (row as UpcomingAppointmentRow & Partial<Pick<Tutor, "number">>).number ?? null,
-                city: (row as UpcomingAppointmentRow & Partial<Pick<Tutor, "city">>).city ?? null,
-                neighborhood: (row as UpcomingAppointmentRow & Partial<Pick<Tutor, "neighborhood">>).neighborhood ?? null,
-                uf: (row as UpcomingAppointmentRow & Partial<Pick<Tutor, "uf">>).uf ?? null,
-              };
-              const address = formatTutorAddressLine(rowAddressData);
+              const isOverdue = row.due_date < dayjs().format("YYYY-MM-DD");
               return (
                 <RichListItem key={row.id}>
-                  <div className="grid min-h-[84px] gap-3 md:grid-cols-[96px_minmax(0,1fr)_minmax(0,240px)_auto] md:items-center">
+                  <div className="grid min-h-[84px] gap-3 md:grid-cols-[96px_minmax(0,1fr)_auto] md:items-center">
                     <div>
-                      <p className="text-[18px] font-bold text-vetvax-primary">{String(row.scheduled_time).slice(0, 5)}</p>
-                      <p className="text-xs text-vetvax-text-tertiary">{dayjs(row.scheduled_date).format("DD/MM/YYYY")}</p>
-                      {isOverdue ? <StatusBadge tone="danger" className="mt-1">Atrasado</StatusBadge> : null}
+                      <p className="text-[13px] font-bold text-vetvax-primary">{dayjs(row.due_date).format("DD/MM/YYYY")}</p>
+                      {isOverdue ? <StatusBadge tone="danger" className="mt-1">Vencido</StatusBadge> : <StatusBadge tone="warning" className="mt-1">A vencer</StatusBadge>}
                     </div>
 
                     <div className="flex items-start gap-3">
@@ -351,36 +315,39 @@ export default function Dashboard() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-bold text-vetvax-text-main">{row.tutor_name}</p>
                         <p className="text-xs text-vetvax-text-tertiary">{row.tutor_phone1 ?? row.tutor_phone2 ?? "Sem telefone"}</p>
-                        {address ? <p className="truncate text-xs text-vetvax-text-tertiary">{address}</p> : null}
+                        <span className={`mt-1 inline-flex max-w-full min-h-[22px] items-center truncate rounded-pill border px-2 py-0.5 text-[11px] font-bold leading-none ${getItemTone(row.reminder_type)}`}>
+                          {row.pet_name ? `${row.pet_name} • ` : ""}
+                          {row.reminder_type}
+                        </span>
+                        {row.notes ? <p className="mt-1 line-clamp-2 text-xs text-vetvax-text-secondary">{row.notes}</p> : null}
                       </div>
                     </div>
 
-                    <div className="flex min-w-0 flex-wrap gap-1.5">
-                      {(row.items ?? []).slice(0, 3).map((it, idx) => (
-                        <span
-                          key={idx}
-                          className={`inline-flex min-h-[26px] items-center rounded-pill border px-2.5 py-1 text-[11px] font-bold leading-none ${getItemTone(it.item)}`}
-                          title={it.item}
-                        >
-                          {it.quantity}x {it.item}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex flex-wrap items-center justify-start gap-2 md:justify-end">
                       <Button
                         variant="outline"
                         size="icon"
                         onClick={async () => {
                           const phone = pickPhone(row.tutor_phone1, row.tutor_phone2);
-                          if (!phone) return;
-                          const msg = await buildAppointmentMessage(row);
+                          if (!phone) {
+                            toast({ title: "Tutor sem telefone", variant: "destructive" });
+                            return;
+                          }
+                          const msg = await buildReminderMessage(row);
+                          const { error } = await supabase
+                            .from("reminders")
+                            .update({
+                              last_sent_at: new Date().toISOString(),
+                              send_count: Math.max(0, row.send_count ?? 0) + 1,
+                            })
+                            .eq("id", row.id);
+                          if (!error) await onRefetch();
                           window.open(buildWhatsAppLink(phone, msg), "_blank", "noopener,noreferrer");
                         }}
                       >
                         <WhatsAppIcon className="h-4 w-4" />
                       </Button>
-                      <Button onClick={() => setCheckoutId(row.id)}>Aplicar</Button>
+                      <Button onClick={() => nav(`/vaccinations/new?tutor=${row.tutor_id}&resolveReminder=${row.id}`)}>Registrar aplicação</Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" size="icon">
@@ -388,12 +355,8 @@ export default function Dashboard() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-control">
-                          <DropdownMenuItem onClick={() => setRescheduleId(row.id)}>Reagendar</DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setCancelConfirmId(row.id)}
-                            disabled={cancelAppointment.isPending}
-                          >
-                            Marcar como cancelado
+                          <DropdownMenuItem onClick={() => archiveReminder.mutate(row.id)} disabled={archiveReminder.isPending}>
+                            Arquivar lembrete
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => nav(`/tutors/${row.tutor_id}`)}>Ver cliente</DropdownMenuItem>
                         </DropdownMenuContent>
@@ -405,10 +368,10 @@ export default function Dashboard() {
             })}
           </div>
 
-          {!upcoming.isLoading && filteredRows.length > 0 ? (
+          {!reminders.isLoading && remindersSorted.length > 0 ? (
             <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <p className="text-xs text-vetvax-text-tertiary">
-                Mostrando {(priorityPage - 1) * priorityPageSize + 1}-{Math.min(priorityPage * priorityPageSize, filteredRows.length)} de {filteredRows.length}
+                Mostrando {(priorityPage - 1) * priorityPageSize + 1}-{Math.min(priorityPage * priorityPageSize, remindersSorted.length)} de {remindersSorted.length}
               </p>
               <div className="flex items-center gap-2">
                 <Button variant="outline" disabled={priorityPage <= 1} onClick={() => setPriorityPage((p) => Math.max(1, p - 1))}>
@@ -429,79 +392,50 @@ export default function Dashboard() {
           ) : null}
         </section>
 
-        <aside className="min-w-0 rounded-[16px] border border-vetvax-border-soft bg-gradient-to-b from-white to-vetvax-surface-panel/50 p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
+        <aside className="min-w-0 rounded-[16px] border border-vetvax-border-soft bg-gradient-to-b from-white via-vetvax-surface-panel/40 to-[#ecfdf5] p-4 shadow-vetvax-card ring-1 ring-black/[0.02]">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="vetvax-section-title">Lembretes críticos</h2>
-            <StatusBadge tone="danger">{criticalReminders.length}</StatusBadge>
+            <h2 className="vetvax-section-title">Últimos registros</h2>
+            <StatusBadge tone="success">{recentRecords.data?.length ?? 0}</StatusBadge>
           </div>
           <div className="space-y-3">
-            {reminders.isLoading &&
+            {recentRecords.isLoading &&
               Array.from({ length: 4 }).map((_, idx) => <Skeleton key={idx} className="h-16 rounded-card-md" />)}
-            {!reminders.isLoading &&
-              criticalReminders.map((row) => (
+            {!recentRecords.isLoading &&
+              (recentRecords.data ?? []).map((row) => (
                 <div
                   key={row.id}
-                  className="rounded-[14px] border border-vetvax-border-soft bg-vetvax-surface-panel/80 p-3 shadow-sm transition-[border-color,box-shadow,transform] duration-vetvax hover:-translate-y-px hover:border-amber-200/80 hover:shadow-md"
+                  className="rounded-[14px] border border-vetvax-border-soft bg-white/95 p-3 shadow-sm transition-[border-color,box-shadow,transform] duration-vetvax hover:-translate-y-px hover:border-vetvax-primary-border hover:shadow-md"
                 >
                   <div className="flex items-start gap-2">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-vetvax-danger" />
+                    <span className="mt-1.5 h-2 w-2 rounded-full bg-vetvax-success shadow-[0_0_0_3px_rgba(16,185,129,0.12)]" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-vetvax-danger">{dayjs(row.due_date).format("DD/MM/YYYY")}</p>
-                      <p className="truncate text-sm font-bold text-vetvax-text-main">{row.tutor_name}</p>
-                      <p className="truncate text-xs text-vetvax-text-secondary">{row.reminder_type}</p>
+                      <p className="text-[11px] font-semibold text-vetvax-success">{dayjs(row.applied_date).format("DD/MM/YYYY")}</p>
+                      <p className="break-words text-sm font-extrabold leading-tight text-vetvax-text-main">{row.tutor_name}</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {(row.items ?? []).slice(0, 2).map((it, idx) => (
+                          <span
+                            key={idx}
+                            className={`inline-flex max-w-full items-center truncate rounded-pill border px-2 py-0.5 text-[10px] font-bold leading-none ${getItemTone(it.item)}`}
+                          >
+                            {it.quantity}x {it.item}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => nav("/reminders")}
-                      className="h-8 px-2.5 text-xs"
-                    >
-                      WhatsApp
-                    </Button>
                   </div>
                 </div>
               ))}
+            {!recentRecords.isLoading && (recentRecords.data?.length ?? 0) === 0 && (
+              <p className="rounded-[12px] border border-dashed border-vetvax-border-soft px-3 py-5 text-center text-xs text-vetvax-text-tertiary">
+                Nenhuma aplicação registrada ainda.
+              </p>
+            )}
           </div>
-          <Button variant="outline" className="mt-4 w-full" onClick={() => nav("/reminders")}>
-            Ver todos
+          <Button variant="outline" className="mt-4 w-full" onClick={() => nav("/reports")}>
+            Ver relatório completo
           </Button>
         </aside>
       </div>
-
-      <CheckoutDialog
-        open={!!checkoutId}
-        appointmentId={checkoutId}
-        onOpenChange={(v) => !v && setCheckoutId(null)}
-        onChanged={() => {
-          setCheckoutId(null);
-          onRefetch();
-        }}
-      />
-      <RescheduleDialog open={!!rescheduleId} appointmentId={rescheduleId} onOpenChange={(v) => !v && setRescheduleId(null)} onChanged={onRefetch} />
-
-      <AlertDialog open={!!cancelConfirmId} onOpenChange={(open) => !open && setCancelConfirmId(null)}>
-        <AlertDialogContent className="rounded-control border-vetvax-border-soft">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar este atendimento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esse agendamento será mantido no histórico como <strong>cancelado</strong>.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-vetvax-danger hover:bg-[#b91c1c]"
-              onClick={(event) => {
-                event.preventDefault();
-                if (!cancelConfirmId) return;
-                cancelAppointment.mutate(cancelConfirmId);
-              }}
-            >
-              Sim, cancelar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

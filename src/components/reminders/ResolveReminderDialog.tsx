@@ -25,7 +25,7 @@ export default function ResolveReminderDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-[10px] border-[1.5px] border-border">
         <DialogHeader>
-          <DialogTitle>Deseja agendar a próxima aplicação?</DialogTitle>
+          <DialogTitle>A vacina já foi aplicada?</DialogTitle>
         </DialogHeader>
 
         <div className="mt-2 text-sm text-muted-foreground">
@@ -34,11 +34,11 @@ export default function ResolveReminderDialog({
         </div>
 
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button variant="secondary" className="rounded-[10px]" onClick={() => onScheduleNow(row)}>
-            Agendar agora
-          </Button>
-          <Button className="rounded-[10px]" onClick={() => onOnlyResolve(row)}>
+          <Button variant="secondary" className="rounded-[10px]" onClick={() => onOnlyResolve(row)}>
             Apenas marcar como resolvido
+          </Button>
+          <Button className="rounded-[10px]" onClick={() => onScheduleNow(row)}>
+            Registrar aplicação
           </Button>
         </div>
       </DialogContent>

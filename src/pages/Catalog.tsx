@@ -146,7 +146,7 @@ export default function Catalog() {
         }
       />
 
-      <Card className="rounded-card border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card">
+      <Card className="vetvax-card-polish rounded-[16px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
         <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <Input
             className="md:w-[340px]"
@@ -165,10 +165,10 @@ export default function Catalog() {
                 key={chip.id}
                 type="button"
                 onClick={() => setTypeFilter(chip.id as typeof typeFilter)}
-                className={`rounded-pill border px-3 py-1.5 text-xs font-bold ${
+              className={`rounded-pill border px-3 py-1.5 text-xs font-semibold transition-[background-color,color,box-shadow] duration-vetvax ${
                   typeFilter === chip.id
-                    ? "border-vetvax-primary-border bg-vetvax-primary-soft text-vetvax-primary"
-                    : "border-vetvax-border-soft bg-vetvax-surface-alt text-vetvax-text-secondary"
+                    ? "border-vetvax-primary-border bg-vetvax-primary-soft text-vetvax-primary shadow-sm"
+                    : "border-vetvax-border-soft bg-vetvax-surface-alt text-vetvax-text-secondary hover:bg-vetvax-surface-panel"
                 }`}
               >
                 {chip.label}
@@ -179,11 +179,14 @@ export default function Catalog() {
 
         <div className="space-y-2">
           {rows.map((it) => (
-            <article key={it.id} className="flex flex-col gap-3 rounded-card-md border border-vetvax-border-soft bg-vetvax-surface-alt p-4 md:flex-row md:items-center md:justify-between">
+            <article
+              key={it.id}
+              className="flex flex-col gap-3 rounded-[14px] border border-vetvax-border-soft bg-gradient-to-b from-white to-vetvax-surface-panel/60 p-4 shadow-sm transition-[border-color,box-shadow] duration-vetvax hover:border-vetvax-border-medium hover:shadow-md md:flex-row md:items-center md:justify-between"
+            >
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-bold text-vetvax-text-main">{it.name}</p>
-                  <Badge variant="secondary">{categoryLabels[it.category]}</Badge>
+                  <Badge variant={it.category === "vaccine" ? "success" : it.category === "medication" ? "warning" : "info"}>{categoryLabels[it.category]}</Badge>
                   {!it.is_active ? <Badge variant="outline">Inativo</Badge> : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -229,7 +232,7 @@ export default function Catalog() {
           if (!v) setEditing(null);
         }}
       >
-        <DialogContent className="rounded-[10px] max-w-xl">
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>{editing?.id ? "Editar item" : "Novo item"}</DialogTitle>
           </DialogHeader>
@@ -237,7 +240,7 @@ export default function Catalog() {
           <form className="mt-2 grid gap-4" onSubmit={form.handleSubmit((v) => upsert.mutate(v))}>
             <div className="grid gap-2">
               <Label>Nome</Label>
-              <Input className="h-10 rounded-[10px] border-[1.5px]" {...form.register("name")} />
+              <Input className="h-10" {...form.register("name")} />
               {form.formState.errors.name && (
                 <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
               )}
@@ -247,10 +250,10 @@ export default function Catalog() {
               <div className="grid gap-2">
                 <Label>Categoria</Label>
                 <Select value={form.watch("category")} onValueChange={(v) => form.setValue("category", v as Values["category"])}>
-                  <SelectTrigger className="h-10 rounded-[10px] border-[1.5px]">
+                  <SelectTrigger className="h-10">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-[10px]">
+                  <SelectContent>
                     <SelectItem value="vaccine">Vacina</SelectItem>
                     <SelectItem value="medication">Medicação</SelectItem>
                     <SelectItem value="other">Outro</SelectItem>
@@ -258,7 +261,7 @@ export default function Catalog() {
                 </Select>
               </div>
 
-              <div className="flex items-center justify-between rounded-[10px] border-[1.5px] border-border bg-muted/20 px-3 py-3">
+              <div className="flex items-center justify-between rounded-[12px] border border-vetvax-border-soft bg-vetvax-surface-panel px-3 py-3">
                 <div>
                   <div className="text-sm font-medium">Ativo</div>
                   <div className="text-xs text-muted-foreground">Itens inativos não aparecem no agendamento.</div>
@@ -268,7 +271,7 @@ export default function Catalog() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex items-center justify-between rounded-[10px] border-[1.5px] border-border bg-muted/20 px-3 py-3">
+              <div className="flex items-center justify-between rounded-[12px] border border-vetvax-border-soft bg-vetvax-surface-panel px-3 py-3">
                 <div>
                   <div className="text-sm font-medium">Exige descrição</div>
                   <div className="text-xs text-muted-foreground">Solicita campo extra no agendamento/baixa.</div>
@@ -278,7 +281,7 @@ export default function Catalog() {
                   onCheckedChange={(v) => form.setValue("requires_description", v)}
                 />
               </div>
-              <div className="flex items-center justify-between rounded-[10px] border-[1.5px] border-border bg-muted/20 px-3 py-3">
+              <div className="flex items-center justify-between rounded-[12px] border border-vetvax-border-soft bg-vetvax-surface-panel px-3 py-3">
                 <div>
                   <div className="text-sm font-medium">Permite origem</div>
                   <div className="text-xs text-muted-foreground">Ex: nacional/importada.</div>
@@ -291,7 +294,7 @@ export default function Catalog() {
               <div className="grid gap-2">
                 <Label>Origem padrão (opcional)</Label>
                 <Input
-                  className="h-10 rounded-[10px] border-[1.5px]"
+                  className="h-10"
                   placeholder="nacional / importada"
                   {...form.register("default_origin")}
                 />
@@ -299,10 +302,10 @@ export default function Catalog() {
             )}
 
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="secondary" className="h-10 rounded-[10px]" onClick={() => setOpen(false)}>
+              <Button type="button" variant="secondary" className="h-10" onClick={() => setOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" className="h-10 rounded-[10px]" disabled={upsert.isPending}>
+              <Button type="submit" className="h-10" disabled={upsert.isPending}>
                 {upsert.isPending ? "Salvando…" : "Salvar"}
               </Button>
             </div>

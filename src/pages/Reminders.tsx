@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, TriangleAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Branch, DueReminderRow } from "@/types/vetvax";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { useWhatsMessage } from "@/components/dashboard/useWhatsMessage";
 import ResolveReminderDialog from "@/components/reminders/ResolveReminderDialog";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/hooks/use-toast";
 
 type DuePreset = "overdue" | "7d" | "30d" | "60d" | "all";
 
@@ -37,7 +38,7 @@ const LS_KEY = "vetvax.reminders.filters";
 function defaults(): Filters {
   return {
     q: "",
-    due: "30d",
+    due: "all",
     status: "ATIVO",
     reminderType: "all",
     pet: "all",
@@ -54,12 +55,18 @@ function dueRange(due: DuePreset) {
   return { from: null, to: null };
 }
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Tente novamente.";
+}
+
 export default function Reminders() {
   const qc = useQueryClient();
   const { buildReminderMessage, pickPhone } = useWhatsMessage();
   const nav = useNavigate();
   const [resolveOpen, setResolveOpen] = useState(false);
   const [resolveRow, setResolveRow] = useState<DueReminderRow | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<10 | 20 | 30 | 50>(10);
 
   const [filters, setFilters] = useState<Filters>(() => {
     try {
@@ -101,7 +108,7 @@ export default function Reminders() {
       let q = supabase
         .from("reminders")
         .select(
-          "id, org_id, branch_id, tutor_id, pet_id, due_date, reference_appointment_id, last_applied_at, reminder_type, message_template_id, status, last_sent_at, send_count, notes, created_at, is_active, tutor:tutors(name, phone1, phone2), pet:pets(name)",
+          "id, org_id, branch_id, tutor_id, pet_id, due_date, reference_appointment_id, reference_record_id, last_applied_at, reminder_type, message_template_id, status, last_sent_at, send_count, notes, created_at, is_active, tutor:tutors(name, phone1, phone2), pet:pets(name)",
         )
         .eq("is_active", true)
         .order("due_date", { ascending: true })
@@ -121,15 +128,31 @@ export default function Reminders() {
       if (filters.branchId !== "all") q = q.eq("branch_id", filters.branchId);
 
       const term = filters.q.trim();
-      if (term) {
-        // OR over joined columns is limited in postgrest; use ilike on notes and rely on client-side match for tutor/pet.
-        q = q.ilike("notes", `%${term}%`);
-      }
 
       const { data, error } = await q;
       if (error) throw error;
 
-      const mapped = (data ?? []).map((r: any) => ({
+      type ReminderJoinRow = {
+        id: string;
+        org_id: string;
+        branch_id: string | null;
+        tutor_id: string;
+        pet_id: string | null;
+        due_date: string;
+        reference_appointment_id: string | null;
+        reference_record_id: string | null;
+        last_applied_at: string | null;
+        reminder_type: string;
+        message_template_id: string | null;
+        status: "ATIVO" | "FEITO" | "ARQUIVADO";
+        last_sent_at: string | null;
+        send_count: number | null;
+        notes: string | null;
+        tutor: { name: string; phone1: string | null; phone2: string | null } | null;
+        pet: { name: string | null } | null;
+      };
+
+      const mapped = ((data ?? []) as ReminderJoinRow[]).map((r) => ({
         id: r.id,
         org_id: r.org_id,
         branch_id: r.branch_id,
@@ -137,6 +160,7 @@ export default function Reminders() {
         pet_id: r.pet_id,
         due_date: r.due_date,
         reference_appointment_id: r.reference_appointment_id,
+        reference_record_id: r.reference_record_id,
         last_applied_at: r.last_applied_at,
         reminder_type: r.reminder_type,
         message_template_id: r.message_template_id,
@@ -186,13 +210,62 @@ export default function Reminders() {
       const { error } = await supabase.from("reminders").update({ status }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => refetchAll(),
+    onSuccess: async (_data, vars) => {
+      toast({ title: vars.status === "FEITO" ? "Lembrete marcado como resolvido" : "Lembrete arquivado" });
+      await Promise.all([
+        refetchAll(),
+        qc.invalidateQueries({ queryKey: ["dashboard", "reminders"] }),
+        qc.invalidateQueries({ queryKey: ["topbar", "reminders"] }),
+      ]);
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Não foi possível atualizar o lembrete",
+        description: getErrorMessage(error),
+        variant: "destructive",
+      });
+    },
   });
 
   const list = useMemo(() => rows.data ?? [], [rows.data]);
+  const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+  const paged = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return list.slice(start, start + pageSize);
+  }, [list, page, pageSize]);
+
+  const sendWhatsReminder = async (row: DueReminderRow) => {
+    const phone = pickPhone(row.tutor_phone1, row.tutor_phone2);
+    if (!phone) {
+      toast({ title: "Tutor sem telefone", variant: "destructive" });
+      return;
+    }
+    const msg = await buildReminderMessage(row);
+    const { error } = await supabase
+      .from("reminders")
+      .update({
+        last_sent_at: new Date().toISOString(),
+        send_count: Math.max(0, row.send_count ?? 0) + 1,
+      })
+      .eq("id", row.id);
+    if (error) {
+      toast({ title: "Falha ao registrar envio", description: getErrorMessage(error), variant: "destructive" });
+    } else {
+      await qc.invalidateQueries({ queryKey: ["reminders", "list"] });
+    }
+    window.open(buildWhatsAppLink(phone, msg), "_blank", "noopener,noreferrer");
+  };
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters, pageSize]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <PageHeader
         badge="Fila operacional"
         title="Lembretes"
@@ -200,8 +273,15 @@ export default function Reminders() {
       />
 
       <DataToolbar
-        sticky
-        leading={<StatusBadge>{countLabel}</StatusBadge>}
+        className="rounded-[18px] p-4"
+        leading={
+          <div className="flex items-center gap-2">
+            <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-vetvax-warning-soft text-vetvax-warning">
+              <TriangleAlert className="h-4 w-4" />
+            </span>
+            <StatusBadge>{countLabel}</StatusBadge>
+          </div>
+        }
         filters={
           <>
             <Select value={filters.status} onValueChange={(v) => persist({ ...filters, status: v as StatusFilter })}>
@@ -267,7 +347,7 @@ export default function Reminders() {
         }
       />
 
-      <section className="rounded-card border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card">
+      <section className="vetvax-card-polish rounded-[18px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
         <div className="space-y-3">
           {rows.isLoading && Array.from({ length: 5 }).map((_, idx) => <Skeleton key={idx} className="h-[98px] rounded-card-md" />)}
 
@@ -279,19 +359,22 @@ export default function Reminders() {
             />
           ) : null}
 
-          {list.map((row) => {
+          {paged.map((row) => {
             const overdueDays = Math.abs(dayjs().startOf("day").diff(dayjs(row.due_date), "day"));
             const isOverdue = dayjs(row.due_date).isBefore(dayjs().startOf("day"));
             return (
-              <RichListItem key={row.id} className="border border-vetvax-border-soft">
+              <RichListItem key={row.id} className="border border-vetvax-border-soft bg-gradient-to-b from-white to-vetvax-surface-panel/40">
                 <div className="grid gap-3 md:grid-cols-[5px_1fr_auto] md:items-center">
                   <div className={isOverdue ? "h-full rounded-pill bg-vetvax-danger" : "h-full rounded-pill bg-transparent"} />
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-xs text-vetvax-text-tertiary">{dayjs(row.due_date).format("DD/MM/YYYY")}</p>
                       {isOverdue ? <StatusBadge tone="danger">vencido há {overdueDays}d</StatusBadge> : <StatusBadge tone="warning">a vencer</StatusBadge>}
+                      {row.status === "ATIVO" ? <StatusBadge tone="warning">ativo</StatusBadge> : null}
+                      {row.status === "FEITO" ? <StatusBadge tone="success">resolvido</StatusBadge> : null}
+                      {row.status === "ARQUIVADO" ? <StatusBadge>arquivado</StatusBadge> : null}
                     </div>
-                    <p className="text-sm font-bold text-vetvax-text-main">{row.tutor_name}</p>
+                    <p className="text-sm font-semibold text-vetvax-text-main">{row.tutor_name}</p>
                     <p className="text-xs text-vetvax-text-secondary">
                       {[row.tutor_phone1, row.tutor_phone2].filter(Boolean).join(" • ") || "Sem contato"} • {row.reminder_type}
                     </p>
@@ -301,16 +384,13 @@ export default function Reminders() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={async () => {
-                        const phone = pickPhone(row.tutor_phone1, row.tutor_phone2);
-                        if (!phone) return;
-                        const msg = await buildReminderMessage(row);
-                        window.open(buildWhatsAppLink(phone, msg), "_blank", "noopener,noreferrer");
-                      }}
+                      onClick={() => sendWhatsReminder(row)}
                     >
                       <WhatsAppIcon className="h-4 w-4" />
                     </Button>
                     <Button
+                      className="shadow-vetvax-button"
+                      disabled={row.status !== "ATIVO" || setStatus.isPending}
                       onClick={() => {
                         setResolveRow(row);
                         setResolveOpen(true);
@@ -318,7 +398,7 @@ export default function Reminders() {
                     >
                       Resolver
                     </Button>
-                    <Button variant="outline" onClick={() => setStatus.mutate({ id: row.id, status: "ARQUIVADO" })}>
+                    <Button variant="secondary" disabled={row.status !== "ATIVO" || setStatus.isPending} onClick={() => setStatus.mutate({ id: row.id, status: "ARQUIVADO" })}>
                       Arquivar
                     </Button>
                   </div>
@@ -328,6 +408,34 @@ export default function Reminders() {
           })}
         </div>
       </section>
+
+      {!rows.isLoading && list.length > 0 ? (
+        <div className="flex flex-col gap-2 rounded-[16px] border border-vetvax-border-soft bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-vetvax-text-tertiary">
+            Mostrando {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, list.length)} de {list.length}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={String(pageSize)} onValueChange={(v) => { setPage(1); setPageSize(Number(v) as 10 | 20 | 30 | 50); }}>
+              <SelectTrigger className="h-9 w-[100px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-control">
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="30">30</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              Anterior
+            </Button>
+            <span className="text-xs font-semibold text-vetvax-text-secondary">Página {page} de {totalPages}</span>
+            <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+              Próxima
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <ResolveReminderDialog
         open={resolveOpen}
@@ -344,8 +452,7 @@ export default function Reminders() {
         onScheduleNow={(row) => {
           setResolveOpen(false);
           setResolveRow(null);
-          const date = dayjs().format("YYYY-MM-DD");
-          nav(`/appointments/new?tutor=${encodeURIComponent(row.tutor_id)}&resolveReminder=${encodeURIComponent(row.id)}&date=${encodeURIComponent(date)}`);
+          nav(`/vaccinations/new?tutor=${encodeURIComponent(row.tutor_id)}&resolveReminder=${encodeURIComponent(row.id)}`);
         }}
       />
     </div>

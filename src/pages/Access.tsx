@@ -32,6 +32,7 @@ export default function Access() {
   });
 
   const rows = useMemo(() => members.data ?? [], [members.data]);
+  const adminCount = useMemo(() => rows.filter((r) => r.role === "admin").length, [rows]);
 
   return (
     <div className="space-y-6">
@@ -47,20 +48,34 @@ export default function Access() {
         }
       />
 
-      <Card className="rounded-card border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Card className="vetvax-card-polish rounded-[15px] border-vetvax-border-soft bg-gradient-to-br from-white to-vetvax-surface-panel/80 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-vetvax-text-tertiary">Acessos ativos</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-vetvax-text-main">{rows.length}</p>
+        </Card>
+        <Card className="vetvax-card-polish rounded-[15px] border-vetvax-border-soft bg-gradient-to-br from-white to-vetvax-surface-panel/80 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-vetvax-text-tertiary">Administradores</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-vetvax-text-main">{adminCount}</p>
+        </Card>
+      </div>
+
+      <Card className="vetvax-card-polish rounded-[16px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <UserCog className="h-4 w-4 text-vetvax-primary" />
             <p className="text-sm font-bold text-vetvax-text-main">Acessos ativos</p>
           </div>
-          <Badge variant="secondary">{rows.length}</Badge>
+          <Badge variant="info">{rows.length}</Badge>
         </div>
 
         <div className="space-y-2">
           {members.isLoading && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[74px] rounded-card-md" />)}
           {!members.isLoading &&
             rows.map((m) => (
-              <article key={m.id} className="flex items-center justify-between rounded-card-md border border-vetvax-border-soft bg-vetvax-surface-alt p-3">
+              <article
+                key={m.id}
+                className="flex items-center justify-between rounded-[14px] border border-vetvax-border-soft bg-gradient-to-r from-white to-vetvax-surface-panel/80 p-3 shadow-sm transition-[border-color,box-shadow] duration-vetvax hover:border-vetvax-border-medium hover:shadow-md"
+              >
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="bg-vetvax-primary-soft text-sm font-bold text-vetvax-primary">

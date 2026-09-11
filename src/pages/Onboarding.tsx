@@ -64,8 +64,8 @@ export default function Onboarding() {
   });
 
   return (
-    <div className="min-h-[100svh] bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-xl rounded-[10px] border-[1.5px] border-border p-6 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-8">
+    <div className="flex min-h-[100svh] items-center justify-center bg-background p-4">
+      <Card className="vetvax-card-polish w-full max-w-xl rounded-[10px] border-[1.5px] border-border p-6 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-8">
         <div className="text-xs font-medium tracking-widest text-muted-foreground">PRIMEIRO ACESSO</div>
         <h1 className="mt-2 text-2xl font-semibold">Configure sua clínica</h1>
         <p className="mt-2 text-sm text-muted-foreground">

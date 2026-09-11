@@ -1,65 +1,45 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { dayjs } from "@/lib/datetime";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import VaccinationsReportTable, { type VaccinationReportRow } from "@/components/reports/VaccinationsReportTable";
-import ReopenCheckoutDialog from "@/components/reports/ReopenCheckoutDialog";
+import DeleteRecordDialog from "@/components/reports/DeleteRecordDialog";
 import PageHeader from "@/components/layout/PageHeader";
 import DataToolbar from "@/components/vetvax/DataToolbar";
 import StatusBadge from "@/components/vetvax/StatusBadge";
 
-type Status = "all" | "PENDENTE" | "APLICADO" | "CANCELADO";
-
 type FiltersState = {
   from: string;
   to: string;
-  status: Status;
   tutor: string;
   vaccineQuery: string;
 };
 
-type SnapshotItem = {
-  category?: string | null;
-  catalog_name?: string | null;
-  name?: string | null;
-};
-
-type AppointmentItem = {
-  quantity?: number | null;
-  item?: {
-    name?: string | null;
-    category?: string | null;
+type RecordItem = {
+  quantity: number | null;
+  catalog_item: {
+    name: string | null;
+    category: string | null;
   } | null;
 };
 
-type AppointmentReportRow = {
+type RecordRow = {
   id: string;
-  scheduled_date: string;
-  scheduled_time: string;
-  status: "PENDENTE" | "APLICADO" | "CANCELADO";
+  applied_date: string;
+  next_due_date: string | null;
   tutor_id: string;
-  tutor?: {
+  tutor: {
     id: string;
     name: string;
     phone1: string | null;
     phone2: string | null;
   } | null;
-  items?: AppointmentItem[] | null;
-};
-
-type CheckoutReportRow = {
-  id: string;
-  appointment_id: string;
-  status_result: "APLICADO" | "CANCELADO";
-  checkout_date: string;
-  applied_items_snapshot: unknown;
   created_by: string | null;
+  items: RecordItem[] | null;
 };
 
 function uniqueLabels(labels: string[]) {
@@ -74,20 +54,10 @@ function uniqueLabels(labels: string[]) {
   return uniq.join(" • ");
 }
 
-function buildVaccinesLabel(appliedItemsSnapshot: unknown) {
-  const items = Array.isArray(appliedItemsSnapshot) ? (appliedItemsSnapshot as SnapshotItem[]) : [];
-  const vaccines = items
-    .filter((it) => (it?.category ?? "") === "vaccine")
-    .map((it) => String(it?.catalog_name ?? it?.name ?? "").trim())
-    .filter(Boolean);
-
-  return uniqueLabels(vaccines);
-}
-
-function buildAppointmentItemsLabel(items: AppointmentItem[] | null | undefined) {
+function buildVaccinesLabel(items: RecordItem[] | null | undefined) {
   const vaccines = (items ?? [])
-    .filter((it) => (it.item?.category ?? "") === "vaccine")
-    .map((it) => String(it.item?.name ?? "").trim())
+    .filter((it) => (it.catalog_item?.category ?? "") === "vaccine")
+    .map((it) => String(it.catalog_item?.name ?? "").trim())
     .filter(Boolean);
   return uniqueLabels(vaccines);
 }
@@ -115,55 +85,32 @@ async function lookupProfileNames(ids: string[]) {
 }
 
 async function fetchReport(filters: FiltersState) {
-  let appointmentsQuery = supabase
-    .from("appointments")
+  const { data, error } = await supabase
+    .from("vaccination_records")
     .select(
-      "id, scheduled_date, scheduled_time, status, tutor_id, tutor:tutors(id, name, phone1, phone2), items:appointment_items(quantity, item:catalog_items(name, category))",
+      "id, applied_date, next_due_date, tutor_id, tutor:tutors(id, name, phone1, phone2), created_by, items:vaccination_record_items(quantity, catalog_item:catalog_items(name, category))",
     )
-    .gte("scheduled_date", filters.from)
-    .lte("scheduled_date", filters.to)
-    .order("scheduled_date", { ascending: false })
-    .order("scheduled_time", { ascending: false })
+    .eq("is_active", true)
+    .gte("applied_date", filters.from)
+    .lte("applied_date", filters.to)
+    .order("applied_date", { ascending: false })
     .limit(500);
+  if (error) throw error;
 
-  if (filters.status !== "all") appointmentsQuery = appointmentsQuery.eq("status", filters.status);
+  const records = (data ?? []) as RecordRow[];
 
-  const { data: appointmentsData, error: appointmentsError } = await appointmentsQuery;
-  if (appointmentsError) throw appointmentsError;
-
-  const appointments = (appointmentsData ?? []) as AppointmentReportRow[];
-  const appointmentIds = appointments.map((a) => a.id);
-
-  const checkoutsByAppointment = new Map<string, CheckoutReportRow>();
-  if (appointmentIds.length > 0) {
-    const { data: checkoutsData, error: checkoutsError } = await supabase
-      .from("appointment_checkouts")
-      .select("id, appointment_id, status_result, checkout_date, applied_items_snapshot, created_by")
-      .in("appointment_id", appointmentIds);
-    if (checkoutsError) throw checkoutsError;
-    for (const checkout of (checkoutsData ?? []) as CheckoutReportRow[]) {
-      checkoutsByAppointment.set(checkout.appointment_id, checkout);
-    }
-  }
-
-  const mappedBase: VaccinationReportRow[] = appointments.map((appt) => {
-    const checkout = checkoutsByAppointment.get(appt.id);
-    return {
-      checkout_id: checkout?.id ?? null,
-      appointment_id: appt.id,
-      checkout_date: checkout?.checkout_date ?? null,
-      scheduled_date: appt.scheduled_date,
-      scheduled_time: appt.scheduled_time ?? "00:00:00",
-      tutor_id: appt.tutor_id ?? "",
-      tutor_name: appt.tutor?.name ?? "—",
-      tutor_phone1: appt.tutor?.phone1 ?? null,
-      tutor_phone2: appt.tutor?.phone2 ?? null,
-      status: checkout?.status_result ?? appt.status,
-      vaccines: checkout ? buildVaccinesLabel(checkout.applied_items_snapshot) : buildAppointmentItemsLabel(appt.items),
-      created_by: checkout?.created_by ?? null,
-      responsible_name: null,
-    };
-  });
+  const mappedBase: VaccinationReportRow[] = records.map((r) => ({
+    record_id: r.id,
+    applied_date: r.applied_date,
+    next_due_date: r.next_due_date,
+    tutor_id: r.tutor_id ?? "",
+    tutor_name: r.tutor?.name ?? "—",
+    tutor_phone1: r.tutor?.phone1 ?? null,
+    tutor_phone2: r.tutor?.phone2 ?? null,
+    vaccines: buildVaccinesLabel(r.items),
+    created_by: r.created_by,
+    responsible_name: null,
+  }));
 
   const createdByIds = mappedBase.map((r) => r.created_by).filter(Boolean) as string[];
   const nameMap = await lookupProfileNames(createdByIds);
@@ -190,11 +137,12 @@ async function fetchReport(filters: FiltersState) {
 
 export default function Reports() {
   const qc = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<10 | 20 | 30 | 50>(10);
 
   const [filters, setFilters] = useState<FiltersState>(() => ({
     from: dayjs().startOf("month").format("YYYY-MM-DD"),
     to: dayjs().endOf("month").format("YYYY-MM-DD"),
-    status: "all",
     tutor: "",
     vaccineQuery: "",
   }));
@@ -204,78 +152,71 @@ export default function Reports() {
     queryFn: () => fetchReport(filters),
   });
 
-  const [reopenOpen, setReopenOpen] = useState(false);
-  const [reopenRow, setReopenRow] = useState<VaccinationReportRow | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteRow, setDeleteRow] = useState<VaccinationReportRow | null>(null);
 
   const count = rows.data?.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(count / pageSize));
+  const pagedRows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return (rows.data ?? []).slice(start, start + pageSize);
+  }, [rows.data, page, pageSize]);
 
-  const title = useMemo(() => {
-    const s =
-      filters.status === "all"
-        ? "todos"
-        : filters.status === "PENDENTE"
-          ? "pendentes"
-          : filters.status === "APLICADO"
-            ? "aplicados"
-            : "cancelados";
-    return `Relatório de agendamentos (${s})`;
-  }, [filters.status]);
+  useEffect(() => {
+    setPage(1);
+  }, [filters, pageSize]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <PageHeader
         badge="Analytics"
-        title={title}
-        description="Consulte agendamentos em aberto, aplicações registradas e cancelamentos."
+        title="Relatório de vacinações"
+        description="Consulte as aplicações registradas por período, tutor ou vacina."
       />
 
       <DataToolbar
-        leading={<StatusBadge>{count} registros</StatusBadge>}
+        className="rounded-[18px] border border-vetvax-border-soft bg-gradient-to-r from-white to-vetvax-surface-panel/75 p-4 shadow-vetvax-card"
+        leading={
+          <div className="flex items-center gap-2">
+            <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-vetvax-info-soft text-vetvax-info">
+              <FileDown className="h-4 w-4" />
+            </span>
+            <StatusBadge>{count} registros</StatusBadge>
+          </div>
+        }
         filters={
-          <>
-            <div className="grid gap-1">
-              <Label className="vetvax-label">Período inicial</Label>
-              <Input type="date" value={filters.from} onChange={(e) => setFilters((p) => ({ ...p, from: e.target.value }))} />
-            </div>
-            <div className="grid gap-1">
-              <Label className="vetvax-label">Período final</Label>
-              <Input type="date" value={filters.to} onChange={(e) => setFilters((p) => ({ ...p, to: e.target.value }))} />
-            </div>
-            <div className="grid gap-1">
-              <Label className="vetvax-label">Status</Label>
-              <Select value={filters.status} onValueChange={(v) => setFilters((p) => ({ ...p, status: v as Status }))}>
-                <SelectTrigger className="w-[170px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent className="rounded-control">
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="PENDENTE">Pendente</SelectItem>
-                  <SelectItem value="APLICADO">Aplicado</SelectItem>
-                  <SelectItem value="CANCELADO">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-1">
-              <Label className="vetvax-label">Tutor</Label>
-              <Input
-                className="w-[220px]"
-                placeholder="Nome ou telefone..."
-                value={filters.tutor}
-                onChange={(e) => setFilters((p) => ({ ...p, tutor: e.target.value }))}
-              />
-            </div>
-            <div className="grid gap-1">
-              <Label className="vetvax-label">Vacina</Label>
-              <Input
-                className="w-[220px]"
-                placeholder="Ex: V8"
-                value={filters.vaccineQuery}
-                onChange={(e) => setFilters((p) => ({ ...p, vaccineQuery: e.target.value }))}
-              />
-            </div>
+          <div className="flex w-full flex-wrap items-center gap-2 xl:flex-nowrap">
+            <Input
+              type="date"
+              value={filters.from}
+              onChange={(e) => setFilters((p) => ({ ...p, from: e.target.value }))}
+              className="h-10 w-full min-w-[156px] xl:w-[156px]"
+            />
+            <Input
+              type="date"
+              value={filters.to}
+              onChange={(e) => setFilters((p) => ({ ...p, to: e.target.value }))}
+              className="h-10 w-full min-w-[156px] xl:w-[156px]"
+            />
+            <Input
+              className="h-10 w-full min-w-[170px] xl:w-[190px]"
+              placeholder="Tutor..."
+              value={filters.tutor}
+              onChange={(e) => setFilters((p) => ({ ...p, tutor: e.target.value }))}
+            />
+            <Input
+              className="h-10 w-full min-w-[170px] xl:w-[190px]"
+              placeholder="Vacina..."
+              value={filters.vaccineQuery}
+              onChange={(e) => setFilters((p) => ({ ...p, vaccineQuery: e.target.value }))}
+            />
             <Button
               variant="outline"
-              className="self-end"
+              className="h-10 w-full xl:w-auto"
               onClick={async () => {
                 await qc.invalidateQueries({ queryKey: ["reports", "vaccinations"] });
                 toast({ title: "Atualizado" });
@@ -283,28 +224,45 @@ export default function Reports() {
             >
               Atualizar
             </Button>
-          </>
+          </div>
         }
       />
 
-      <section className="rounded-card border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card">
+      <section className="rounded-[18px] border border-vetvax-border-soft bg-gradient-to-b from-white to-vetvax-surface-panel/40 p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
         <VaccinationsReportTable
           loading={rows.isLoading}
-          rows={rows.data ?? []}
+          rows={pagedRows}
+          totalCount={count}
           onExport={() => toast({ title: "CSV exportado" })}
-          onReopen={(r) => {
-            setReopenRow(r);
-            setReopenOpen(true);
+          onDelete={(r) => {
+            setDeleteRow(r);
+            setDeleteOpen(true);
           }}
         />
+        {!rows.isLoading && count > 0 ? (
+          <div className="mt-4 flex flex-col gap-2 border-t border-vetvax-border-soft pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-vetvax-text-tertiary">
+              Mostrando {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, count)} de {count}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                Anterior
+              </Button>
+              <span className="text-xs font-semibold text-vetvax-text-secondary">Página {page} de {totalPages}</span>
+              <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                Próxima
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </section>
 
-      <ReopenCheckoutDialog
-        open={reopenOpen}
-        row={reopenRow}
+      <DeleteRecordDialog
+        open={deleteOpen}
+        row={deleteRow}
         onOpenChange={(v) => {
-          setReopenOpen(v);
-          if (!v) setReopenRow(null);
+          setDeleteOpen(v);
+          if (!v) setDeleteRow(null);
         }}
         onChanged={async () => {
           await qc.invalidateQueries({ queryKey: ["reports", "vaccinations"] });

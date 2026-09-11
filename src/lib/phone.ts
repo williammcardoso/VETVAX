@@ -59,5 +59,8 @@ function toWhatsDigits(phoneRaw: string) {
 export function buildWhatsAppLink(phoneRaw: string, message: string) {
   const digits = toWhatsDigits(phoneRaw);
   const encoded = encodeURIComponent(message);
-  return `https://wa.me/${digits}?text=${encoded}`;
+  // Link directly to api.whatsapp.com instead of wa.me: wa.me's own redirect
+  // has been observed mangling multi-byte emoji in the text param, turning
+  // them into "?" — going straight to the final URL avoids that hop.
+  return `https://api.whatsapp.com/send?phone=${digits}&text=${encoded}&type=phone_number&app_absent=0`;
 }

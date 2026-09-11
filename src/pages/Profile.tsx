@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
+import PageHeader from "@/components/layout/PageHeader";
+import { Badge } from "@/components/ui/badge";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Tente novamente.";
@@ -66,33 +68,33 @@ export default function Profile() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
-          <User className="h-3.5 w-3.5" />
-          Conta
-        </div>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Meu perfil</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Atualize seu nome de exibição e sua senha de acesso.</p>
-      </div>
+      <PageHeader
+        badge="Conta"
+        title="Meu perfil"
+        description="Atualize seus dados de acesso, identidade e segurança no VetVAX."
+        actions={<Badge variant="info">Acesso interno</Badge>}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="rounded-[10px] border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-6">
+        <Card className="rounded-[16px] border border-vetvax-border-soft bg-gradient-to-br from-white to-vetvax-surface-panel/60 p-4 shadow-vetvax-card ring-1 ring-black/[0.02] sm:p-6">
           <div className="flex items-center gap-2">
-            <User className="h-4 w-4" />
+            <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-vetvax-info-soft text-vetvax-info">
+              <User className="h-4 w-4" />
+            </span>
             <div className="text-sm font-semibold">Dados do usuário</div>
           </div>
 
           <div className="mt-5 grid gap-4">
             <div className="grid gap-2">
               <Label>Usuário</Label>
-              <Input className="h-10 rounded-[10px] border-[1.5px]" value={username} readOnly />
+              <Input className="h-10" value={username} readOnly />
               <p className="text-xs text-muted-foreground">Para alterar o usuário, crie outro usuário na tela Usuários.</p>
             </div>
 
             <div className="grid gap-2">
               <Label>Nome</Label>
               <Input
-                className="h-10 rounded-[10px] border-[1.5px]"
+                className="h-10"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Seu nome"
@@ -100,16 +102,18 @@ export default function Profile() {
             </div>
 
             <div className="flex justify-end">
-              <Button className="h-10 rounded-[10px]" onClick={() => updateName.mutate()} disabled={updateName.isPending}>
+              <Button className="h-10 min-w-[140px]" onClick={() => updateName.mutate()} disabled={updateName.isPending}>
                 {updateName.isPending ? "Salvando..." : "Salvar nome"}
               </Button>
             </div>
           </div>
         </Card>
 
-        <Card className="rounded-[10px] border-[1.5px] border-border p-4 shadow-[0_6px_16px_rgba(0,0,0,0.08)] sm:p-6">
+        <Card className="rounded-[16px] border border-vetvax-border-soft bg-gradient-to-br from-white to-vetvax-surface-panel/60 p-4 shadow-vetvax-card ring-1 ring-black/[0.02] sm:p-6">
           <div className="flex items-center gap-2">
-            <KeyRound className="h-4 w-4" />
+            <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-vetvax-warning-soft text-vetvax-warning">
+              <KeyRound className="h-4 w-4" />
+            </span>
             <div className="text-sm font-semibold">Alterar senha</div>
           </div>
 
@@ -117,7 +121,7 @@ export default function Profile() {
             <div className="grid gap-2">
               <Label>Nova senha</Label>
               <Input
-                className="h-10 rounded-[10px] border-[1.5px]"
+                className="h-10"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -127,7 +131,7 @@ export default function Profile() {
             <div className="grid gap-2">
               <Label>Confirmar nova senha</Label>
               <Input
-                className="h-10 rounded-[10px] border-[1.5px]"
+                className="h-10"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -135,7 +139,7 @@ export default function Profile() {
             </div>
 
             <div className="flex justify-end">
-              <Button className="h-10 rounded-[10px]" onClick={() => updatePassword.mutate()} disabled={updatePassword.isPending}>
+              <Button className="h-10 min-w-[140px]" onClick={() => updatePassword.mutate()} disabled={updatePassword.isPending}>
                 {updatePassword.isPending ? "Alterando..." : "Alterar senha"}
               </Button>
             </div>

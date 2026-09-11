@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { usernameToEmail } from "@/lib/username";
+import VetVaxMark from "@/components/branding/VetVaxMark";
 
 const schema = z.object({
   username: z.string().min(3, "Informe o usuário"),
@@ -75,9 +76,7 @@ export default function Login() {
         />
         <div className="relative z-10 flex h-full flex-col justify-between p-10 text-white">
           <div className="flex items-center gap-3">
-            <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-white/10 text-lg font-extrabold text-white shadow-[0_12px_40px_rgba(0,0,0,0.25)] ring-1 ring-white/15 backdrop-blur-sm">
-              V
-            </div>
+            <VetVaxMark className="h-12 w-12 rounded-[14px] ring-1 ring-white/20" />
             <div className="h-px flex-1 max-w-[120px] bg-gradient-to-r from-white/35 to-transparent" />
           </div>
           <div className="space-y-4 pb-4">
@@ -91,10 +90,10 @@ export default function Login() {
       </div>
 
       <div className="flex items-center justify-center p-4 sm:p-8">
-        <Card className="w-full max-w-md border-vetvax-border-soft bg-white/95 shadow-vetvax-card ring-1 ring-black/[0.03] backdrop-blur-sm">
+        <Card className="vetvax-card-polish w-full max-w-md border-vetvax-border-soft bg-white/95 shadow-vetvax-card ring-1 ring-black/[0.03] backdrop-blur-sm">
           <div className="p-6 sm:p-8">
             <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-[12px] bg-vetvax-primary text-sm font-extrabold text-white shadow-vetvax-button">V</div>
+              <VetVaxMark className="h-10 w-10 drop-shadow-[0_10px_20px_rgba(16,185,129,0.26)]" />
               <div>
                 <div className="text-xs font-semibold tracking-widest text-vetvax-text-tertiary">VETVAX</div>
                 <h1 className="mt-1 text-xl font-semibold tracking-tight text-vetvax-text-main">Acesso ao sistema</h1>
