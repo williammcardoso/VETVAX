@@ -135,7 +135,7 @@ export default function TutorUpsertDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-[10px] max-w-2xl">
+      <DialogContent className="w-[95vw] max-h-[92vh] max-w-2xl overflow-y-auto overscroll-contain rounded-[10px] sm:w-full sm:max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{initial?.id ? "Editar tutor" : "Novo tutor"}</DialogTitle>
         </DialogHeader>
