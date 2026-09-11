@@ -312,6 +312,28 @@ export default function VaccinationNew() {
               <div className="grid gap-2 sm:w-[240px]">
                 <Label className="vetvax-label">Data prevista (opcional)</Label>
                 <Input type="date" {...form.register("next_due_date")} />
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: "15 dias", days: 15 },
+                    { label: "21 dias", days: 21 },
+                    { label: "28 dias", days: 28 },
+                    { label: "Anual (365 dias)", days: 365 },
+                  ].map((opt) => (
+                    <Button
+                      key={opt.days}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 rounded-pill px-2.5 text-xs"
+                      onClick={() => {
+                        const base = form.watch("applied_date") || dayjs().format("YYYY-MM-DD");
+                        form.setValue("next_due_date", dayjs(base).add(opt.days, "day").format("YYYY-MM-DD"), { shouldValidate: true });
+                      }}
+                    >
+                      {opt.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
 
               <div className="flex items-center justify-between rounded-[14px] border border-vetvax-border-soft bg-gradient-to-r from-vetvax-surface-panel to-vetvax-surface-alt px-4 py-3.5">

@@ -19,16 +19,18 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 
 type Filters = {
   q: string;
+  hideOverdue: boolean;
 };
 
 const LS_KEY = "vetvax.dashboard.filters";
 
 function defaultFilters(): Filters {
-  return { q: "" };
+  return { q: "", hideOverdue: true };
 }
 
 function getItemTone(itemName: string) {
@@ -178,15 +180,21 @@ export default function Dashboard() {
     }
   };
 
-  const priorityTotalPages = Math.max(1, Math.ceil(remindersSorted.length / priorityPageSize));
+  const visibleReminders = useMemo(() => {
+    if (!filters.hideOverdue) return remindersSorted;
+    const today = dayjs().format("YYYY-MM-DD");
+    return remindersSorted.filter((row) => row.due_date >= today);
+  }, [remindersSorted, filters.hideOverdue]);
+
+  const priorityTotalPages = Math.max(1, Math.ceil(visibleReminders.length / priorityPageSize));
   const priorityRows = useMemo(() => {
     const start = (priorityPage - 1) * priorityPageSize;
-    return remindersSorted.slice(start, start + priorityPageSize);
-  }, [remindersSorted, priorityPage, priorityPageSize]);
+    return visibleReminders.slice(start, start + priorityPageSize);
+  }, [visibleReminders, priorityPage, priorityPageSize]);
 
   useEffect(() => {
     setPriorityPage(1);
-  }, [filters.q, priorityPageSize]);
+  }, [filters.q, filters.hideOverdue, priorityPageSize]);
 
   useEffect(() => {
     if (priorityPage > priorityTotalPages) setPriorityPage(priorityTotalPages);
@@ -248,7 +256,10 @@ export default function Dashboard() {
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="vetvax-section-title">Lembretes por vencer</h2>
-              <p className="mt-1 text-xs text-vetvax-text-tertiary">Priorize contatos com vencidos primeiro. ({remindersSorted.length} registros)</p>
+              <p className="mt-1 text-xs text-vetvax-text-tertiary">
+                Priorize contatos com vencidos primeiro. ({visibleReminders.length} registros
+                {filters.hideOverdue && overdueReminders > 0 ? `, ${overdueReminders} vencido(s) oculto(s)` : ""})
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
               <div className="relative w-full sm:w-[280px]">
@@ -278,15 +289,27 @@ export default function Dashboard() {
             </div>
           </div>
 
+          <label className="mb-3 flex w-fit cursor-pointer items-center gap-2 text-sm text-vetvax-text-secondary">
+            <Checkbox
+              checked={filters.hideOverdue}
+              onCheckedChange={(v) => persist({ ...filters, hideOverdue: v === true })}
+            />
+            Ocultar vencidos/atrasados
+          </label>
+
           <div className="space-y-2">
             {reminders.isLoading &&
               Array.from({ length: 5 }).map((_, idx) => <Skeleton key={idx} className="h-[84px] rounded-card-md" />)}
 
-            {!reminders.isLoading && (reminders.data?.length ?? 0) === 0 && (
+            {!reminders.isLoading && visibleReminders.length === 0 && (
               <EmptyState
                 icon={Bell}
-                title="Sem lembretes ativos"
-                description="Quando uma aplicação tiver próxima dose prevista, o lembrete aparece aqui."
+                title={filters.hideOverdue && overdueReminders > 0 ? "Nenhum lembrete a vencer" : "Sem lembretes ativos"}
+                description={
+                  filters.hideOverdue && overdueReminders > 0
+                    ? `Há ${overdueReminders} vencido(s) oculto(s) — desmarque "Ocultar vencidos/atrasados" para vê-los.`
+                    : "Quando uma aplicação tiver próxima dose prevista, o lembrete aparece aqui."
+                }
               />
             )}
 
@@ -368,10 +391,10 @@ export default function Dashboard() {
             })}
           </div>
 
-          {!reminders.isLoading && remindersSorted.length > 0 ? (
+          {!reminders.isLoading && visibleReminders.length > 0 ? (
             <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <p className="text-xs text-vetvax-text-tertiary">
-                Mostrando {(priorityPage - 1) * priorityPageSize + 1}-{Math.min(priorityPage * priorityPageSize, remindersSorted.length)} de {remindersSorted.length}
+                Mostrando {(priorityPage - 1) * priorityPageSize + 1}-{Math.min(priorityPage * priorityPageSize, visibleReminders.length)} de {visibleReminders.length}
               </p>
               <div className="flex items-center gap-2">
                 <Button variant="outline" disabled={priorityPage <= 1} onClick={() => setPriorityPage((p) => Math.max(1, p - 1))}>
