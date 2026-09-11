@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Clock3, MoreHorizontal, Search, Syringe, UserPlus, Users } from "lucide-react";
+import { Bell, Clock3, MoreHorizontal, Syringe, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { DashboardKpis, DueReminderRow, VaccinationRecordRow } from "@/types/vetvax";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { dayjs } from "@/lib/datetime";
 import PageHeader from "@/components/layout/PageHeader";
@@ -18,20 +17,7 @@ import { useWhatsMessage } from "@/components/dashboard/useWhatsMessage";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-
-type Filters = {
-  q: string;
-  hideOverdue: boolean;
-};
-
-const LS_KEY = "vetvax.dashboard.filters";
-
-function defaultFilters(): Filters {
-  return { q: "", hideOverdue: true };
-}
 
 function getItemTone(itemName: string) {
   const palette = [
@@ -96,37 +82,20 @@ async function fetchBusinessKpis() {
   };
 }
 
+const DASHBOARD_PREVIEW_SIZE = 6;
+
 export default function Dashboard() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const { buildReminderMessage, pickPhone } = useWhatsMessage();
-  const [priorityPage, setPriorityPage] = useState(1);
-  const [priorityPageSize, setPriorityPageSize] = useState<10 | 20 | 30 | 50 | 100>(20);
-
-  const [filters, setFilters] = useState<Filters>(() => {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (!raw) return defaultFilters();
-      return { ...defaultFilters(), ...(JSON.parse(raw) as Partial<Filters>) };
-    } catch {
-      return defaultFilters();
-    }
-  });
 
   const kpis = useQuery({ queryKey: ["dashboard", "kpis"], queryFn: fetchKpis });
   const businessKpis = useQuery({ queryKey: ["dashboard", "business-kpis"], queryFn: fetchBusinessKpis });
 
   const reminders = useQuery({
-    queryKey: ["dashboard", "reminders", filters.q],
+    queryKey: ["dashboard", "reminders"],
     queryFn: async () => {
-      let q = supabase.from("vw_due_reminders").select("*").order("due_date", { ascending: true }).limit(500);
-
-      const term = filters.q.trim();
-      if (term) {
-        q = q.or(`tutor_name.ilike.%${term}%,tutor_phone1.ilike.%${term}%,tutor_phone2.ilike.%${term}%,pet_name.ilike.%${term}%`);
-      }
-
-      const { data, error } = await q;
+      const { data, error } = await supabase.from("vw_due_reminders").select("*").order("due_date", { ascending: true }).limit(500);
       if (error) throw error;
       return (data ?? []) as DueReminderRow[];
     },
@@ -146,21 +115,18 @@ export default function Dashboard() {
     },
   });
 
-  const remindersSorted = useMemo(() => {
-    const list = reminders.data ?? [];
-    const today = dayjs().format("YYYY-MM-DD");
-    return [...list].sort((a, b) => {
-      const ao = a.due_date < today ? 0 : 1;
-      const bo = b.due_date < today ? 0 : 1;
-      if (ao !== bo) return ao - bo;
-      return a.due_date.localeCompare(b.due_date);
-    });
-  }, [reminders.data]);
-
   const overdueReminders = useMemo(() => {
     const today = dayjs().format("YYYY-MM-DD");
-    return remindersSorted.filter((row) => row.due_date < today).length;
-  }, [remindersSorted]);
+    return (reminders.data ?? []).filter((row) => row.due_date < today).length;
+  }, [reminders.data]);
+
+  const upcomingPreview = useMemo(() => {
+    const today = dayjs().format("YYYY-MM-DD");
+    return (reminders.data ?? [])
+      .filter((row) => row.due_date >= today)
+      .sort((a, b) => a.due_date.localeCompare(b.due_date))
+      .slice(0, DASHBOARD_PREVIEW_SIZE);
+  }, [reminders.data]);
 
   const onRefetch = async () => {
     await Promise.all([
@@ -170,35 +136,6 @@ export default function Dashboard() {
       qc.invalidateQueries({ queryKey: ["dashboard", "business-kpis"] }),
     ]);
   };
-
-  const persist = (next: Filters) => {
-    setFilters(next);
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(next));
-    } catch {
-      // ignore
-    }
-  };
-
-  const visibleReminders = useMemo(() => {
-    if (!filters.hideOverdue) return remindersSorted;
-    const today = dayjs().format("YYYY-MM-DD");
-    return remindersSorted.filter((row) => row.due_date >= today);
-  }, [remindersSorted, filters.hideOverdue]);
-
-  const priorityTotalPages = Math.max(1, Math.ceil(visibleReminders.length / priorityPageSize));
-  const priorityRows = useMemo(() => {
-    const start = (priorityPage - 1) * priorityPageSize;
-    return visibleReminders.slice(start, start + priorityPageSize);
-  }, [visibleReminders, priorityPage, priorityPageSize]);
-
-  useEffect(() => {
-    setPriorityPage(1);
-  }, [filters.q, filters.hideOverdue, priorityPageSize]);
-
-  useEffect(() => {
-    if (priorityPage > priorityTotalPages) setPriorityPage(priorityTotalPages);
-  }, [priorityPage, priorityTotalPages]);
 
   const archiveReminder = useMutation({
     mutationFn: async (id: string) => {
@@ -232,7 +169,7 @@ export default function Dashboard() {
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-xl font-semibold tracking-tight">Hoje, quem precisa de contato?</h2>
-            <p className="mt-1 text-sm text-white/75">{remindersSorted.length} lembretes ativos aguardando ação.</p>
+            <p className="mt-1 text-sm text-white/75">{reminders.data?.length ?? 0} lembretes ativos aguardando ação.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <MetricTile label="Vencidos" value={overdueReminders} tone="inverse" />
@@ -256,162 +193,122 @@ export default function Dashboard() {
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="vetvax-section-title">Lembretes por vencer</h2>
-              <p className="mt-1 text-xs text-vetvax-text-tertiary">
-                Priorize contatos com vencidos primeiro. ({visibleReminders.length} registros
-                {filters.hideOverdue && overdueReminders > 0 ? `, ${overdueReminders} vencido(s) oculto(s)` : ""})
-              </p>
+              <p className="mt-1 text-xs text-vetvax-text-tertiary">Os {upcomingPreview.length} mais próximos. Use "Ver todos" para a fila completa.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-              <div className="relative w-full sm:w-[280px]">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-vetvax-text-tertiary" />
-                <Input
-                  className="pl-9"
-                  placeholder="Buscar cliente / telefone / pet..."
-                  value={filters.q}
-                  onChange={(e) => persist({ ...filters, q: e.target.value })}
-                />
-              </div>
+              {overdueReminders > 0 ? (
+                <Button
+                  variant="outline"
+                  className="border-vetvax-danger/30 bg-vetvax-danger-soft text-vetvax-danger hover:bg-vetvax-danger-soft"
+                  onClick={() => nav("/reminders?due=overdue")}
+                >
+                  {overdueReminders} vencido(s)
+                </Button>
+              ) : null}
               <Button variant="outline" className="shrink-0" onClick={onRefetch}>
                 Atualizar
               </Button>
-              <Select value={String(priorityPageSize)} onValueChange={(v) => setPriorityPageSize(Number(v) as 10 | 20 | 30 | 50 | 100)}>
-                <SelectTrigger className="w-[96px] shrink-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-control">
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="30">30</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
+              <Button className="shrink-0" onClick={() => nav("/reminders")}>
+                Ver todos
+              </Button>
             </div>
           </div>
-
-          <label className="mb-3 flex w-fit cursor-pointer items-center gap-2 text-sm text-vetvax-text-secondary">
-            <Checkbox
-              checked={filters.hideOverdue}
-              onCheckedChange={(v) => persist({ ...filters, hideOverdue: v === true })}
-            />
-            Ocultar vencidos/atrasados
-          </label>
 
           <div className="space-y-2">
             {reminders.isLoading &&
               Array.from({ length: 5 }).map((_, idx) => <Skeleton key={idx} className="h-[84px] rounded-card-md" />)}
 
-            {!reminders.isLoading && visibleReminders.length === 0 && (
+            {!reminders.isLoading && upcomingPreview.length === 0 && (
               <EmptyState
                 icon={Bell}
-                title={filters.hideOverdue && overdueReminders > 0 ? "Nenhum lembrete a vencer" : "Sem lembretes ativos"}
+                title="Nenhum lembrete a vencer"
                 description={
-                  filters.hideOverdue && overdueReminders > 0
-                    ? `Há ${overdueReminders} vencido(s) oculto(s) — desmarque "Ocultar vencidos/atrasados" para vê-los.`
+                  overdueReminders > 0
+                    ? `Não há lembretes futuros, mas existem ${overdueReminders} vencido(s) — clique em "vencido(s)" acima para ver.`
                     : "Quando uma aplicação tiver próxima dose prevista, o lembrete aparece aqui."
                 }
               />
             )}
 
-            {priorityRows.map((row) => {
-              const isOverdue = row.due_date < dayjs().format("YYYY-MM-DD");
-              return (
-                <RichListItem key={row.id}>
-                  <div className="grid min-h-[84px] gap-3 md:grid-cols-[96px_minmax(0,1fr)_auto] md:items-center">
-                    <div>
-                      <p className="text-[13px] font-bold text-vetvax-primary">{dayjs(row.due_date).format("DD/MM/YYYY")}</p>
-                      {isOverdue ? <StatusBadge tone="danger" className="mt-1">Vencido</StatusBadge> : <StatusBadge tone="warning" className="mt-1">A vencer</StatusBadge>}
-                    </div>
+            {upcomingPreview.map((row) => (
+              <RichListItem key={row.id}>
+                <div className="grid min-h-[84px] gap-3 md:grid-cols-[96px_minmax(0,1fr)_auto] md:items-center">
+                  <div>
+                    <p className="text-[13px] font-bold text-vetvax-primary">{dayjs(row.due_date).format("DD/MM/YYYY")}</p>
+                    <StatusBadge tone="warning" className="mt-1">A vencer</StatusBadge>
+                  </div>
 
-                    <div className="flex items-start gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarFallback className="bg-vetvax-primary-soft text-xs font-bold text-vetvax-primary">
-                          {row.tutor_name
-                            .split(" ")
-                            .filter(Boolean)
-                            .slice(0, 2)
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-vetvax-text-main">{row.tutor_name}</p>
-                        <p className="text-xs text-vetvax-text-tertiary">{row.tutor_phone1 ?? row.tutor_phone2 ?? "Sem telefone"}</p>
-                        <span className={`mt-1 inline-flex max-w-full min-h-[22px] items-center truncate rounded-pill border px-2 py-0.5 text-[11px] font-bold leading-none ${getItemTone(row.item_name ?? row.reminder_type)}`}>
-                          {row.pet_name ? `${row.pet_name} • ` : ""}
-                          {row.item_name ?? row.reminder_type}
-                        </span>
-                        {row.notes ? <p className="mt-1 line-clamp-2 text-xs text-vetvax-text-secondary">{row.notes}</p> : null}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-start gap-2 md:justify-end">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={async () => {
-                          const phone = pickPhone(row.tutor_phone1, row.tutor_phone2);
-                          if (!phone) {
-                            toast({ title: "Tutor sem telefone", variant: "destructive" });
-                            return;
-                          }
-                          const msg = await buildReminderMessage(row);
-                          const { error } = await supabase
-                            .from("reminders")
-                            .update({
-                              last_sent_at: new Date().toISOString(),
-                              send_count: Math.max(0, row.send_count ?? 0) + 1,
-                            })
-                            .eq("id", row.id);
-                          if (!error) await onRefetch();
-                          window.open(buildWhatsAppLink(phone, msg), "_blank", "noopener,noreferrer");
-                        }}
-                      >
-                        <WhatsAppIcon className="h-4 w-4" />
-                      </Button>
-                      <Button onClick={() => nav(`/vaccinations/new?tutor=${row.tutor_id}&resolveReminder=${row.id}`)}>Registrar aplicação</Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-control">
-                          <DropdownMenuItem onClick={() => archiveReminder.mutate(row.id)} disabled={archiveReminder.isPending}>
-                            Arquivar lembrete
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => nav(`/tutors/${row.tutor_id}`)}>Ver cliente</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="bg-vetvax-primary-soft text-xs font-bold text-vetvax-primary">
+                        {row.tutor_name
+                          .split(" ")
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-vetvax-text-main">{row.tutor_name}</p>
+                      <p className="text-xs text-vetvax-text-tertiary">{row.tutor_phone1 ?? row.tutor_phone2 ?? "Sem telefone"}</p>
+                      <span className={`mt-1 inline-flex max-w-full min-h-[22px] items-center truncate rounded-pill border px-2 py-0.5 text-[11px] font-bold leading-none ${getItemTone(row.item_name ?? row.reminder_type)}`}>
+                        {row.pet_name ? `${row.pet_name} • ` : ""}
+                        {row.item_name ?? row.reminder_type}
+                      </span>
+                      {row.notes ? <p className="mt-1 line-clamp-2 text-xs text-vetvax-text-secondary">{row.notes}</p> : null}
                     </div>
                   </div>
-                </RichListItem>
-              );
-            })}
+
+                  <div className="flex flex-wrap items-center justify-start gap-2 md:justify-end">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={async () => {
+                        const phone = pickPhone(row.tutor_phone1, row.tutor_phone2);
+                        if (!phone) {
+                          toast({ title: "Tutor sem telefone", variant: "destructive" });
+                          return;
+                        }
+                        const msg = await buildReminderMessage(row);
+                        const { error } = await supabase
+                          .from("reminders")
+                          .update({
+                            last_sent_at: new Date().toISOString(),
+                            send_count: Math.max(0, row.send_count ?? 0) + 1,
+                          })
+                          .eq("id", row.id);
+                        if (!error) await onRefetch();
+                        window.open(buildWhatsAppLink(phone, msg), "_blank", "noopener,noreferrer");
+                      }}
+                    >
+                      <WhatsAppIcon className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={() => nav(`/vaccinations/new?tutor=${row.tutor_id}&resolveReminder=${row.id}`)}>Registrar aplicação</Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-control">
+                        <DropdownMenuItem onClick={() => archiveReminder.mutate(row.id)} disabled={archiveReminder.isPending}>
+                          Arquivar lembrete
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => nav(`/tutors/${row.tutor_id}`)}>Ver cliente</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </RichListItem>
+            ))}
           </div>
 
-          {!reminders.isLoading && visibleReminders.length > 0 ? (
-            <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <p className="text-xs text-vetvax-text-tertiary">
-                Mostrando {(priorityPage - 1) * priorityPageSize + 1}-{Math.min(priorityPage * priorityPageSize, visibleReminders.length)} de {visibleReminders.length}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" disabled={priorityPage <= 1} onClick={() => setPriorityPage((p) => Math.max(1, p - 1))}>
-                  Anterior
-                </Button>
-                <span className="text-xs font-semibold text-vetvax-text-secondary">
-                  Página {priorityPage} de {priorityTotalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  disabled={priorityPage >= priorityTotalPages}
-                  onClick={() => setPriorityPage((p) => Math.min(priorityTotalPages, p + 1))}
-                >
-                  Próxima
-                </Button>
-              </div>
-            </div>
+          {!reminders.isLoading && (reminders.data?.length ?? 0) > upcomingPreview.length ? (
+            <Button variant="outline" className="mt-4 w-full" onClick={() => nav("/reminders")}>
+              Ver todos os lembretes
+            </Button>
           ) : null}
         </section>
 

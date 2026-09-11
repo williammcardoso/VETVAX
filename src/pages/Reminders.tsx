@@ -16,7 +16,7 @@ import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { buildWhatsAppLink } from "@/lib/phone";
 import { useWhatsMessage } from "@/components/dashboard/useWhatsMessage";
 import ResolveReminderDialog from "@/components/reminders/ResolveReminderDialog";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 
@@ -63,19 +63,25 @@ export default function Reminders() {
   const qc = useQueryClient();
   const { buildReminderMessage, pickPhone } = useWhatsMessage();
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
   const [resolveOpen, setResolveOpen] = useState(false);
   const [resolveRow, setResolveRow] = useState<DueReminderRow | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<10 | 20 | 30 | 50>(10);
 
   const [filters, setFilters] = useState<Filters>(() => {
+    let base: Filters;
     try {
       const raw = localStorage.getItem(LS_KEY);
-      if (!raw) return defaults();
-      return { ...defaults(), ...(JSON.parse(raw) as Partial<Filters>) };
+      base = raw ? { ...defaults(), ...(JSON.parse(raw) as Partial<Filters>) } : defaults();
     } catch {
-      return defaults();
+      base = defaults();
     }
+    const dueParam = searchParams.get("due");
+    if (dueParam && ["overdue", "7d", "30d", "60d", "all"].includes(dueParam)) {
+      base = { ...base, due: dueParam as DuePreset };
+    }
+    return base;
   });
 
   const persist = (next: Filters) => {
