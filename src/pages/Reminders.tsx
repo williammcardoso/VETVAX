@@ -376,7 +376,10 @@ export default function Reminders() {
                       {row.status === "FEITO" ? <StatusBadge tone="success">resolvido</StatusBadge> : null}
                       {row.status === "ARQUIVADO" ? <StatusBadge>arquivado</StatusBadge> : null}
                     </div>
-                    <p className="text-sm font-semibold text-vetvax-text-main">{row.tutor_name}</p>
+                    <p className="text-sm font-semibold text-vetvax-text-main">
+                      {row.tutor_name}
+                      {row.pet_name ? <span className="font-normal text-vetvax-text-tertiary"> • {row.pet_name}</span> : null}
+                    </p>
                     <p className="text-xs text-vetvax-text-secondary">
                       {[row.tutor_phone1, row.tutor_phone2].filter(Boolean).join(" • ") || "Sem contato"} • {row.item_name ?? row.reminder_type}
                     </p>

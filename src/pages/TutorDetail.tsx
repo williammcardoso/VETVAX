@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { Bell, CalendarPlus, ClipboardList, PawPrint, Phone, Syringe, UserCircle2 } from "lucide-react";
+import { Bell, CalendarPlus, Cat, ClipboardList, Dog, MapPin, PawPrint, Pencil, Phone, Plus, ShieldCheck, Syringe } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Pet, Tutor } from "@/types/vetvax";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBrPhoneForDisplay, buildWhatsAppLink } from "@/lib/phone";
 import { formatDateBr } from "@/lib/datetime";
@@ -17,6 +18,27 @@ import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { formatTutorAddressLine } from "@/lib/address";
 import StatusBadge from "@/components/vetvax/StatusBadge";
 import RichListItem from "@/components/vetvax/RichListItem";
+import EmptyState from "@/components/vetvax/EmptyState";
+
+function speciesMeta(species: Pet["species"]) {
+  if (species === "dog") {
+    return { label: "Cão", Icon: Dog, tone: "border-sky-200 bg-sky-50 text-sky-700" };
+  }
+  if (species === "cat") {
+    return { label: "Gato", Icon: Cat, tone: "border-violet-200 bg-violet-50 text-violet-700" };
+  }
+  return { label: "Outro", Icon: PawPrint, tone: "border-slate-200 bg-slate-50 text-slate-700" };
+}
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+}
 
 function getItemTone(itemName: string) {
   const palette = [
@@ -148,17 +170,17 @@ export default function TutorDetail() {
 
   if (tutor.isLoading) {
     return (
-      <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
-        <div className="text-sm text-muted-foreground">Carregando tutor…</div>
+      <Card className="rounded-[16px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card">
+        <div className="text-sm text-vetvax-text-tertiary">Carregando tutor…</div>
       </Card>
     );
   }
 
   if (!t) {
     return (
-      <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
-        <div className="text-sm font-medium">Tutor não encontrado</div>
-        <p className="mt-1 text-sm text-muted-foreground">Verifique o link ou volte para a lista.</p>
+      <Card className="rounded-[16px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card">
+        <div className="text-sm font-medium text-vetvax-text-main">Tutor não encontrado</div>
+        <p className="mt-1 text-sm text-vetvax-text-tertiary">Verifique o link ou volte para a lista.</p>
         <Button asChild className="mt-4 rounded-[10px]" variant="secondary">
           <Link to="/tutors">Voltar</Link>
         </Button>
@@ -170,74 +192,105 @@ export default function TutorDetail() {
 
   return (
     <div className="vetvax-fade-in space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
-            <UserCircle2 className="h-3.5 w-3.5" />
-            Tutor
-          </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight uppercase">{t.name}</h1>
-
-          <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4" />
-              <span>{primaryPhone ? formatBrPhoneForDisplay(primaryPhone) : "—"}</span>
+      <section className="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[#0b1220] via-[#0f172a] to-[#0d4f4a] p-6 text-white shadow-vetvax-card ring-1 ring-white/10">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-teal-400/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-10 h-52 w-52 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <Avatar className="h-14 w-14 shrink-0 border border-white/20 bg-white/10 shadow-lg">
+              <AvatarFallback className="bg-transparent text-lg font-bold text-white">{initials(t.name)}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <span className="inline-flex items-center gap-1.5 rounded-pill border border-white/15 bg-white/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/80">
+                Tutor
+              </span>
+              <h1 className="mt-1.5 truncate text-2xl font-bold tracking-tight text-white">{t.name}</h1>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/75">
+                <span className="flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5" />
+                  {primaryPhone ? formatBrPhoneForDisplay(primaryPhone) : "—"}
+                </span>
+                {addressLine ? (
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {addressLine}
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {t.tags?.map((tag) => (
+                  <Badge key={tag} className="rounded-pill border-white/15 bg-white/10 text-white hover:bg-white/10">
+                    {tag}
+                  </Badge>
+                ))}
+                {t.contact_consent && (
+                  <Badge className="rounded-pill border-transparent bg-vetvax-success-soft text-vetvax-success">
+                    <ShieldCheck className="mr-1 h-3 w-3" />
+                    consentimento
+                  </Badge>
+                )}
+              </div>
             </div>
-            {addressLine ? <div className="text-sm">{addressLine}</div> : null}
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            {t.tags?.map((tag) => (
-              <Badge key={tag} variant="secondary" className="rounded-full">
-                {tag}
-              </Badge>
-            ))}
-            {t.contact_consent && <Badge className="rounded-full">consentimento</Badge>}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild className="rounded-control bg-white text-vetvax-text-main hover:bg-white/90">
+              <Link to={`/vaccinations/new?tutor=${t.id}`}>
+                <CalendarPlus className="mr-2 h-4 w-4" />
+                Registrar aplicação
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              className="rounded-control border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              onClick={() => openWhats.mutate()}
+              disabled={openWhats.isPending}
+            >
+              <WhatsAppIcon className="mr-2 h-4 w-4" />
+              WhatsApp
+            </Button>
+            <Button
+              variant="ghost"
+              className="rounded-control text-white/80 hover:bg-white/10 hover:text-white"
+              onClick={() => setOpenEditTutor(true)}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Editar
+            </Button>
           </div>
         </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button asChild variant="secondary" className="rounded-[10px]">
-            <Link to={`/vaccinations/new?tutor=${t.id}`}>
-              <CalendarPlus className="mr-2 h-4 w-4" />
-              Registrar aplicação
-            </Link>
-          </Button>
-          <Button variant="secondary" className="rounded-[10px]" onClick={() => openWhats.mutate()} disabled={openWhats.isPending}>
-            <WhatsAppIcon className="mr-2 h-4 w-4" />
-            WhatsApp
-          </Button>
-          <Button variant="ghost" className="rounded-[10px]" onClick={() => setOpenEditTutor(true)}>
-            Editar
-          </Button>
-        </div>
-      </div>
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="vetvax-card-polish rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)] lg:col-span-2">
-          <div className="text-sm font-semibold">Contato e endereço</div>
-          <div className="mt-3 grid gap-2 text-sm">
-            <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
-              <Phone className="h-4 w-4" />
+        <Card className="rounded-[16px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card ring-1 ring-black/[0.02] lg:col-span-2">
+          <h2 className="vetvax-section-title">Contato e endereço</h2>
+          <div className="mt-3 grid gap-2.5 text-sm">
+            <div className="flex flex-wrap items-center gap-2 text-vetvax-text-secondary">
+              <Phone className="h-4 w-4 text-vetvax-primary" />
               <span>{t.phone1 ? formatBrPhoneForDisplay(t.phone1) : "—"}</span>
               {t.phone2 ? <span>• {formatBrPhoneForDisplay(t.phone2)}</span> : null}
             </div>
-            <div className="text-muted-foreground">
-              {[t.street, t.number, t.complement].filter(Boolean).join(", ")}
-              {t.neighborhood || t.city || t.uf ? (
-                <>
-                  <div className="text-muted-foreground">{[t.neighborhood, t.city, t.uf].filter(Boolean).join(" • ")}</div>
-                </>
-              ) : null}
+            <div className="flex items-start gap-2 text-vetvax-text-secondary">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-sky-500" />
+              <div>
+                <div>{[t.street, t.number, t.complement].filter(Boolean).join(", ") || "—"}</div>
+                {t.neighborhood || t.city || t.uf ? (
+                  <div className="text-vetvax-text-tertiary">{[t.neighborhood, t.city, t.uf].filter(Boolean).join(" • ")}</div>
+                ) : null}
+              </div>
             </div>
-            {t.notes ? <div className="rounded-[10px] border-[1.5px] bg-muted/20 p-3 text-xs text-muted-foreground">{t.notes}</div> : null}
+            {t.notes ? (
+              <div className="rounded-[10px] border border-vetvax-border-soft bg-vetvax-surface-panel/60 p-3 text-xs italic text-vetvax-text-tertiary">
+                {t.notes}
+              </div>
+            ) : null}
           </div>
         </Card>
 
-        <Card className="vetvax-card-polish rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
-          <div className="text-sm font-semibold">Atalhos</div>
+        <Card className="rounded-[16px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
+          <h2 className="vetvax-section-title">Atalhos</h2>
           <div className="mt-3 grid gap-2">
-            <Button asChild className="rounded-[10px]">
+            <Button asChild className="rounded-control">
               <Link to={`/vaccinations/new?tutor=${t.id}`}>
                 <ClipboardList className="mr-2 h-4 w-4" />
                 Registrar em 20s
@@ -245,7 +298,7 @@ export default function TutorDetail() {
             </Button>
             <Button
               variant="secondary"
-              className="rounded-[10px]"
+              className="rounded-control"
               onClick={() => {
                 setEditingPet(null);
                 setOpenPet(true);
@@ -269,58 +322,74 @@ export default function TutorDetail() {
         </TabsList>
 
         <TabsContent value="pets" className="mt-4">
-          <Card className="rounded-[10px] border-[1.5px] border-border p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
+          <Card className="rounded-[16px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold">Pets</div>
-                <div className="mt-1 text-xs text-muted-foreground">Opcional — vincule itens por pet quando fizer sentido.</div>
+                <h2 className="vetvax-section-title">Pets</h2>
+                <p className="mt-1 text-xs text-vetvax-text-tertiary">Opcional — vincule itens por pet quando fizer sentido.</p>
               </div>
               <Button
-                className="rounded-[10px]"
+                className="rounded-control"
                 onClick={() => {
                   setEditingPet(null);
                   setOpenPet(true);
                 }}
               >
-                <PawPrint className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 h-4 w-4" />
                 Novo pet
               </Button>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {(pets.data ?? []).map((p) => (
-                <button
-                  key={p.id}
-                  className="text-left rounded-[10px] border-[1.5px] border-border bg-card p-4 hover:bg-muted/30"
-                  onClick={() => {
-                    setEditingPet(p);
-                    setOpenPet(true);
-                  }}
-                >
-                  <div className="text-sm font-semibold">{p.name}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {p.species}
-                    {p.age_text ? ` • ${p.age_text}` : ""}
-                    {p.breed ? ` • ${p.breed}` : ""}
-                    {p.color ? ` • ${p.color}` : ""}
-                  </div>
-                  {p.notes ? <div className="mt-3 line-clamp-2 text-xs text-muted-foreground">{p.notes}</div> : null}
-                </button>
-              ))}
-
-              {!pets.isLoading && (pets.data?.length ?? 0) === 0 && (
-                <div className="rounded-[10px] border-[1.5px] border-border bg-muted/10 p-6 text-center sm:col-span-2 lg:col-span-3">
-                  <div className="text-sm font-medium">Nenhum pet cadastrado</div>
-                  <p className="mt-1 text-xs text-muted-foreground">Você pode cadastrar agora ou seguir usando sem pets.</p>
-                  <Button
-                    className="mt-4 rounded-[10px]"
+              {(pets.data ?? []).map((p) => {
+                const meta = speciesMeta(p.species);
+                const Icon = meta.Icon;
+                return (
+                  <button
+                    key={p.id}
+                    className="group relative text-left rounded-[14px] border border-vetvax-border-soft bg-gradient-to-b from-white to-vetvax-surface-panel/40 p-4 shadow-sm transition-[border-color,box-shadow,transform] duration-vetvax hover:-translate-y-px hover:border-vetvax-primary-border hover:shadow-vetvax-card"
                     onClick={() => {
-                      setEditingPet(null);
+                      setEditingPet(p);
                       setOpenPet(true);
                     }}
                   >
-                    Cadastrar pet
-                  </Button>
+                    <Pencil className="absolute right-3 top-3 h-3.5 w-3.5 text-vetvax-text-tertiary opacity-0 transition-opacity group-hover:opacity-100" />
+                    <div className="flex items-start gap-3">
+                      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-[12px] border ${meta.tone}`}>
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold text-vetvax-text-main">{p.name}</p>
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          <Badge variant="secondary" className="text-[10px]">{meta.label}</Badge>
+                          {p.age_text ? <Badge variant="secondary" className="text-[10px]">{p.age_text}</Badge> : null}
+                          {p.breed ? <Badge variant="secondary" className="text-[10px]">{p.breed}</Badge> : null}
+                          {p.color ? <Badge variant="secondary" className="text-[10px]">{p.color}</Badge> : null}
+                        </div>
+                      </div>
+                    </div>
+                    {p.notes ? <p className="mt-3 line-clamp-2 text-xs italic text-vetvax-text-tertiary">{p.notes}</p> : null}
+                  </button>
+                );
+              })}
+
+              {!pets.isLoading && (pets.data?.length ?? 0) === 0 && (
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <EmptyState
+                    icon={PawPrint}
+                    title="Nenhum pet cadastrado"
+                    description="Você pode cadastrar agora ou seguir usando sem pets."
+                    action={
+                      <Button
+                        onClick={() => {
+                          setEditingPet(null);
+                          setOpenPet(true);
+                        }}
+                      >
+                        Cadastrar pet
+                      </Button>
+                    }
+                  />
                 </div>
               )}
             </div>
