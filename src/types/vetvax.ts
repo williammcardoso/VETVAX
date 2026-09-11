@@ -165,6 +165,7 @@ export type DueReminderRow = {
   reference_record_id: string | null;
   last_applied_at: string | null;
   reminder_type: string;
+  item_name: string | null;
   message_template_id: string | null;
   status: "ATIVO" | "FEITO" | "ARQUIVADO";
   last_sent_at: string | null;

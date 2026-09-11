@@ -315,9 +315,9 @@ export default function Dashboard() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-bold text-vetvax-text-main">{row.tutor_name}</p>
                         <p className="text-xs text-vetvax-text-tertiary">{row.tutor_phone1 ?? row.tutor_phone2 ?? "Sem telefone"}</p>
-                        <span className={`mt-1 inline-flex max-w-full min-h-[22px] items-center truncate rounded-pill border px-2 py-0.5 text-[11px] font-bold leading-none ${getItemTone(row.reminder_type)}`}>
+                        <span className={`mt-1 inline-flex max-w-full min-h-[22px] items-center truncate rounded-pill border px-2 py-0.5 text-[11px] font-bold leading-none ${getItemTone(row.item_name ?? row.reminder_type)}`}>
                           {row.pet_name ? `${row.pet_name} • ` : ""}
-                          {row.reminder_type}
+                          {row.item_name ?? row.reminder_type}
                         </span>
                         {row.notes ? <p className="mt-1 line-clamp-2 text-xs text-vetvax-text-secondary">{row.notes}</p> : null}
                       </div>

@@ -108,7 +108,7 @@ export default function Reminders() {
       let q = supabase
         .from("reminders")
         .select(
-          "id, org_id, branch_id, tutor_id, pet_id, due_date, reference_appointment_id, reference_record_id, last_applied_at, reminder_type, message_template_id, status, last_sent_at, send_count, notes, created_at, is_active, tutor:tutors(name, phone1, phone2), pet:pets(name)",
+          "id, org_id, branch_id, tutor_id, pet_id, due_date, reference_appointment_id, reference_record_id, last_applied_at, reminder_type, item_name, message_template_id, status, last_sent_at, send_count, notes, created_at, is_active, tutor:tutors(name, phone1, phone2), pet:pets(name)",
         )
         .eq("is_active", true)
         .order("due_date", { ascending: true })
@@ -143,6 +143,7 @@ export default function Reminders() {
         reference_record_id: string | null;
         last_applied_at: string | null;
         reminder_type: string;
+        item_name: string | null;
         message_template_id: string | null;
         status: "ATIVO" | "FEITO" | "ARQUIVADO";
         last_sent_at: string | null;
@@ -163,6 +164,7 @@ export default function Reminders() {
         reference_record_id: r.reference_record_id,
         last_applied_at: r.last_applied_at,
         reminder_type: r.reminder_type,
+        item_name: r.item_name,
         message_template_id: r.message_template_id,
         status: r.status,
         last_sent_at: r.last_sent_at,
@@ -178,7 +180,7 @@ export default function Reminders() {
 
       const t = term.toLowerCase();
       return mapped.filter((row) => {
-        const hay = [row.tutor_name, row.pet_name, row.tutor_phone1, row.tutor_phone2, row.notes, row.reminder_type]
+        const hay = [row.tutor_name, row.pet_name, row.tutor_phone1, row.tutor_phone2, row.notes, row.reminder_type, row.item_name]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
@@ -376,7 +378,7 @@ export default function Reminders() {
                     </div>
                     <p className="text-sm font-semibold text-vetvax-text-main">{row.tutor_name}</p>
                     <p className="text-xs text-vetvax-text-secondary">
-                      {[row.tutor_phone1, row.tutor_phone2].filter(Boolean).join(" • ") || "Sem contato"} • {row.reminder_type}
+                      {[row.tutor_phone1, row.tutor_phone2].filter(Boolean).join(" • ") || "Sem contato"} • {row.item_name ?? row.reminder_type}
                     </p>
                     {row.notes ? <p className="text-xs text-vetvax-text-tertiary">{row.notes}</p> : null}
                   </div>
