@@ -114,7 +114,7 @@ export default function TutorDetail() {
           .limit(15),
         supabase
           .from("reminders")
-          .select("id, due_date, status, reminder_type, item_name, last_sent_at, send_count, notes, created_at")
+          .select("id, due_date, status, reminder_type, item_name, last_sent_at, send_count, notes, created_at, pet:pets(name)")
           .eq("tutor_id", tutorId)
           .order("due_date", { ascending: false })
           .limit(15),
@@ -459,8 +459,13 @@ export default function TutorDetail() {
                             {r.status === "ATIVO" ? "ativo" : r.status === "FEITO" ? "resolvido" : "arquivado"}
                           </StatusBadge>
                         </div>
-                        <p className="mt-1 text-xs font-semibold text-vetvax-text-secondary">{r.item_name ?? r.reminder_type}</p>
-                        {r.notes ? <p className="mt-1 text-xs italic text-vetvax-text-tertiary">{r.notes}</p> : null}
+                        <span
+                          className={`mt-1.5 inline-flex items-center rounded-pill border px-2.5 py-1 text-[11px] font-bold leading-none ${getItemTone(r.item_name ?? r.reminder_type)}`}
+                        >
+                          {r.pet?.name ? `${r.pet.name} • ` : ""}
+                          {r.item_name ?? r.reminder_type}
+                        </span>
+                        {r.notes ? <p className="mt-2 text-xs italic text-vetvax-text-tertiary">{r.notes}</p> : null}
                       </div>
                     </div>
                   </RichListItem>
