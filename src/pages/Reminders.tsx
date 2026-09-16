@@ -24,6 +24,8 @@ type DuePreset = "overdue" | "7d" | "30d" | "60d" | "all";
 
 type StatusFilter = "all" | "ATIVO" | "FEITO" | "ARQUIVADO";
 
+type ContactFilter = "all" | "not_contacted" | "no_response";
+
 type Filters = {
   q: string;
   due: DuePreset;
@@ -31,9 +33,11 @@ type Filters = {
   reminderType: "all" | "vacina" | "medicação" | "outro";
   pet: "all" | "with_pet" | "without_pet";
   branchId: string;
+  contact: ContactFilter;
 };
 
 const LS_KEY = "vetvax.reminders.filters";
+const NO_RESPONSE_DAYS = 3;
 
 function defaults(): Filters {
   return {
@@ -43,6 +47,7 @@ function defaults(): Filters {
     reminderType: "all",
     pet: "all",
     branchId: "all",
+    contact: "all",
   };
 }
 
@@ -182,10 +187,20 @@ export default function Reminders() {
         pet_name: r.pet?.name ?? null,
       })) as DueReminderRow[];
 
-      if (!term) return mapped;
+      const today = dayjs();
+      const byContact = mapped.filter((row) => {
+        if (filters.contact === "not_contacted") return (row.send_count ?? 0) === 0;
+        if (filters.contact === "no_response") {
+          if (row.status !== "ATIVO" || !row.last_sent_at || (row.send_count ?? 0) === 0) return false;
+          return today.diff(dayjs(row.last_sent_at), "day") >= NO_RESPONSE_DAYS;
+        }
+        return true;
+      });
+
+      if (!term) return byContact;
 
       const t = term.toLowerCase();
-      return mapped.filter((row) => {
+      return byContact.filter((row) => {
         const hay = [row.tutor_name, row.pet_name, row.tutor_phone1, row.tutor_phone2, row.notes, row.reminder_type, row.item_name]
           .filter(Boolean)
           .join(" ")
@@ -332,6 +347,16 @@ export default function Reminders() {
                 <SelectItem value="outro">Outro</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={filters.contact} onValueChange={(v) => persist({ ...filters, contact: v as ContactFilter })}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Contato" />
+              </SelectTrigger>
+              <SelectContent className="rounded-control">
+                <SelectItem value="all">Qualquer contato</SelectItem>
+                <SelectItem value="not_contacted">Nunca contatado</SelectItem>
+                <SelectItem value="no_response">Contatado sem retorno ({NO_RESPONSE_DAYS}+ dias)</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={filters.branchId} onValueChange={(v) => persist({ ...filters, branchId: v as Filters["branchId"] })}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filial" />
@@ -396,6 +421,17 @@ export default function Reminders() {
                       {[row.tutor_phone1, row.tutor_phone2].filter(Boolean).join(" • ") || "Sem contato"} • {row.item_name ?? row.reminder_type}
                     </p>
                     {row.notes ? <p className="text-xs text-vetvax-text-tertiary">{row.notes}</p> : null}
+                    {(row.send_count ?? 0) > 0 ? (
+                      <p className="text-[11px] font-medium text-vetvax-text-tertiary">
+                        📤 Contatado {row.send_count}x
+                        {row.last_sent_at ? ` • último há ${Math.max(0, dayjs().diff(dayjs(row.last_sent_at), "day"))}d` : ""}
+                        {row.status === "ATIVO" && row.last_sent_at && dayjs().diff(dayjs(row.last_sent_at), "day") >= NO_RESPONSE_DAYS
+                          ? " • sem retorno"
+                          : ""}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] font-medium text-vetvax-text-tertiary">Nunca contatado</p>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     <Button

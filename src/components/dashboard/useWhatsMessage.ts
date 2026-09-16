@@ -55,7 +55,7 @@ export function useWhatsMessage() {
       tutor_name: row.tutor_name,
       store_name: storeName,
       due_date: formatDateBr(row.due_date),
-      pet_name: row.pet_name,
+      pet_name: row.pet_name?.trim() ? row.pet_name : "seu animalzinho",
     });
   };
 
