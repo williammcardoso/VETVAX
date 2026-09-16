@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { DueReminderRow, MessageTemplate, OrgSettings } from "@/types/vetvax";
 import { supabase } from "@/lib/supabase";
 import { renderTemplate } from "@/lib/template";
-import { formatDateBr } from "@/lib/datetime";
+import { dayjs, formatDateBr } from "@/lib/datetime";
 
 async function fetchOrgSettings() {
   const { data, error } = await supabase
@@ -14,6 +14,7 @@ async function fetchOrgSettings() {
 }
 
 const REMINDER_TEMPLATE_NAME = "Lembrete - padrão";
+const OVERDUE_REMINDER_TEMPLATE_NAME = "Lembrete - vencida";
 
 async function fetchWhatsTemplates() {
   const { data, error } = await supabase
@@ -37,14 +38,18 @@ export function useWhatsMessage() {
 
   const buildReminderMessage = async (row: DueReminderRow) => {
     const storeName = org.data?.store_name ?? "VetVAX";
+    const isOverdue = row.due_date < dayjs().format("YYYY-MM-DD");
+    const preferredName = isOverdue ? OVERDUE_REMINDER_TEMPLATE_NAME : REMINDER_TEMPLATE_NAME;
     const reminderTemplate =
+      templates.data?.find((t) => t.name === preferredName) ??
       templates.data?.find((t) => t.name === REMINDER_TEMPLATE_NAME) ??
       templates.data?.find((t) => t.name.toLowerCase().includes("lembrete")) ??
       templates.data?.[0] ??
       null;
-    const body =
-      reminderTemplate?.body ??
-      "Olá {{tutor_name}}! Aqui é da {{store_name}}. Passando para lembrar da próxima aplicação em {{due_date}}.";
+    const fallbackBody = isOverdue
+      ? "⚠️ Olá {{tutor_name}}! Aqui é da {{store_name}}. A vacina de {{pet_name}} está atrasada desde {{due_date}}. Responda aqui com o melhor dia para regularizar."
+      : "Olá {{tutor_name}}! Aqui é da {{store_name}}. Passando para lembrar da próxima aplicação em {{due_date}}.";
+    const body = reminderTemplate?.body ?? fallbackBody;
 
     return renderTemplate(body, {
       tutor_name: row.tutor_name,

@@ -15,9 +15,24 @@ import { toast } from "@/hooks/use-toast";
 import PageHeader from "@/components/layout/PageHeader";
 import StatusBadge from "@/components/vetvax/StatusBadge";
 
-const REMINDER_TEMPLATE_NAME = "Lembrete - padrão";
-const REMINDER_TEMPLATE_FALLBACK =
-  "Olá {{tutor_name}}! Aqui é da {{store_name}}. Passando para lembrar da próxima aplicação em {{due_date}}.";
+type ReminderKind = "upcoming" | "overdue";
+
+const REMINDER_TEMPLATES: Record<ReminderKind, { name: string; label: string; fallback: string; helper: string }> = {
+  upcoming: {
+    name: "Lembrete - padrão",
+    label: "A vencer",
+    fallback:
+      "🐾 Olá, {{tutor_name}}! Aqui é da {{store_name}}.\nPassando para lembrar que a vacina de {{pet_name}} está prevista para {{due_date}}. Quer já deixar agendado? Responda aqui com o melhor dia! 📅",
+    helper: "Enviada para lembretes que ainda não venceram — tom tranquilo, sem pressa.",
+  },
+  overdue: {
+    name: "Lembrete - vencida",
+    label: "Vencida",
+    fallback:
+      "⚠️ Olá, {{tutor_name}}! Aqui é da {{store_name}}.\nA vacina de {{pet_name}} está *atrasada* desde {{due_date}}. Vacina em atraso deixa o pet mais exposto a doenças sérias, e alguns protocolos precisam reiniciar a série se o atraso for grande. 🐾💉\nPra resolver rápido, responda aqui com o melhor dia *esta semana* que já deixamos reservado pra você.",
+    helper: "Enviada para lembretes já vencidos — mais direta, com urgência e um pedido de resposta claro.",
+  },
+};
 
 const WHATS_VARIABLES = [
   { key: "tutor_name", label: "Nome do tutor" },
@@ -41,7 +56,8 @@ function getErrorMessage(error: unknown) {
 export default function Settings() {
   const qc = useQueryClient();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const [whatsBody, setWhatsBody] = useState(REMINDER_TEMPLATE_FALLBACK);
+  const [activeKind, setActiveKind] = useState<ReminderKind>("upcoming");
+  const [whatsBody, setWhatsBody] = useState(REMINDER_TEMPLATES.upcoming.fallback);
 
   const settings = useQuery({
     queryKey: ["org", "settings"],
@@ -56,14 +72,14 @@ export default function Settings() {
   });
 
   const whatsTemplate = useQuery({
-    queryKey: ["org", "whats-template", "reminder"],
+    queryKey: ["org", "whats-template", activeKind],
     enabled: !!settings.data?.org_id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("message_templates")
         .select("id, org_id, name, channel, body, is_active, created_at, updated_at")
         .eq("channel", "whatsapp")
-        .eq("name", REMINDER_TEMPLATE_NAME)
+        .eq("name", REMINDER_TEMPLATES[activeKind].name)
         .order("created_at", { ascending: true })
         .limit(1);
       if (error) throw error;
@@ -76,8 +92,8 @@ export default function Settings() {
       setWhatsBody(whatsTemplate.data.body);
       return;
     }
-    setWhatsBody(REMINDER_TEMPLATE_FALLBACK);
-  }, [whatsTemplate.data?.body]);
+    setWhatsBody(REMINDER_TEMPLATES[activeKind].fallback);
+  }, [whatsTemplate.data?.body, activeKind]);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -131,7 +147,7 @@ export default function Settings() {
   const saveWhatsTemplate = useMutation({
     mutationFn: async () => {
       if (!settings.data?.org_id) throw new Error("Configuração da organização não encontrada.");
-      const body = whatsBody.trim() || REMINDER_TEMPLATE_FALLBACK;
+      const body = whatsBody.trim() || REMINDER_TEMPLATES[activeKind].fallback;
       if (whatsTemplate.data?.id) {
         const { error } = await supabase
           .from("message_templates")
@@ -142,7 +158,7 @@ export default function Settings() {
       }
       const { error } = await supabase.from("message_templates").insert({
         org_id: settings.data.org_id,
-        name: REMINDER_TEMPLATE_NAME,
+        name: REMINDER_TEMPLATES[activeKind].name,
         channel: "whatsapp",
         body,
         is_active: true,
@@ -152,7 +168,7 @@ export default function Settings() {
     onSuccess: async () => {
       toast({ title: "Mensagem do WhatsApp salva" });
       await Promise.all([
-        qc.invalidateQueries({ queryKey: ["org", "whats-template", "reminder"] }),
+        qc.invalidateQueries({ queryKey: ["org", "whats-template", activeKind] }),
         qc.invalidateQueries({ queryKey: ["org", "whats-template"] }),
       ]);
     },
@@ -225,8 +241,26 @@ export default function Settings() {
               <h2 className="vetvax-section-title">Mensagem WhatsApp</h2>
             </div>
             <p className="mt-1 text-sm text-vetvax-text-tertiary">
-              Configure o texto automático enviado ao tutor ao clicar no ícone do WhatsApp nos lembretes.
+              O sistema usa uma mensagem diferente conforme o lembrete já venceu ou não — escolha abaixo qual editar.
             </p>
+
+            <div className="mt-4 inline-flex rounded-control border border-vetvax-border-soft bg-vetvax-surface-panel/60 p-1">
+              {(Object.keys(REMINDER_TEMPLATES) as ReminderKind[]).map((kind) => (
+                <button
+                  key={kind}
+                  type="button"
+                  onClick={() => setActiveKind(kind)}
+                  className={`rounded-[8px] px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+                    activeKind === kind
+                      ? "bg-white text-vetvax-text-main shadow-sm"
+                      : "text-vetvax-text-tertiary hover:text-vetvax-text-main"
+                  }`}
+                >
+                  {REMINDER_TEMPLATES[kind].label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-vetvax-text-tertiary">{REMINDER_TEMPLATES[activeKind].helper}</p>
 
             <div className="mt-4 space-y-3">
               <div className="grid gap-2">
@@ -262,8 +296,8 @@ export default function Settings() {
               </div>
 
               <div className="flex justify-end">
-                <Button type="button" className="min-w-[200px]" disabled={saveWhatsTemplate.isPending} onClick={() => saveWhatsTemplate.mutate()}>
-                  {saveWhatsTemplate.isPending ? "Salvando mensagem..." : "Salvar mensagem do WhatsApp"}
+                <Button type="button" className="min-w-[220px]" disabled={saveWhatsTemplate.isPending} onClick={() => saveWhatsTemplate.mutate()}>
+                  {saveWhatsTemplate.isPending ? "Salvando mensagem..." : `Salvar mensagem "${REMINDER_TEMPLATES[activeKind].label}"`}
                 </Button>
               </div>
             </div>
