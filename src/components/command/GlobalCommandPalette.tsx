@@ -70,7 +70,7 @@ export default function GlobalCommandPalette({ className, placeholder = "Buscar 
       },
       {
         key: "schedule-return",
-        label: "Agendar retorno",
+        label: "Agendar vacinação",
         icon: CalendarClock,
         run: () => nav("/reminders/new"),
       },

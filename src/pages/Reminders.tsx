@@ -281,7 +281,7 @@ export default function Reminders() {
         actions={
           <Button onClick={() => nav("/reminders/new")}>
             <CalendarClock className="mr-2 h-4 w-4" />
-            Agendar retorno
+            Agendar vacinação
           </Button>
         }
       />

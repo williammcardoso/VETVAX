@@ -299,7 +299,7 @@ export default function TutorDetail() {
             <Button asChild variant="secondary" className="rounded-control">
               <Link to={`/reminders/new?tutor=${t.id}`}>
                 <CalendarClock className="mr-2 h-4 w-4" />
-                Agendar retorno
+                Agendar vacinação
               </Link>
             </Button>
             <Button

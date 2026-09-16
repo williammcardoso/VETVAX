@@ -1,6 +1,6 @@
 -- VetVAX - two fixes to the reminder/return workflow:
 --
--- 1. "Agendar retorno": until now the only way to note a future visit was
+-- 1. "Agendar vacinação": until now the only way to note a future visit was
 --    register_vaccination, which always creates a vaccination_records row —
 --    i.e. treats it as an already-applied fact. Staff had no way to say
 --    "client will come on day X" without either lying about an application
@@ -37,6 +37,7 @@ declare
   v_next_catalog_item_id uuid;
   v_next_pet_id uuid;
   v_next_due_date date;
+  v_next_notes text;
   v_item_name text;
   v_category text;
   v_reminder_type text;
@@ -126,6 +127,7 @@ begin
 
     v_next_catalog_item_id := (v_next->>'catalog_item_id')::uuid;
     v_next_pet_id := nullif(v_next->>'pet_id','')::uuid;
+    v_next_notes := nullif(v_next->>'notes','');
 
     select ci.name, ci.category into v_item_name, v_category
     from public.catalog_items ci
@@ -156,7 +158,7 @@ begin
     values (
       v_org_id, v_branch_id, v_tutor_id, v_next_pet_id, v_next_due_date,
       v_record_id, v_applied_date,
-      v_reminder_type, v_item_name, 'ATIVO', null
+      v_reminder_type, v_item_name, 'ATIVO', v_next_notes
     );
   end loop;
 

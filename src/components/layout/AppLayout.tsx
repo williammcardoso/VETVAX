@@ -10,7 +10,7 @@ type NavMeta = { key: NavKey; name: string };
 function routeMeta(pathname: string): NavMeta {
   if (pathname.startsWith("/tutors")) return { key: "tutors", name: "Clientes" };
   if (pathname.startsWith("/vaccinations/new")) return { key: "new", name: "Registrar aplicação" };
-  if (pathname.startsWith("/reminders/new")) return { key: "scheduleReturn", name: "Agendar retorno" };
+  if (pathname.startsWith("/reminders/new")) return { key: "scheduleReturn", name: "Agendar vacinação" };
   if (pathname.startsWith("/reminders")) return { key: "reminders", name: "Lembretes" };
   if (pathname.startsWith("/reports")) return { key: "reports", name: "Relatório de vacinações" };
   if (pathname.startsWith("/access")) return { key: "access", name: "Usuários" };

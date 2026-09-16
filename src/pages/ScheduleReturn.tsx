@@ -99,7 +99,7 @@ export default function ScheduleReturn() {
             catalog_item_id: r.catalog_item_id,
             due_date: r.due_date,
             pet_id: values.separate_by_pet ? r.pet_id : null,
-            notes: values.notes,
+            notes: r.notes || values.notes || null,
           })),
         },
       });
@@ -128,8 +128,8 @@ export default function ScheduleReturn() {
   return (
     <div className="space-y-7">
       <PageHeader
-        title="Agendar retorno"
-        description="Marque a próxima visita sem registrar uma aplicação — vira um lembrete, sem duplicar dados quando a vacina realmente for aplicada."
+        title="Agendar vacinação"
+        description="Marque uma vacinação para uma data futura sem registrar como se já tivesse acontecido — seja a primeira visita ou um retorno. Vira um lembrete, sem duplicar dados quando a aplicação realmente ocorrer."
         actions={
           <Button asChild variant="outline">
             <Link to="/reminders">Voltar</Link>
@@ -139,7 +139,7 @@ export default function ScheduleReturn() {
 
       <form className="vetvax-fade-in grid gap-6 lg:grid-cols-[minmax(0,2fr)_320px]" onSubmit={form.handleSubmit((v) => save.mutate(v))}>
         <div className="space-y-5">
-          <FormSection step="1" title="Tutor" description="Quem vai retornar.">
+          <FormSection step="1" title="Tutor" description="Quem vai receber a vacina.">
             <div className="grid gap-4">
               <div className="grid gap-2">
                 <Label className="vetvax-label">Tutor</Label>
@@ -153,8 +153,8 @@ export default function ScheduleReturn() {
 
               <div className="flex items-center justify-between rounded-[14px] border border-vetvax-border-soft bg-gradient-to-r from-vetvax-surface-panel to-vetvax-surface-alt px-4 py-3.5">
                 <div>
-                  <p className="text-sm font-semibold text-vetvax-text-main">Vincular retornos aos pets</p>
-                  <p className="vetvax-help-text">Ative quando precisar indicar exatamente qual pet vai retornar.</p>
+                  <p className="text-sm font-semibold text-vetvax-text-main">Vincular aos pets</p>
+                  <p className="vetvax-help-text">Ative quando precisar indicar exatamente qual pet vai receber cada vacina.</p>
                 </div>
                 <Switch checked={separateByPet} onCheckedChange={(v) => form.setValue("separate_by_pet", v)} />
               </div>
@@ -163,8 +163,8 @@ export default function ScheduleReturn() {
 
           <FormSection
             step="2"
-            title="Retornos"
-            description="Cada retorno vira um lembrete — pode agendar quantos precisar, com vacinas diferentes."
+            title="Vacinações agendadas"
+            description="Cada linha vira um lembrete — pode agendar quantas precisar, cada uma com sua própria vacina e data."
           >
             <FutureRemindersField
               rows={reminders}
@@ -187,7 +187,7 @@ export default function ScheduleReturn() {
           footer={
             <>
               <ActionButton type="submit" emphasis="primary" className="h-11 w-full" disabled={save.isPending}>
-                {save.isPending ? "Agendando..." : "Agendar retorno"}
+                {save.isPending ? "Agendando..." : "Agendar vacinação"}
               </ActionButton>
               <ActionButton asChild type="button" emphasis="secondary" className="w-full">
                 <Link to="/reminders">Voltar</Link>
@@ -201,7 +201,7 @@ export default function ScheduleReturn() {
               <span className="max-w-[180px] truncate font-semibold text-vetvax-text-main">{selectedTutor.data ?? "Não selecionado"}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-vetvax-text-tertiary">Retornos</span>
+              <span className="text-vetvax-text-tertiary">Agendamentos</span>
               <span className="font-semibold text-vetvax-text-main">
                 {reminders.filter((r) => r.catalog_item_id && r.due_date).length}
               </span>

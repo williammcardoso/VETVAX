@@ -7,10 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ActionButton from "@/components/vetvax/ActionButton";
 
+const NOTES_PLACEHOLDER = "Ex: segunda dose, vacina anual, reforço...";
+
 export type FutureReminderRow = {
   catalog_item_id: string;
   due_date: string;
   pet_id: string | null;
+  notes: string;
 };
 
 const DAY_SHORTCUTS = [
@@ -21,7 +24,7 @@ const DAY_SHORTCUTS = [
 ];
 
 export function emptyFutureReminderRow(): FutureReminderRow {
-  return { catalog_item_id: "", due_date: "", pet_id: null };
+  return { catalog_item_id: "", due_date: "", pet_id: null, notes: "" };
 }
 
 export default function FutureRemindersField({
@@ -57,7 +60,7 @@ export default function FutureRemindersField({
         <div key={idx} className="rounded-[14px] border border-vetvax-border-soft bg-vetvax-surface-panel/80 p-4 shadow-sm">
           <div className="grid gap-3 sm:grid-cols-12 sm:items-end">
             <div className="grid gap-2 sm:col-span-5">
-              <Label className="vetvax-label">Vacina do retorno</Label>
+              <Label className="vetvax-label">Vacina</Label>
               <Select value={row.catalog_item_id} onValueChange={(v) => updateRow(idx, { catalog_item_id: v })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione..." />
@@ -122,12 +125,21 @@ export default function FutureRemindersField({
               </Button>
             ))}
           </div>
+
+          <div className="mt-3 grid gap-2">
+            <Label className="vetvax-label">Observação (opcional)</Label>
+            <Input
+              placeholder={NOTES_PLACEHOLDER}
+              value={row.notes}
+              onChange={(e) => updateRow(idx, { notes: e.target.value })}
+            />
+          </div>
         </div>
       ))}
 
       <ActionButton type="button" emphasis="secondary" onClick={addRow}>
         <Plus className="h-4 w-4" />
-        {rows.length === 0 ? "Adicionar retorno" : "Adicionar outro retorno"}
+        {rows.length === 0 ? "Adicionar" : "Adicionar outro"}
       </ActionButton>
     </div>
   );

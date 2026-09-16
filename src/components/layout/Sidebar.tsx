@@ -22,7 +22,7 @@ const operations: MenuItem[] = [
   { key: "dashboard", label: "Início", icon: CalendarDays, iconClass: "text-sky-600", to: "/dashboard" },
   { key: "tutors", label: "Clientes", icon: Users, iconClass: "text-indigo-600", to: "/tutors" },
   { key: "new", label: "Registrar aplicação", icon: ClipboardList, iconClass: "text-violet-600", to: "/vaccinations/new" },
-  { key: "scheduleReturn", label: "Agendar retorno", icon: CalendarClock, iconClass: "text-cyan-600", to: "/reminders/new" },
+  { key: "scheduleReturn", label: "Agendar vacinação", icon: CalendarClock, iconClass: "text-cyan-600", to: "/reminders/new" },
   { key: "reminders", label: "Lembretes", icon: Bell, iconClass: "text-amber-600", to: "/reminders" },
   { key: "reports", label: "Relatórios", icon: FileDown, iconClass: "text-emerald-600", to: "/reports" },
 ];
