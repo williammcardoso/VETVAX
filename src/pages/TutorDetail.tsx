@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { Bell, CalendarPlus, Cat, ClipboardList, Dog, MapPin, PawPrint, Pencil, Phone, Plus, ShieldCheck, Syringe } from "lucide-react";
+import { Bell, CalendarClock, CalendarPlus, Cat, ClipboardList, Dog, MapPin, PawPrint, Pencil, Phone, Plus, ShieldCheck, Syringe } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Pet, Tutor } from "@/types/vetvax";
 import { Card } from "@/components/ui/card";
@@ -294,6 +294,12 @@ export default function TutorDetail() {
               <Link to={`/vaccinations/new?tutor=${t.id}`}>
                 <ClipboardList className="mr-2 h-4 w-4" />
                 Registrar em 20s
+              </Link>
+            </Button>
+            <Button asChild variant="secondary" className="rounded-control">
+              <Link to={`/reminders/new?tutor=${t.id}`}>
+                <CalendarClock className="mr-2 h-4 w-4" />
+                Agendar retorno
               </Link>
             </Button>
             <Button

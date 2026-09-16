@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Bell, CalendarDays, ChevronDown, ClipboardList, FileDown, ListPlus, LogOut, PanelLeftClose, PanelLeftOpen, Settings, Tag, UserCog, Users } from "lucide-react";
+import { Bell, CalendarClock, CalendarDays, ChevronDown, ClipboardList, FileDown, ListPlus, LogOut, PanelLeftClose, PanelLeftOpen, Settings, Tag, UserCog, Users } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 import VetVaxMark from "@/components/branding/VetVaxMark";
 
-export type NavKey = "dashboard" | "tutors" | "new" | "reminders" | "reports" | "access" | "catalog" | "prices" | "settings" | "profile";
+export type NavKey = "dashboard" | "tutors" | "new" | "scheduleReturn" | "reminders" | "reports" | "access" | "catalog" | "prices" | "settings" | "profile";
 
 type MenuItem = {
   key: NavKey;
@@ -22,6 +22,7 @@ const operations: MenuItem[] = [
   { key: "dashboard", label: "Início", icon: CalendarDays, iconClass: "text-sky-600", to: "/dashboard" },
   { key: "tutors", label: "Clientes", icon: Users, iconClass: "text-indigo-600", to: "/tutors" },
   { key: "new", label: "Registrar aplicação", icon: ClipboardList, iconClass: "text-violet-600", to: "/vaccinations/new" },
+  { key: "scheduleReturn", label: "Agendar retorno", icon: CalendarClock, iconClass: "text-cyan-600", to: "/reminders/new" },
   { key: "reminders", label: "Lembretes", icon: Bell, iconClass: "text-amber-600", to: "/reminders" },
   { key: "reports", label: "Relatórios", icon: FileDown, iconClass: "text-emerald-600", to: "/reports" },
 ];

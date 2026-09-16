@@ -13,6 +13,7 @@ import Dashboard from "@/pages/Dashboard";
 import Tutors from "@/pages/Tutors";
 import TutorDetail from "@/pages/TutorDetail";
 import VaccinationNew from "@/pages/VaccinationNew";
+import ScheduleReturn from "@/pages/ScheduleReturn";
 import Reports from "@/pages/Reports";
 import Catalog from "@/pages/Catalog";
 import PriceList from "@/pages/PriceList";
@@ -57,6 +58,7 @@ const App = () => (
               <Route path="tutors/:id" element={<TutorDetail />} />
               <Route path="vaccinations/new" element={<VaccinationNew />} />
               <Route path="reminders" element={<Reminders />} />
+              <Route path="reminders/new" element={<ScheduleReturn />} />
               <Route path="reports" element={<Reports />} />
               <Route path="catalog" element={<Catalog />} />
               <Route path="prices" element={<PriceList />} />

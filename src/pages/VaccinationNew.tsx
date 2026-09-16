@@ -24,6 +24,7 @@ import PageHeader from "@/components/layout/PageHeader";
 import FormSection from "@/components/vetvax/FormSection";
 import SummaryCard from "@/components/vetvax/SummaryCard";
 import ActionButton from "@/components/vetvax/ActionButton";
+import FutureRemindersField, { type FutureReminderRow } from "@/components/vetvax/FutureRemindersField";
 
 const itemSchema = z.object({
   catalog_item_id: z.string().uuid("Selecione um item"),
@@ -38,8 +39,6 @@ const schema = z.object({
   notes: z.string().optional().nullable(),
   separate_by_pet: z.boolean().default(false),
   items: z.array(itemSchema).min(1, "Adicione ao menos 1 item"),
-  next_due_date: z.string().optional().nullable(),
-  create_item_reminders: z.boolean().default(false),
 });
 
 type Values = z.infer<typeof schema>;
@@ -78,10 +77,10 @@ export default function VaccinationNew() {
       notes: "",
       separate_by_pet: false,
       items: [{ catalog_item_id: "", quantity: 1, pet_id: null, free_description: null }],
-      next_due_date: "",
-      create_item_reminders: false,
     },
   });
+
+  const [nextReminders, setNextReminders] = useState<FutureReminderRow[]>([]);
 
   useEffect(() => {
     if (tutorParam) form.setValue("tutor_id", tutorParam);
@@ -122,8 +121,6 @@ export default function VaccinationNew() {
           tutor_id: values.tutor_id,
           applied_date: values.applied_date,
           notes: values.notes,
-          next_due_date: values.next_due_date || null,
-          create_item_reminders: values.create_item_reminders,
           reference_reminder_id: resolveReminderParam || null,
           items: values.items.map((it) => ({
             catalog_item_id: it.catalog_item_id,
@@ -132,6 +129,13 @@ export default function VaccinationNew() {
             free_description: it.free_description,
             metadata: {},
           })),
+          next_reminders: nextReminders
+            .filter((r) => r.catalog_item_id && r.due_date)
+            .map((r) => ({
+              catalog_item_id: r.catalog_item_id,
+              due_date: r.due_date,
+              pet_id: values.separate_by_pet ? r.pet_id : null,
+            })),
         },
       });
       if (error) throw error;
@@ -307,46 +311,19 @@ export default function VaccinationNew() {
             </div>
           </FormSection>
 
-          <FormSection step="3" title="Próxima aplicação" description="Opcional: já deixe agendado o lembrete da próxima dose.">
-            <div className="grid gap-4">
-              <div className="grid gap-2 sm:w-[240px]">
-                <Label className="vetvax-label">Data prevista (opcional)</Label>
-                <Input type="date" {...form.register("next_due_date")} />
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { label: "15 dias", days: 15 },
-                    { label: "21 dias", days: 21 },
-                    { label: "28 dias", days: 28 },
-                    { label: "Anual (365 dias)", days: 365 },
-                  ].map((opt) => (
-                    <Button
-                      key={opt.days}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 rounded-pill px-2.5 text-xs"
-                      onClick={() => {
-                        const base = form.watch("applied_date") || dayjs().format("YYYY-MM-DD");
-                        form.setValue("next_due_date", dayjs(base).add(opt.days, "day").format("YYYY-MM-DD"), { shouldValidate: true });
-                      }}
-                    >
-                      {opt.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between rounded-[14px] border border-vetvax-border-soft bg-gradient-to-r from-vetvax-surface-panel to-vetvax-surface-alt px-4 py-3.5">
-                <div>
-                  <p className="text-sm font-semibold text-vetvax-text-main">Criar lembrete para cada item</p>
-                  <p className="vetvax-help-text">Mais fiel: cria lembretes separados por item/pet quando existir.</p>
-                </div>
-                <Switch
-                  checked={form.watch("create_item_reminders")}
-                  onCheckedChange={(v) => form.setValue("create_item_reminders", v)}
-                />
-              </div>
-            </div>
+          <FormSection
+            step="3"
+            title="Próximos retornos"
+            description="Opcional: agende quantos lembretes precisar, cada um com sua própria vacina e data — por exemplo, reforço em 15 dias e revacinação anual."
+          >
+            <FutureRemindersField
+              rows={nextReminders}
+              onChange={setNextReminders}
+              baseDate={form.watch("applied_date")}
+              catalog={catalog.data ?? []}
+              pets={pets.data ?? []}
+              showPetSelect={separateByPet}
+            />
           </FormSection>
 
           <FormSection step="4" title="Observações">

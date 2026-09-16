@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { CalendarPlus, Search, Users } from "lucide-react";
+import { CalendarClock, CalendarPlus, Search, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
@@ -67,6 +67,12 @@ export default function GlobalCommandPalette({ className, placeholder = "Buscar 
         label: "Registrar aplicação",
         icon: CalendarPlus,
         run: () => nav("/vaccinations/new"),
+      },
+      {
+        key: "schedule-return",
+        label: "Agendar retorno",
+        icon: CalendarClock,
+        run: () => nav("/reminders/new"),
       },
       {
         key: "tutors",

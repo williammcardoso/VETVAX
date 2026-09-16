@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Search, TriangleAlert } from "lucide-react";
+import { Bell, CalendarClock, Search, TriangleAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Branch, DueReminderRow } from "@/types/vetvax";
 import { Input } from "@/components/ui/input";
@@ -278,6 +278,12 @@ export default function Reminders() {
         badge="Fila operacional"
         title="Lembretes"
         description="Priorize lembretes vencidos, resolva contatos e arquive pendências."
+        actions={
+          <Button onClick={() => nav("/reminders/new")}>
+            <CalendarClock className="mr-2 h-4 w-4" />
+            Agendar retorno
+          </Button>
+        }
       />
 
       <DataToolbar
