@@ -14,6 +14,7 @@ export type FutureReminderRow = {
   due_date: string;
   pet_id: string | null;
   notes: string;
+  quantity: number;
 };
 
 const DAY_SHORTCUTS = [
@@ -24,7 +25,7 @@ const DAY_SHORTCUTS = [
 ];
 
 export function emptyFutureReminderRow(): FutureReminderRow {
-  return { catalog_item_id: "", due_date: "", pet_id: null, notes: "" };
+  return { catalog_item_id: "", due_date: "", pet_id: null, notes: "", quantity: 1 };
 }
 
 export default function FutureRemindersField({
@@ -59,7 +60,7 @@ export default function FutureRemindersField({
       {rows.map((row, idx) => (
         <div key={idx} className="rounded-[14px] border border-vetvax-border-soft bg-vetvax-surface-panel/80 p-4 shadow-sm">
           <div className="grid gap-3 sm:grid-cols-12 sm:items-end">
-            <div className="grid gap-2 sm:col-span-5">
+            <div className="grid gap-2 sm:col-span-4">
               <Label className="vetvax-label">Vacina</Label>
               <Select value={row.catalog_item_id} onValueChange={(v) => updateRow(idx, { catalog_item_id: v })}>
                 <SelectTrigger>
@@ -75,9 +76,19 @@ export default function FutureRemindersField({
               </Select>
             </div>
 
-            <div className="grid gap-2 sm:col-span-3">
+            <div className="grid gap-2 sm:col-span-2">
               <Label className="vetvax-label">Data prevista</Label>
               <Input type="date" value={row.due_date} onChange={(e) => updateRow(idx, { due_date: e.target.value })} />
+            </div>
+
+            <div className="grid gap-2 sm:col-span-2">
+              <Label className="vetvax-label">Quantidade</Label>
+              <Input
+                type="number"
+                min={1}
+                value={row.quantity}
+                onChange={(e) => updateRow(idx, { quantity: Math.max(1, Number(e.target.value) || 1) })}
+              />
             </div>
 
             <div className="grid gap-2 sm:col-span-3">

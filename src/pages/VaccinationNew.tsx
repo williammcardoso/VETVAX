@@ -136,6 +136,7 @@ export default function VaccinationNew() {
               due_date: r.due_date,
               pet_id: values.separate_by_pet ? r.pet_id : null,
               notes: r.notes || null,
+              quantity: r.quantity || 1,
             })),
         },
       });

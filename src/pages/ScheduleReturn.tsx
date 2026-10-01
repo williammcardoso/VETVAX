@@ -100,6 +100,7 @@ export default function ScheduleReturn() {
             due_date: r.due_date,
             pet_id: values.separate_by_pet ? r.pet_id : null,
             notes: r.notes || values.notes || null,
+            quantity: r.quantity || 1,
           })),
         },
       });

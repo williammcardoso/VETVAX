@@ -172,9 +172,16 @@ export type DueReminderRow = {
   last_sent_at: string | null;
   send_count: number;
   notes: string | null;
+  quantity: number;
   tutor_name: string;
   tutor_phone1: string | null;
   tutor_phone2: string | null;
+  tutor_street: string | null;
+  tutor_number: string | null;
+  tutor_complement: string | null;
+  tutor_neighborhood: string | null;
+  tutor_city: string | null;
+  tutor_uf: string | null;
   pet_name: string | null;
 };
 

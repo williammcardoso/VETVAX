@@ -64,6 +64,14 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Tente novamente.";
 }
 
+function formatTutorAddress(row: DueReminderRow) {
+  const line1 = [row.tutor_street, row.tutor_number].filter(Boolean).join(", ");
+  const line2 = [row.tutor_neighborhood, row.tutor_city && row.tutor_uf ? `${row.tutor_city}/${row.tutor_uf}` : row.tutor_city || row.tutor_uf]
+    .filter(Boolean)
+    .join(" • ");
+  return [line1, row.tutor_complement, line2].filter(Boolean).join(" • ") || null;
+}
+
 export default function Reminders() {
   const qc = useQueryClient();
   const { buildReminderMessage, pickPhone } = useWhatsMessage();
@@ -119,7 +127,7 @@ export default function Reminders() {
       let q = supabase
         .from("reminders")
         .select(
-          "id, org_id, branch_id, tutor_id, pet_id, due_date, reference_appointment_id, reference_record_id, last_applied_at, reminder_type, item_name, message_template_id, status, last_sent_at, send_count, notes, created_at, is_active, tutor:tutors(name, phone1, phone2), pet:pets(name)",
+          "id, org_id, branch_id, tutor_id, pet_id, due_date, reference_appointment_id, reference_record_id, last_applied_at, reminder_type, item_name, message_template_id, status, last_sent_at, send_count, notes, quantity, created_at, is_active, tutor:tutors(name, phone1, phone2, street, number, complement, neighborhood, city, uf), pet:pets(name)",
         )
         .eq("is_active", true)
         .order("due_date", { ascending: true })
@@ -160,7 +168,18 @@ export default function Reminders() {
         last_sent_at: string | null;
         send_count: number | null;
         notes: string | null;
-        tutor: { name: string; phone1: string | null; phone2: string | null } | null;
+        quantity: number | null;
+        tutor: {
+          name: string;
+          phone1: string | null;
+          phone2: string | null;
+          street: string | null;
+          number: string | null;
+          complement: string | null;
+          neighborhood: string | null;
+          city: string | null;
+          uf: string | null;
+        } | null;
         pet: { name: string | null } | null;
       };
 
@@ -181,9 +200,16 @@ export default function Reminders() {
         last_sent_at: r.last_sent_at,
         send_count: r.send_count ?? 0,
         notes: r.notes,
+        quantity: r.quantity ?? 1,
         tutor_name: r.tutor?.name ?? "",
         tutor_phone1: r.tutor?.phone1 ?? null,
         tutor_phone2: r.tutor?.phone2 ?? null,
+        tutor_street: r.tutor?.street ?? null,
+        tutor_number: r.tutor?.number ?? null,
+        tutor_complement: r.tutor?.complement ?? null,
+        tutor_neighborhood: r.tutor?.neighborhood ?? null,
+        tutor_city: r.tutor?.city ?? null,
+        tutor_uf: r.tutor?.uf ?? null,
         pet_name: r.pet?.name ?? null,
       })) as DueReminderRow[];
 
@@ -419,7 +445,11 @@ export default function Reminders() {
                     </p>
                     <p className="text-xs text-vetvax-text-secondary">
                       {[row.tutor_phone1, row.tutor_phone2].filter(Boolean).join(" • ") || "Sem contato"} • {row.item_name ?? row.reminder_type}
+                      {row.quantity > 1 ? ` • ${row.quantity} doses` : ""}
                     </p>
+                    {formatTutorAddress(row) ? (
+                      <p className="text-xs text-vetvax-text-tertiary">📍 {formatTutorAddress(row)}</p>
+                    ) : null}
                     {row.notes ? <p className="text-xs text-vetvax-text-tertiary">{row.notes}</p> : null}
                     {(row.send_count ?? 0) > 0 ? (
                       <p className="text-[11px] font-medium text-vetvax-text-tertiary">
