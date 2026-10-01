@@ -8,6 +8,7 @@ import { dayjs, daysDiffFromToday } from "@/lib/datetime";
 import { getReminderUrgency, URGENCY_BADGE_TONE, URGENCY_STRIPE_CLASS } from "@/lib/reminderUrgency";
 import { getItemTone } from "@/lib/itemTone";
 import { formatTutorAddressLine } from "@/lib/address";
+import { displayReminderNotes } from "@/lib/reminderNotes";
 import PageHeader from "@/components/layout/PageHeader";
 import MetricTile from "@/components/vetvax/MetricTile";
 import StatusBadge from "@/components/vetvax/StatusBadge";
@@ -252,7 +253,9 @@ export default function Dashboard() {
                       {formatTutorAddress(row) ? (
                         <p className="mt-1 text-xs text-vetvax-text-tertiary">📍 {formatTutorAddress(row)}</p>
                       ) : null}
-                      {row.notes ? <p className="mt-1 line-clamp-2 text-xs text-vetvax-text-secondary">{row.notes}</p> : null}
+                      {displayReminderNotes(row.notes) ? (
+                        <p className="mt-1 line-clamp-2 text-xs text-vetvax-text-secondary">{displayReminderNotes(row.notes)}</p>
+                      ) : null}
                     </div>
                   </div>
 

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { dayjs, daysDiffFromToday } from "@/lib/datetime";
 import { getReminderUrgency, URGENCY_BADGE_TONE, URGENCY_STRIPE_CLASS } from "@/lib/reminderUrgency";
 import { formatTutorAddressLine } from "@/lib/address";
+import { displayReminderNotes } from "@/lib/reminderNotes";
 import PageHeader from "@/components/layout/PageHeader";
 import DataToolbar from "@/components/vetvax/DataToolbar";
 import StatusBadge from "@/components/vetvax/StatusBadge";
@@ -466,7 +467,9 @@ export default function Reminders() {
                     {formatTutorAddress(row) ? (
                       <p className="text-xs text-vetvax-text-tertiary">📍 {formatTutorAddress(row)}</p>
                     ) : null}
-                    {row.notes ? <p className="text-xs text-vetvax-text-tertiary">{row.notes}</p> : null}
+                    {displayReminderNotes(row.notes) ? (
+                      <p className="text-xs text-vetvax-text-tertiary">{displayReminderNotes(row.notes)}</p>
+                    ) : null}
                     {(row.send_count ?? 0) > 0 ? (
                       <p className="text-[11px] font-medium text-vetvax-text-tertiary">
                         📤 Contatado {row.send_count}x

@@ -17,6 +17,7 @@ import TutorUpsertDialog from "@/components/tutors/TutorUpsertDialog";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { formatTutorAddressLine } from "@/lib/address";
 import { getItemTone } from "@/lib/itemTone";
+import { displayReminderNotes } from "@/lib/reminderNotes";
 import StatusBadge from "@/components/vetvax/StatusBadge";
 import RichListItem from "@/components/vetvax/RichListItem";
 import EmptyState from "@/components/vetvax/EmptyState";
@@ -260,9 +261,9 @@ export default function TutorDetail() {
                 ) : null}
               </div>
             </div>
-            {t.notes ? (
+            {displayReminderNotes(t.notes) ? (
               <div className="rounded-[10px] border border-vetvax-border-soft bg-vetvax-surface-panel/60 p-3 text-xs italic text-vetvax-text-tertiary">
-                {t.notes}
+                {displayReminderNotes(t.notes)}
               </div>
             ) : null}
           </div>
@@ -355,7 +356,9 @@ export default function TutorDetail() {
                         </div>
                       </div>
                     </div>
-                    {p.notes ? <p className="mt-3 line-clamp-2 text-xs italic text-vetvax-text-tertiary">{p.notes}</p> : null}
+                    {displayReminderNotes(p.notes) ? (
+                      <p className="mt-3 line-clamp-2 text-xs italic text-vetvax-text-tertiary">{displayReminderNotes(p.notes)}</p>
+                    ) : null}
                   </button>
                 );
               })}
@@ -422,7 +425,9 @@ export default function TutorDetail() {
                               ))}
                             </div>
                           ) : null}
-                          {r.notes ? <p className="mt-2 text-xs italic text-vetvax-text-tertiary">{r.notes}</p> : null}
+                          {displayReminderNotes(r.notes) ? (
+                            <p className="mt-2 text-xs italic text-vetvax-text-tertiary">{displayReminderNotes(r.notes)}</p>
+                          ) : null}
                         </div>
                       </div>
                     </RichListItem>
@@ -452,7 +457,9 @@ export default function TutorDetail() {
                           {r.pet?.name ? `${r.pet.name} • ` : ""}
                           {r.item_name ?? r.reminder_type}
                         </span>
-                        {r.notes ? <p className="mt-2 text-xs italic text-vetvax-text-tertiary">{r.notes}</p> : null}
+                        {displayReminderNotes(r.notes) ? (
+                          <p className="mt-2 text-xs italic text-vetvax-text-tertiary">{displayReminderNotes(r.notes)}</p>
+                        ) : null}
                       </div>
                     </div>
                   </RichListItem>
