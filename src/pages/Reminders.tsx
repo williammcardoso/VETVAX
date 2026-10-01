@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dayjs, daysDiffFromToday } from "@/lib/datetime";
 import { getReminderUrgency, URGENCY_BADGE_TONE, URGENCY_STRIPE_CLASS } from "@/lib/reminderUrgency";
-import { formatTutorAddressLine } from "@/lib/address";
+import { formatTutorAddressLine, buildGoogleMapsUrl } from "@/lib/address";
 import { displayReminderNotes } from "@/lib/reminderNotes";
 import PageHeader from "@/components/layout/PageHeader";
 import DataToolbar from "@/components/vetvax/DataToolbar";
@@ -68,16 +68,18 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Tente novamente.";
 }
 
+function tutorAddressParts(row: DueReminderRow) {
+  return {
+    street: row.tutor_street,
+    number: row.tutor_number,
+    city: row.tutor_city,
+    neighborhood: row.tutor_neighborhood,
+    uf: row.tutor_uf,
+  };
+}
+
 function formatTutorAddress(row: DueReminderRow) {
-  return (
-    formatTutorAddressLine({
-      street: row.tutor_street,
-      number: row.tutor_number,
-      city: row.tutor_city,
-      neighborhood: row.tutor_neighborhood,
-      uf: row.tutor_uf,
-    }) || null
-  );
+  return formatTutorAddressLine(tutorAddressParts(row)) || null;
 }
 
 export default function Reminders() {
@@ -465,7 +467,15 @@ export default function Reminders() {
                       {row.quantity} {row.quantity === 1 ? "dose" : "doses"}
                     </p>
                     {formatTutorAddress(row) ? (
-                      <p className="text-xs text-vetvax-text-tertiary">📍 {formatTutorAddress(row)}</p>
+                      <a
+                        href={buildGoogleMapsUrl(tutorAddressParts(row)) ?? undefined}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex w-fit items-center gap-1 text-xs text-vetvax-text-tertiary hover:text-vetvax-primary hover:underline"
+                      >
+                        📍 {formatTutorAddress(row)}
+                      </a>
                     ) : null}
                     {displayReminderNotes(row.notes) ? (
                       <p className="text-xs text-vetvax-text-tertiary">{displayReminderNotes(row.notes)}</p>

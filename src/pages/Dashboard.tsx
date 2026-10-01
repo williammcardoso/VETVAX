@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { dayjs, daysDiffFromToday } from "@/lib/datetime";
 import { getReminderUrgency, URGENCY_BADGE_TONE, URGENCY_STRIPE_CLASS } from "@/lib/reminderUrgency";
 import { getItemTone } from "@/lib/itemTone";
-import { formatTutorAddressLine } from "@/lib/address";
+import { formatTutorAddressLine, buildGoogleMapsUrl } from "@/lib/address";
 import { displayReminderNotes } from "@/lib/reminderNotes";
 import PageHeader from "@/components/layout/PageHeader";
 import MetricTile from "@/components/vetvax/MetricTile";
@@ -23,16 +23,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 
+function tutorAddressParts(row: DueReminderRow) {
+  return {
+    street: row.tutor_street,
+    number: row.tutor_number,
+    city: row.tutor_city,
+    neighborhood: row.tutor_neighborhood,
+    uf: row.tutor_uf,
+  };
+}
+
 function formatTutorAddress(row: DueReminderRow) {
-  return (
-    formatTutorAddressLine({
-      street: row.tutor_street,
-      number: row.tutor_number,
-      city: row.tutor_city,
-      neighborhood: row.tutor_neighborhood,
-      uf: row.tutor_uf,
-    }) || null
-  );
+  return formatTutorAddressLine(tutorAddressParts(row)) || null;
 }
 
 async function fetchKpis() {
@@ -251,7 +253,14 @@ export default function Dashboard() {
                         {row.quantity} {row.quantity === 1 ? "dose" : "doses"}
                       </span>
                       {formatTutorAddress(row) ? (
-                        <p className="mt-1 text-xs text-vetvax-text-tertiary">📍 {formatTutorAddress(row)}</p>
+                        <a
+                          href={buildGoogleMapsUrl(tutorAddressParts(row)) ?? undefined}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 inline-flex w-fit items-center gap-1 text-xs text-vetvax-text-tertiary hover:text-vetvax-primary hover:underline"
+                        >
+                          📍 {formatTutorAddress(row)}
+                        </a>
                       ) : null}
                       {displayReminderNotes(row.notes) ? (
                         <p className="mt-1 line-clamp-2 text-xs text-vetvax-text-secondary">{displayReminderNotes(row.notes)}</p>

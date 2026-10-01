@@ -10,3 +10,10 @@ export function formatTutorAddressLine(t: Pick<Tutor, "street" | "number" | "cit
   const tail = [regionPart, uf].filter(Boolean).join(uf && regionPart ? " • " : "");
   return [streetPart, tail].filter(Boolean).join(streetPart && tail ? " • " : "");
 }
+
+export function buildGoogleMapsUrl(t: Pick<Tutor, "street" | "number" | "city" | "neighborhood" | "uf"> | null | undefined) {
+  if (!t) return null;
+  const parts = [[t.street, t.number].filter(Boolean).join(", "), t.neighborhood, t.city, t.uf].filter(Boolean);
+  if (parts.length === 0) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(", "))}`;
+}

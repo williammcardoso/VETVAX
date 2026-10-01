@@ -13,6 +13,7 @@ import TutorUpsertDialog from "@/components/tutors/TutorUpsertDialog";
 import DuplicateTutorsDialog from "@/components/tutors/DuplicateTutorsDialog";
 import PaginationBar from "@/components/vetvax/PaginationBar";
 import { buildWhatsAppLink, formatBrPhoneForDisplay } from "@/lib/phone";
+import { buildGoogleMapsUrl } from "@/lib/address";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "@/components/layout/PageHeader";
 import EmptyState from "@/components/vetvax/EmptyState";
@@ -312,13 +313,20 @@ export default function Tutors() {
               {(() => {
                 const loc = locationLabel(t);
                 if (!loc.street && !loc.region) return null;
+                const mapsUrl = buildGoogleMapsUrl(t);
                 return (
-                  <div className="mt-1.5 flex items-center gap-1.5 pl-12 text-[11px] text-vetvax-text-tertiary">
+                  <a
+                    href={mapsUrl ?? undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-1.5 flex items-center gap-1.5 pl-12 text-[11px] text-vetvax-text-tertiary hover:text-vetvax-primary hover:underline"
+                  >
                     <MapPin className="h-3 w-3 shrink-0 text-sky-500" />
                     <span className="truncate">
                       {loc.street ? `${loc.street} · ` : ""}{loc.region}
                     </span>
-                  </div>
+                  </a>
                 );
               })()}
             </RichListItem>

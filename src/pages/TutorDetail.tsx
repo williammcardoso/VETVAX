@@ -15,7 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import PetUpsertDialog from "@/components/tutors/PetUpsertDialog";
 import TutorUpsertDialog from "@/components/tutors/TutorUpsertDialog";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
-import { formatTutorAddressLine } from "@/lib/address";
+import { formatTutorAddressLine, buildGoogleMapsUrl } from "@/lib/address";
 import { getItemTone } from "@/lib/itemTone";
 import { displayReminderNotes } from "@/lib/reminderNotes";
 import StatusBadge from "@/components/vetvax/StatusBadge";
@@ -252,15 +252,32 @@ export default function TutorDetail() {
               <span>{t.phone1 ? formatBrPhoneForDisplay(t.phone1) : "—"}</span>
               {t.phone2 ? <span>• {formatBrPhoneForDisplay(t.phone2)}</span> : null}
             </div>
-            <div className="flex items-start gap-2 text-vetvax-text-secondary">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-sky-500" />
-              <div>
-                <div>{[t.street, t.number, t.complement].filter(Boolean).join(", ") || "—"}</div>
-                {t.neighborhood || t.city || t.uf ? (
-                  <div className="text-vetvax-text-tertiary">{[t.neighborhood, t.city, t.uf].filter(Boolean).join(" • ")}</div>
-                ) : null}
-              </div>
-            </div>
+            {(() => {
+              const mapsUrl = buildGoogleMapsUrl(t);
+              const content = (
+                <>
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-sky-500" />
+                  <div>
+                    <div>{[t.street, t.number, t.complement].filter(Boolean).join(", ") || "—"}</div>
+                    {t.neighborhood || t.city || t.uf ? (
+                      <div className="text-vetvax-text-tertiary">{[t.neighborhood, t.city, t.uf].filter(Boolean).join(" • ")}</div>
+                    ) : null}
+                  </div>
+                </>
+              );
+              return mapsUrl ? (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-2 text-vetvax-text-secondary hover:text-vetvax-primary hover:underline"
+                >
+                  {content}
+                </a>
+              ) : (
+                <div className="flex items-start gap-2 text-vetvax-text-secondary">{content}</div>
+              );
+            })()}
             {displayReminderNotes(t.notes) ? (
               <div className="rounded-[10px] border border-vetvax-border-soft bg-vetvax-surface-panel/60 p-3 text-xs italic text-vetvax-text-tertiary">
                 {displayReminderNotes(t.notes)}
