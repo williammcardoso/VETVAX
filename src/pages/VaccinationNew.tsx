@@ -325,6 +325,11 @@ export default function VaccinationNew() {
               catalog={catalog.data ?? []}
               pets={pets.data ?? []}
               showPetSelect={separateByPet}
+              firstRowDefaults={{
+                catalog_item_id: form.watch("items.0.catalog_item_id") || "",
+                quantity: form.watch("items.0.quantity") || 1,
+                pet_id: separateByPet ? (form.watch("items.0.pet_id") ?? null) : null,
+              }}
             />
           </FormSection>
 

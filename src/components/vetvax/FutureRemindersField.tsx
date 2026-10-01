@@ -24,6 +24,8 @@ const DAY_SHORTCUTS = [
   { label: "Anual (365 dias)", days: 365 },
 ];
 
+const NOTES_SHORTCUTS = ["1ª dose", "2ª dose", "3ª dose", "4ª dose", "Dose anual"];
+
 export function emptyFutureReminderRow(): FutureReminderRow {
   return { catalog_item_id: "", due_date: "", pet_id: null, notes: "", quantity: 1 };
 }
@@ -35,6 +37,7 @@ export default function FutureRemindersField({
   catalog,
   pets,
   showPetSelect,
+  firstRowDefaults,
 }: {
   rows: FutureReminderRow[];
   onChange: (rows: FutureReminderRow[]) => void;
@@ -42,6 +45,8 @@ export default function FutureRemindersField({
   catalog: CatalogItem[];
   pets: Pet[];
   showPetSelect: boolean;
+  /** Applied when the very first row is added (e.g. duplicate the just-applied vaccine + quantity). */
+  firstRowDefaults?: Partial<FutureReminderRow>;
 }) {
   const updateRow = (idx: number, patch: Partial<FutureReminderRow>) => {
     onChange(rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
@@ -52,15 +57,17 @@ export default function FutureRemindersField({
   };
 
   const addRow = () => {
-    onChange([...rows, emptyFutureReminderRow()]);
+    const base = emptyFutureReminderRow();
+    const next = rows.length === 0 && firstRowDefaults ? { ...base, ...firstRowDefaults } : base;
+    onChange([...rows, next]);
   };
 
   return (
     <div className="space-y-3">
       {rows.map((row, idx) => (
         <div key={idx} className="rounded-[14px] border border-vetvax-border-soft bg-vetvax-surface-panel/80 p-4 shadow-sm">
-          <div className="grid gap-3 sm:grid-cols-12 sm:items-end">
-            <div className="grid gap-2 sm:col-span-4">
+          <div className="flex items-start gap-2">
+            <div className="grid flex-1 gap-2">
               <Label className="vetvax-label">Vacina</Label>
               <Select value={row.catalog_item_id} onValueChange={(v) => updateRow(idx, { catalog_item_id: v })}>
                 <SelectTrigger>
@@ -75,13 +82,18 @@ export default function FutureRemindersField({
                 </SelectContent>
               </Select>
             </div>
+            <Button type="button" variant="ghost" size="icon" className="mt-6" onClick={() => removeRow(idx)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
 
-            <div className="grid gap-2 sm:col-span-2">
+          <div className="mt-3 grid gap-3 grid-cols-1 sm:grid-cols-3">
+            <div className="grid gap-2">
               <Label className="vetvax-label">Data prevista</Label>
               <Input type="date" value={row.due_date} onChange={(e) => updateRow(idx, { due_date: e.target.value })} />
             </div>
 
-            <div className="grid gap-2 sm:col-span-2">
+            <div className="grid gap-2">
               <Label className="vetvax-label">Quantidade</Label>
               <Input
                 type="number"
@@ -91,7 +103,7 @@ export default function FutureRemindersField({
               />
             </div>
 
-            <div className="grid gap-2 sm:col-span-3">
+            <div className="grid gap-2">
               <Label className="vetvax-label">Pet (opcional)</Label>
               <Select
                 value={row.pet_id ?? "_none"}
@@ -110,12 +122,6 @@ export default function FutureRemindersField({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="sm:col-span-1 flex justify-end">
-              <Button type="button" variant="ghost" size="icon" onClick={() => removeRow(idx)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </div>
           </div>
 
@@ -144,6 +150,20 @@ export default function FutureRemindersField({
               value={row.notes}
               onChange={(e) => updateRow(idx, { notes: e.target.value })}
             />
+            <div className="flex flex-wrap gap-1.5">
+              {NOTES_SHORTCUTS.map((label) => (
+                <Button
+                  key={label}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 rounded-pill px-2.5 text-xs"
+                  onClick={() => updateRow(idx, { notes: label })}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
       ))}
