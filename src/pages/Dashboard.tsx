@@ -264,7 +264,8 @@ export default function Dashboard() {
                       <span className={`mt-1 inline-flex max-w-full min-h-[22px] items-center truncate rounded-pill border px-2 py-0.5 text-[11px] font-bold leading-none ${getItemTone(row.item_name ?? row.reminder_type)}`}>
                         {row.pet_name ? `${row.pet_name} • ` : ""}
                         {row.item_name ?? row.reminder_type}
-                        {row.quantity > 1 ? ` • ${row.quantity} doses` : ""}
+                        {" • "}
+                        {row.quantity} {row.quantity === 1 ? "dose" : "doses"}
                       </span>
                       {formatTutorAddress(row) ? (
                         <p className="mt-1 text-xs text-vetvax-text-tertiary">📍 {formatTutorAddress(row)}</p>

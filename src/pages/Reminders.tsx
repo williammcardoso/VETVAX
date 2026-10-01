@@ -445,7 +445,8 @@ export default function Reminders() {
                     </p>
                     <p className="text-xs text-vetvax-text-secondary">
                       {[row.tutor_phone1, row.tutor_phone2].filter(Boolean).join(" • ") || "Sem contato"} • {row.item_name ?? row.reminder_type}
-                      {row.quantity > 1 ? ` • ${row.quantity} doses` : ""}
+                      {" • "}
+                      {row.quantity} {row.quantity === 1 ? "dose" : "doses"}
                     </p>
                     {formatTutorAddress(row) ? (
                       <p className="text-xs text-vetvax-text-tertiary">📍 {formatTutorAddress(row)}</p>
