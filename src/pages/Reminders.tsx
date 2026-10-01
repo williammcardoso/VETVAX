@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { dayjs, daysDiffFromToday } from "@/lib/datetime";
 import { getReminderUrgency, URGENCY_BADGE_TONE, URGENCY_STRIPE_CLASS } from "@/lib/reminderUrgency";
 import { formatTutorAddressLine, buildGoogleMapsUrl } from "@/lib/address";
+import { matchesSearchAny } from "@/lib/search";
 import { displayReminderNotes } from "@/lib/reminderNotes";
 import PageHeader from "@/components/layout/PageHeader";
 import DataToolbar from "@/components/vetvax/DataToolbar";
@@ -235,14 +236,12 @@ export default function Reminders() {
 
       if (!term) return byContact;
 
-      const t = term.toLowerCase();
-      return byContact.filter((row) => {
-        const hay = [row.tutor_name, row.pet_name, row.tutor_phone1, row.tutor_phone2, row.notes, row.reminder_type, row.item_name]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return hay.includes(t);
-      });
+      return byContact.filter((row) =>
+        matchesSearchAny(
+          [row.tutor_name, row.pet_name, row.tutor_phone1, row.tutor_phone2, row.notes, row.reminder_type, row.item_name],
+          term,
+        ),
+      );
     },
   });
 

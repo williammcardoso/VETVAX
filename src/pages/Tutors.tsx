@@ -14,6 +14,7 @@ import DuplicateTutorsDialog from "@/components/tutors/DuplicateTutorsDialog";
 import PaginationBar from "@/components/vetvax/PaginationBar";
 import { buildWhatsAppLink, formatBrPhoneForDisplay } from "@/lib/phone";
 import { buildGoogleMapsUrl } from "@/lib/address";
+import { matchesSearch, matchesSearchAny } from "@/lib/search";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "@/components/layout/PageHeader";
 import EmptyState from "@/components/vetvax/EmptyState";
@@ -64,52 +65,56 @@ export default function Tutors() {
   const [openDuplicates, setOpenDuplicates] = useState(false);
 
   const tutors = useQuery({
-    queryKey: ["tutors", "list", q, filterBy, page, pageSize, sortBy],
+    queryKey: ["tutors", "all"],
     queryFn: async () => {
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-      let query = supabase
+      const { data, error } = await supabase
         .from("tutors")
         .select(
           "id, org_id, branch_id, name, street, number, complement, neighborhood, city, uf, phone1, phone2, notes, tags, contact_consent, is_active, created_at",
-          { count: "exact" },
         )
         .eq("is_active", true)
-        .range(from, to);
-
-      if (sortBy === "latest") {
-        query = query.order("created_at", { ascending: false }).order("name", { ascending: true });
-      } else if (sortBy === "name") {
-        query = query.order("name", { ascending: true });
-      } else if (sortBy === "address") {
-        query = query.order("city", { ascending: true }).order("neighborhood", { ascending: true }).order("name", { ascending: true });
-      } else {
-        query = query.order("created_at", { ascending: true }).order("name", { ascending: true });
-      }
-
-      const term = q.trim();
-      if (term) {
-        const searchByFilter: Record<typeof filterBy, string> = {
-          all: `name.ilike.%${term}%,phone1.ilike.%${term}%,phone2.ilike.%${term}%,city.ilike.%${term}%,neighborhood.ilike.%${term}%`,
-          name: `name.ilike.%${term}%`,
-          phone: `phone1.ilike.%${term}%,phone2.ilike.%${term}%`,
-          address: `city.ilike.%${term}%,neighborhood.ilike.%${term}%,street.ilike.%${term}%,uf.ilike.%${term}%`,
-        };
-        query = query.or(searchByFilter[filterBy]);
-      }
-
-      const { data, count, error } = await query;
+        .limit(5000);
       if (error) throw error;
-      return {
-        rows: (data ?? []) as Tutor[],
-        count: count ?? 0,
-      };
+      return (data ?? []) as Tutor[];
     },
   });
 
-  const rows = useMemo(() => tutors.data?.rows ?? [], [tutors.data?.rows]);
-  const total = tutors.data?.count ?? 0;
+  const filteredSorted = useMemo(() => {
+    const all = tutors.data ?? [];
+    const term = q.trim();
+    const filtered = !term
+      ? all
+      : all.filter((t) => {
+          if (filterBy === "name") return matchesSearch(t.name, term);
+          if (filterBy === "phone") return matchesSearchAny([t.phone1, t.phone2], term);
+          if (filterBy === "address") return matchesSearchAny([t.city, t.neighborhood, t.street, t.uf], term);
+          return matchesSearchAny([t.name, t.phone1, t.phone2, t.city, t.neighborhood], term);
+        });
+
+    const sorted = [...filtered];
+    if (sortBy === "latest") {
+      sorted.sort((a, b) => b.created_at.localeCompare(a.created_at) || a.name.localeCompare(b.name));
+    } else if (sortBy === "name") {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === "address") {
+      sorted.sort(
+        (a, b) =>
+          (a.city ?? "").localeCompare(b.city ?? "") ||
+          (a.neighborhood ?? "").localeCompare(b.neighborhood ?? "") ||
+          a.name.localeCompare(b.name),
+      );
+    } else {
+      sorted.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.name.localeCompare(b.name));
+    }
+    return sorted;
+  }, [tutors.data, q, filterBy, sortBy]);
+
+  const total = filteredSorted.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const rows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredSorted.slice(start, start + pageSize);
+  }, [filteredSorted, page, pageSize]);
   const withPhoneCount = useMemo(() => rows.filter((r) => r.phone1 || r.phone2).length, [rows]);
   const consentCount = useMemo(() => rows.filter((r) => r.contact_consent).length, [rows]);
 

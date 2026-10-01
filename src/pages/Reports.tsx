@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { dayjs } from "@/lib/datetime";
+import { matchesSearch, matchesSearchAny } from "@/lib/search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
@@ -159,17 +160,12 @@ async function fetchReport(filters: FiltersState) {
     responsible_name: r.created_by ? (nameMap[r.created_by] ?? null) : null,
   }));
 
-  const tutorTerm = filters.tutor.trim().toLowerCase();
-  const vaccineTerm = filters.vaccineQuery.trim().toLowerCase();
+  const tutorTerm = filters.tutor.trim();
+  const vaccineTerm = filters.vaccineQuery.trim();
 
   return mapped.filter((row) => {
-    if (tutorTerm) {
-      const hay = [row.tutor_name, row.tutor_phone1, row.tutor_phone2].filter(Boolean).join(" ").toLowerCase();
-      if (!hay.includes(tutorTerm)) return false;
-    }
-    if (vaccineTerm) {
-      if (!row.vaccines.toLowerCase().includes(vaccineTerm)) return false;
-    }
+    if (tutorTerm && !matchesSearchAny([row.tutor_name, row.tutor_phone1, row.tutor_phone2], tutorTerm)) return false;
+    if (vaccineTerm && !matchesSearch(row.vaccines, vaccineTerm)) return false;
     return true;
   });
 }

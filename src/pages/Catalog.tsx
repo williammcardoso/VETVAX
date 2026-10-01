@@ -21,6 +21,7 @@ import EmptyState from "@/components/vetvax/EmptyState";
 import ActionButton from "@/components/vetvax/ActionButton";
 import DataToolbar from "@/components/vetvax/DataToolbar";
 import RichListItem from "@/components/vetvax/RichListItem";
+import { matchesSearch } from "@/lib/search";
 
 const schema = z.object({
   name: z.string().min(2, "Informe o nome"),
@@ -52,19 +53,14 @@ export default function Catalog() {
   const [typeFilter, setTypeFilter] = useState<"all" | Values["category"]>("all");
 
   const items = useQuery({
-    queryKey: ["catalog", "admin", q],
+    queryKey: ["catalog", "admin"],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from("catalog_items")
         .select("id, org_id, name, category, requires_description, allows_origin, default_origin, is_active")
         .order("is_active", { ascending: false })
         .order("category", { ascending: true })
         .order("name", { ascending: true });
-
-      const term = q.trim();
-      if (term) query = query.ilike("name", `%${term}%`);
-
-      const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as CatalogItem[];
     },
@@ -115,10 +111,11 @@ export default function Catalog() {
   });
 
   const rows = useMemo(() => {
-    const base = items.data ?? [];
-    if (typeFilter === "all") return base;
-    return base.filter((item) => item.category === typeFilter);
-  }, [items.data, typeFilter]);
+    let base = items.data ?? [];
+    if (typeFilter !== "all") base = base.filter((item) => item.category === typeFilter);
+    if (q.trim()) base = base.filter((item) => matchesSearch(item.name, q));
+    return base;
+  }, [items.data, typeFilter, q]);
 
   return (
     <div className="space-y-6">

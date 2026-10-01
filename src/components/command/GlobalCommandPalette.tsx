@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { matchesSearchAny } from "@/lib/search";
 
 type TutorLite = { id: string; name: string; phone1: string | null; phone2: string | null };
 
@@ -41,24 +42,26 @@ export default function GlobalCommandPalette({ className, placeholder = "Buscar 
   useHotkey(() => setOpen((v) => !v));
 
   const tutors = useQuery({
-    queryKey: ["cmdk", "tutors", q],
+    queryKey: ["cmdk", "tutors"],
     enabled: open,
     queryFn: async () => {
-      const term = q.trim();
-      if (!term) return [] as TutorLite[];
-
       const { data, error } = await supabase
         .from("tutors")
         .select("id, name, phone1, phone2")
         .eq("is_active", true)
-        .or(`name.ilike.%${term}%,phone1.ilike.%${term}%,phone2.ilike.%${term}%`)
         .order("name", { ascending: true })
-        .limit(10);
+        .limit(5000);
 
       if (error) throw error;
       return (data ?? []) as TutorLite[];
     },
   });
+
+  const filteredTutors = useMemo(() => {
+    const term = q.trim();
+    if (!term) return [] as TutorLite[];
+    return (tutors.data ?? []).filter((t) => matchesSearchAny([t.name, t.phone1, t.phone2], term)).slice(0, 10);
+  }, [tutors.data, q]);
 
   const quickActions = useMemo(
     () => [
@@ -109,7 +112,7 @@ export default function GlobalCommandPalette({ className, placeholder = "Buscar 
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="p-0 rounded-[10px] overflow-hidden max-w-2xl border-[1.5px] border-border shadow-[0_6px_16px_rgba(0,0,0,0.08)]">
-          <Command>
+          <Command shouldFilter={false}>
             <div className="border-b border-border p-2">
               <CommandInput placeholder="Buscar tutor ou ação…" value={q} onValueChange={setQ} />
             </div>
@@ -137,7 +140,7 @@ export default function GlobalCommandPalette({ className, placeholder = "Buscar 
               <CommandSeparator />
 
               <CommandGroup heading="Clientes">
-                {(tutors.data ?? []).map((t) => (
+                {filteredTutors.map((t) => (
                   <CommandItem
                     key={t.id}
                     className="rounded-[10px]"

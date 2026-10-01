@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { matchesSearchAny } from "@/lib/search";
 
 type TutorLite = {
   id: string;
@@ -30,27 +31,27 @@ export default function TutorCombobox({
   const [q, setQ] = useState("");
 
   const tutors = useQuery({
-    queryKey: ["tutors", "combo", q],
+    queryKey: ["tutors", "combo"],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from("tutors")
         .select("id, name, phone1, phone2, street, number, neighborhood")
         .eq("is_active", true)
         .order("name", { ascending: true })
-        .limit(50);
-
-      const term = q.trim();
-      if (term) {
-        query = query.or(
-          `name.ilike.%${term}%,phone1.ilike.%${term}%,phone2.ilike.%${term}%,street.ilike.%${term}%,number.ilike.%${term}%,neighborhood.ilike.%${term}%`,
-        );
-      }
-
-      const { data, error } = await query;
+        .limit(5000);
       if (error) throw error;
       return (data ?? []) as TutorLite[];
     },
   });
+
+  const filteredTutors = useMemo(() => {
+    const term = q.trim();
+    const all = tutors.data ?? [];
+    const matched = !term
+      ? all
+      : all.filter((t) => matchesSearchAny([t.name, t.phone1, t.phone2, t.street, t.number, t.neighborhood], term));
+    return matched.slice(0, 50);
+  }, [tutors.data, q]);
 
   const selected = useMemo(() => tutors.data?.find((t) => t.id === value) ?? null, [tutors.data, value]);
 
@@ -70,7 +71,7 @@ export default function TutorCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[min(520px,90vw)] p-0 rounded-[10px] border-[1.5px]" align="start">
-        <Command>
+        <Command shouldFilter={false}>
           <div className="flex items-center gap-2 border-b border-border px-3">
             <Search className="h-4 w-4 text-muted-foreground" />
             <CommandInput placeholder="Buscar tutor…" value={q} onValueChange={setQ} />
@@ -86,7 +87,7 @@ export default function TutorCombobox({
               </div>
             </CommandEmpty>
             <CommandGroup heading="Tutores">
-              {(tutors.data ?? []).map((t) => (
+              {filteredTutors.map((t) => (
                 <CommandItem
                   key={t.id}
                   value={`${t.name} ${t.phone1 ?? ""} ${t.phone2 ?? ""} ${t.street ?? ""} ${t.number ?? ""} ${t.neighborhood ?? ""}`}

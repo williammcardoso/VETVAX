@@ -18,6 +18,7 @@ import { buildWhatsAppLink, normalizeBrPhone } from "@/lib/phone";
 import { renderTemplate } from "@/lib/template";
 import RichListItem from "@/components/vetvax/RichListItem";
 import EmptyState from "@/components/vetvax/EmptyState";
+import { matchesSearch } from "@/lib/search";
 
 type QuoteItemDraft = {
   price_list_item_id: string;
@@ -73,20 +74,22 @@ export default function PriceList() {
   const [selectedTutorId, setSelectedTutorId] = useState("");
 
   const priceItems = useQuery({
-    queryKey: ["prices", "items", q],
+    queryKey: ["prices", "items"],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from("price_list_items")
         .select("id, org_id, vaccine_name, price_cents, is_active, created_at, updated_at")
         .order("is_active", { ascending: false })
         .order("vaccine_name", { ascending: true });
-      const term = q.trim();
-      if (term) query = query.ilike("vaccine_name", `%${term}%`);
-      const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as PriceListItem[];
     },
   });
+
+  const filteredPriceItems = useMemo(
+    () => (priceItems.data ?? []).filter((item) => matchesSearch(item.vaccine_name, q)),
+    [priceItems.data, q],
+  );
 
   const quoteTemplates = useQuery({
     queryKey: ["prices", "quotes"],
@@ -338,7 +341,7 @@ export default function PriceList() {
             />
           </div>
           <div className="space-y-2">
-            {(priceItems.data ?? []).map((item) => (
+            {filteredPriceItems.map((item) => (
               <RichListItem key={item.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-extrabold text-vetvax-text-main">{item.vaccine_name}</p>
@@ -362,8 +365,12 @@ export default function PriceList() {
                 </div>
               </RichListItem>
             ))}
-            {!priceItems.isLoading && (priceItems.data ?? []).length === 0 ? (
-              <EmptyState icon={Tag} title="Nenhuma vacina cadastrada" description="Cadastre o primeiro valor para montar orçamentos." />
+            {!priceItems.isLoading && filteredPriceItems.length === 0 ? (
+              <EmptyState
+                icon={Tag}
+                title={q.trim() ? "Nenhuma vacina encontrada" : "Nenhuma vacina cadastrada"}
+                description="Cadastre o primeiro valor para montar orçamentos."
+              />
             ) : null}
           </div>
         </Card>
