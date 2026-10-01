@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowUpRight, Building2, MapPin, Phone, Plus, Search, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { ArrowUpRight, Building2, MapPin, Phone, Plus, Search, ShieldCheck, Sparkles, Users, Copy } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Tutor } from "@/types/vetvax";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import TutorUpsertDialog from "@/components/tutors/TutorUpsertDialog";
+import DuplicateTutorsDialog from "@/components/tutors/DuplicateTutorsDialog";
 import { buildWhatsAppLink, formatBrPhoneForDisplay } from "@/lib/phone";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "@/components/layout/PageHeader";
@@ -55,6 +56,7 @@ export default function Tutors() {
   const [pageSize, setPageSize] = useState<10 | 20 | 50>(10);
   const [sortBy, setSortBy] = useState<"latest" | "name" | "address" | "created_asc">("latest");
   const [openCreate, setOpenCreate] = useState(false);
+  const [openDuplicates, setOpenDuplicates] = useState(false);
 
   const tutors = useQuery({
     queryKey: ["tutors", "list", q, filterBy, page, pageSize, sortBy],
@@ -150,6 +152,10 @@ export default function Tutors() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="info">{total} clientes</Badge>
+            <Button variant="outline" onClick={() => setOpenDuplicates(true)}>
+              <Copy className="mr-1 h-4 w-4" />
+              Duplicados
+            </Button>
             <Button onClick={() => setOpenCreate(true)}>
               <Plus className="mr-1 h-4 w-4" />
               Novo cliente
@@ -157,6 +163,8 @@ export default function Tutors() {
           </div>
         }
       />
+
+      <DuplicateTutorsDialog open={openDuplicates} onOpenChange={setOpenDuplicates} />
 
       <section className="grid gap-3 sm:grid-cols-3">
         <Card className="group rounded-[14px] border-[1.5px] border-[#378ADD] bg-[#E6F1FB] p-4 opacity-0 transition-[transform,box-shadow] duration-[180ms] ease-[ease] hover:-translate-y-[3px] hover:shadow-[0_6px_20px_-6px_rgba(0,0,0,0.13)] animate-fade-up-1">

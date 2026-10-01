@@ -4,7 +4,8 @@ import { Bell, Clock3, MoreHorizontal, Syringe, UserPlus, Users } from "lucide-r
 import { supabase } from "@/lib/supabase";
 import type { DashboardKpis, DueReminderRow, VaccinationRecordRow } from "@/types/vetvax";
 import { Button } from "@/components/ui/button";
-import { dayjs } from "@/lib/datetime";
+import { dayjs, daysDiffFromToday } from "@/lib/datetime";
+import { getReminderUrgency, URGENCY_BADGE_TONE, URGENCY_STRIPE_CLASS } from "@/lib/reminderUrgency";
 import PageHeader from "@/components/layout/PageHeader";
 import MetricTile from "@/components/vetvax/MetricTile";
 import StatusBadge from "@/components/vetvax/StatusBadge";
@@ -238,12 +239,17 @@ export default function Dashboard() {
               />
             )}
 
-            {upcomingPreview.map((row) => (
+            {upcomingPreview.map((row) => {
+              const days = daysDiffFromToday(row.due_date);
+              const urgency = getReminderUrgency(row.due_date);
+              const dueLabel = urgency === "soon" ? (days === 0 ? "vence hoje" : `vence em ${days}d`) : "a vencer";
+              return (
               <RichListItem key={row.id}>
-                <div className="grid min-h-[84px] gap-3 md:grid-cols-[96px_minmax(0,1fr)_auto] md:items-center">
+                <div className="grid min-h-[84px] gap-3 md:grid-cols-[5px_96px_minmax(0,1fr)_auto] md:items-center">
+                  <div className={`h-full rounded-pill ${URGENCY_STRIPE_CLASS[urgency]}`} />
                   <div>
                     <p className="text-[13px] font-bold text-vetvax-primary">{dayjs(row.due_date).format("DD/MM/YYYY")}</p>
-                    <StatusBadge tone="warning" className="mt-1">A vencer</StatusBadge>
+                    <StatusBadge tone={URGENCY_BADGE_TONE[urgency]} className="mt-1">{dueLabel}</StatusBadge>
                   </div>
 
                   <div className="flex items-start gap-3">
@@ -315,7 +321,8 @@ export default function Dashboard() {
                   </div>
                 </div>
               </RichListItem>
-            ))}
+              );
+            })}
           </div>
 
           {!reminders.isLoading && (reminders.data?.length ?? 0) > upcomingPreview.length ? (

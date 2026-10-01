@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, UserCog, UserPlus, Users } from "lucide-react";
+import { UserCog, UserPlus, Users } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import type { Profile } from "@/types/vetvax";
@@ -90,12 +90,9 @@ export default function Access() {
                     <p className="text-xs text-vetvax-text-tertiary">{m.role === "admin" ? "Administrador" : "Operador"}</p>
                   </div>
                 </div>
-                <div className="hidden items-center gap-6 md:flex">
-                  <span className="font-mono text-xs text-vetvax-text-tertiary">{m.id.slice(0, 8)}</span>
-                  <span className="text-xs text-vetvax-text-tertiary">{new Date(m.created_at).toLocaleDateString("pt-BR")}</span>
-                  <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                <div className="flex flex-shrink-0 flex-col items-end gap-0.5 text-right sm:flex-row sm:items-center sm:gap-6">
+                  <span className="hidden font-mono text-xs text-vetvax-text-tertiary sm:inline">{m.id.slice(0, 8)}</span>
+                  <span className="text-xs text-vetvax-text-tertiary">desde {new Date(m.created_at).toLocaleDateString("pt-BR")}</span>
                 </div>
               </article>
             ))}

@@ -42,6 +42,44 @@ type RecordRow = {
   items: RecordItem[] | null;
 };
 
+function exportReportCsv(rows: VaccinationReportRow[]) {
+  if (rows.length === 0) {
+    toast({ title: "Nada para exportar", description: "Ajuste os filtros para ter registros.", variant: "destructive" });
+    return;
+  }
+
+  const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
+  const headers = ["Data", "Tutor", "Telefone", "Vacinas", "Responsável", "Próximo retorno"];
+  const lines = [headers.map(escape).join(";")];
+
+  for (const r of rows) {
+    lines.push(
+      [
+        dayjs(r.applied_date).format("DD/MM/YYYY"),
+        r.tutor_name,
+        [r.tutor_phone1, r.tutor_phone2].filter(Boolean).join(" / "),
+        r.vaccines,
+        r.responsible_name ?? "",
+        r.next_due_date ? dayjs(r.next_due_date).format("DD/MM/YYYY") : "",
+      ]
+        .map((value) => escape(String(value ?? "")))
+        .join(";"),
+    );
+  }
+
+  // BOM so Excel pt-br opens the accented text correctly.
+  const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `vetvax-relatorio-${dayjs().format("YYYY-MM-DD")}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast({ title: "CSV exportado", description: `${rows.length} registro(s).` });
+}
+
 function uniqueLabels(labels: string[]) {
   const seen = new Set<string>();
   const uniq: string[] = [];
@@ -233,7 +271,7 @@ export default function Reports() {
           loading={rows.isLoading}
           rows={pagedRows}
           totalCount={count}
-          onExport={() => toast({ title: "CSV exportado" })}
+          onExport={() => exportReportCsv(rows.data ?? [])}
           onDelete={(r) => {
             setDeleteRow(r);
             setDeleteOpen(true);

@@ -6,7 +6,8 @@ import type { Branch, DueReminderRow } from "@/types/vetvax";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { dayjs } from "@/lib/datetime";
+import { dayjs, daysDiffFromToday } from "@/lib/datetime";
+import { getReminderUrgency, URGENCY_BADGE_TONE, URGENCY_STRIPE_CLASS } from "@/lib/reminderUrgency";
 import PageHeader from "@/components/layout/PageHeader";
 import DataToolbar from "@/components/vetvax/DataToolbar";
 import StatusBadge from "@/components/vetvax/StatusBadge";
@@ -425,16 +426,24 @@ export default function Reminders() {
           ) : null}
 
           {paged.map((row) => {
-            const overdueDays = Math.abs(dayjs().startOf("day").diff(dayjs(row.due_date), "day"));
-            const isOverdue = dayjs(row.due_date).isBefore(dayjs().startOf("day"));
+            const days = daysDiffFromToday(row.due_date);
+            const urgency = getReminderUrgency(row.due_date);
+            const dueLabel =
+              urgency === "overdue"
+                ? `vencido há ${Math.abs(days)}d`
+                : urgency === "soon"
+                  ? days === 0
+                    ? "vence hoje"
+                    : `vence em ${days}d`
+                  : "a vencer";
             return (
               <RichListItem key={row.id} className="border border-vetvax-border-soft bg-gradient-to-b from-white to-vetvax-surface-panel/40">
                 <div className="grid gap-3 md:grid-cols-[5px_1fr_auto] md:items-center">
-                  <div className={isOverdue ? "h-full rounded-pill bg-vetvax-danger" : "h-full rounded-pill bg-transparent"} />
+                  <div className={`h-full rounded-pill ${row.status === "ATIVO" ? URGENCY_STRIPE_CLASS[urgency] : "bg-transparent"}`} />
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-xs text-vetvax-text-tertiary">{dayjs(row.due_date).format("DD/MM/YYYY")}</p>
-                      {isOverdue ? <StatusBadge tone="danger">vencido há {overdueDays}d</StatusBadge> : <StatusBadge tone="warning">a vencer</StatusBadge>}
+                      <StatusBadge tone={URGENCY_BADGE_TONE[urgency]}>{dueLabel}</StatusBadge>
                       {row.status === "ATIVO" ? <StatusBadge tone="warning">ativo</StatusBadge> : null}
                       {row.status === "FEITO" ? <StatusBadge tone="success">resolvido</StatusBadge> : null}
                       {row.status === "ARQUIVADO" ? <StatusBadge>arquivado</StatusBadge> : null}
