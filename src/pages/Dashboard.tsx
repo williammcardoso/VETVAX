@@ -19,6 +19,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 
+function formatTutorAddress(row: DueReminderRow) {
+  const line1 = [row.tutor_street, row.tutor_number].filter(Boolean).join(", ");
+  const line2 = [row.tutor_neighborhood, row.tutor_city && row.tutor_uf ? `${row.tutor_city}/${row.tutor_uf}` : row.tutor_city || row.tutor_uf]
+    .filter(Boolean)
+    .join(" • ");
+  return [line1, row.tutor_complement, line2].filter(Boolean).join(" • ") || null;
+}
+
 function getItemTone(itemName: string) {
   const palette = [
     "border-[#ddd6fe] bg-[#f5f3ff] text-[#5b21b6]",
@@ -256,7 +264,11 @@ export default function Dashboard() {
                       <span className={`mt-1 inline-flex max-w-full min-h-[22px] items-center truncate rounded-pill border px-2 py-0.5 text-[11px] font-bold leading-none ${getItemTone(row.item_name ?? row.reminder_type)}`}>
                         {row.pet_name ? `${row.pet_name} • ` : ""}
                         {row.item_name ?? row.reminder_type}
+                        {row.quantity > 1 ? ` • ${row.quantity} doses` : ""}
                       </span>
+                      {formatTutorAddress(row) ? (
+                        <p className="mt-1 text-xs text-vetvax-text-tertiary">📍 {formatTutorAddress(row)}</p>
+                      ) : null}
                       {row.notes ? <p className="mt-1 line-clamp-2 text-xs text-vetvax-text-secondary">{row.notes}</p> : null}
                     </div>
                   </div>
