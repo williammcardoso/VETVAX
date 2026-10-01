@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { buildWhatsAppLink, normalizeBrPhone } from "@/lib/phone";
 import { renderTemplate } from "@/lib/template";
+import RichListItem from "@/components/vetvax/RichListItem";
+import EmptyState from "@/components/vetvax/EmptyState";
 
 type QuoteItemDraft = {
   price_list_item_id: string;
@@ -337,7 +339,7 @@ export default function PriceList() {
           </div>
           <div className="space-y-2">
             {(priceItems.data ?? []).map((item) => (
-              <article key={item.id} className="flex flex-col gap-2 rounded-[14px] border border-vetvax-border-soft bg-gradient-to-r from-white to-vetvax-surface-panel/80 p-3 shadow-sm transition-[box-shadow,border-color,transform] duration-vetvax hover:-translate-y-px hover:border-vetvax-primary-border hover:shadow-md sm:flex-row sm:items-center sm:justify-between">
+              <RichListItem key={item.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-extrabold text-vetvax-text-main">{item.vaccine_name}</p>
                   <p className="text-sm font-semibold text-vetvax-primary">{centsToCurrency(item.price_cents)}</p>
@@ -358,12 +360,10 @@ export default function PriceList() {
                     <Pencil className="h-4 w-4" />
                   </Button>
                 </div>
-              </article>
+              </RichListItem>
             ))}
             {!priceItems.isLoading && (priceItems.data ?? []).length === 0 ? (
-              <p className="rounded-[14px] border border-dashed border-vetvax-border-soft px-3 py-8 text-center text-sm text-vetvax-text-tertiary">
-                Nenhuma vacina cadastrada.
-              </p>
+              <EmptyState icon={Tag} title="Nenhuma vacina cadastrada" description="Cadastre o primeiro valor para montar orçamentos." />
             ) : null}
           </div>
         </Card>
@@ -375,7 +375,7 @@ export default function PriceList() {
           </div>
           <div className="space-y-2">
             {quoteRows.map(({ quote, items, totalCents }) => (
-              <article key={quote.id} className="rounded-[14px] border border-vetvax-border-soft bg-gradient-to-r from-white to-vetvax-surface-panel/80 p-3 shadow-sm transition-[box-shadow,border-color] duration-vetvax hover:border-vetvax-primary-border hover:shadow-md">
+              <RichListItem key={quote.id}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-sm font-extrabold text-vetvax-text-main">{quote.name}</p>
@@ -416,12 +416,10 @@ export default function PriceList() {
                   </div>
                 </div>
                 {quote.notes ? <p className="mt-2 text-xs text-vetvax-text-tertiary">{quote.notes}</p> : null}
-              </article>
+              </RichListItem>
             ))}
             {!quoteTemplates.isLoading && quoteRows.length === 0 ? (
-              <p className="rounded-[14px] border border-dashed border-vetvax-border-soft px-3 py-8 text-center text-sm text-vetvax-text-tertiary">
-                Nenhum orçamento cadastrado.
-              </p>
+              <EmptyState icon={MessageCircle} title="Nenhum orçamento cadastrado" description="Monte um orçamento padrão para enviar por WhatsApp em segundos." />
             ) : null}
           </div>
         </Card>

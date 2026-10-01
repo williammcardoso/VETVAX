@@ -19,6 +19,8 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import PageHeader from "@/components/layout/PageHeader";
 import EmptyState from "@/components/vetvax/EmptyState";
 import ActionButton from "@/components/vetvax/ActionButton";
+import DataToolbar from "@/components/vetvax/DataToolbar";
+import RichListItem from "@/components/vetvax/RichListItem";
 
 const schema = z.object({
   name: z.string().min(2, "Informe o nome"),
@@ -146,42 +148,43 @@ export default function Catalog() {
         }
       />
 
-      <Card className="vetvax-card-polish rounded-[16px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
-        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <DataToolbar
+        className="rounded-[18px] p-4"
+        leading={
           <Input
             className="md:w-[340px]"
             placeholder="Buscar item..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { id: "all", label: "Todos" },
-              { id: "vaccine", label: "Vacinas" },
-              { id: "medication", label: "Medicações" },
-              { id: "other", label: "Outros" },
-            ].map((chip) => (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => setTypeFilter(chip.id as typeof typeFilter)}
-              className={`rounded-pill border px-3 py-1.5 text-xs font-semibold transition-[background-color,color,box-shadow] duration-vetvax ${
-                  typeFilter === chip.id
-                    ? "border-vetvax-primary-border bg-vetvax-primary-soft text-vetvax-primary shadow-sm"
-                    : "border-vetvax-border-soft bg-vetvax-surface-alt text-vetvax-text-secondary hover:bg-vetvax-surface-panel"
-                }`}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        }
+        filters={[
+          { id: "all", label: "Todos" },
+          { id: "vaccine", label: "Vacinas" },
+          { id: "medication", label: "Medicações" },
+          { id: "other", label: "Outros" },
+        ].map((chip) => (
+          <button
+            key={chip.id}
+            type="button"
+            onClick={() => setTypeFilter(chip.id as typeof typeFilter)}
+            className={`rounded-pill border px-3 py-1.5 text-xs font-semibold transition-[background-color,color,box-shadow] duration-vetvax ${
+              typeFilter === chip.id
+                ? "border-vetvax-primary-border bg-vetvax-primary-soft text-vetvax-primary shadow-sm"
+                : "border-vetvax-border-soft bg-vetvax-surface-alt text-vetvax-text-secondary hover:bg-vetvax-surface-panel"
+            }`}
+          >
+            {chip.label}
+          </button>
+        ))}
+      />
 
+      <Card className="vetvax-card-polish rounded-[16px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
         <div className="space-y-2">
           {rows.map((it) => (
-            <article
+            <RichListItem
               key={it.id}
-              className="flex flex-col gap-3 rounded-[14px] border border-vetvax-border-soft bg-gradient-to-b from-white to-vetvax-surface-panel/60 p-4 shadow-sm transition-[border-color,box-shadow] duration-vetvax hover:border-vetvax-border-medium hover:shadow-md md:flex-row md:items-center md:justify-between"
+              className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
             >
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
@@ -212,7 +215,7 @@ export default function Catalog() {
               >
                 Editar
               </ActionButton>
-            </article>
+            </RichListItem>
           ))}
 
           {!items.isLoading && rows.length === 0 ? (
