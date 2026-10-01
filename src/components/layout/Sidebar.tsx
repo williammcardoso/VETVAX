@@ -145,15 +145,24 @@ export default function Sidebar({
       </div>
 
       <div className={cn("mt-4 flex h-[50px] items-center rounded-[14px] border border-vetvax-border-soft bg-white/95 shadow-[0_8px_20px_rgba(15,23,42,0.06)]", collapsed ? "justify-center px-1" : "justify-between px-3")}>
-        <div className={cn("flex min-w-0 items-center", collapsed ? "gap-0" : "gap-2.5")}>
+        <button
+          type="button"
+          title="Ver perfil"
+          onClick={() => navigateTo({ key: "profile", label: "Perfil", icon: Users, iconClass: "", to: "/profile" })}
+          className={cn(
+            "flex min-w-0 items-center rounded-[10px] py-1 text-left transition-[background-color] duration-vetvax hover:bg-vetvax-surface-panel",
+            collapsed ? "gap-0 px-0" : "gap-2.5 px-1",
+            activeKey === "profile" && "bg-[rgba(16,185,129,0.10)]",
+          )}
+        >
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-vetvax-primary-soft text-xs font-bold text-vetvax-primary">{initials}</AvatarFallback>
           </Avatar>
           {!collapsed ? <div className="min-w-0">
             <p className="truncate text-[13px] font-bold text-vetvax-text-main">{profile?.display_name ?? "Usuário"}</p>
-            <p className="truncate text-[11px] text-vetvax-text-tertiary">Acesso interno</p>
+            <p className="truncate text-[11px] text-vetvax-text-tertiary">Ver perfil</p>
           </div> : null}
-        </div>
+        </button>
         <Button
           variant="ghost"
           size="icon"

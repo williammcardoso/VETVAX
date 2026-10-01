@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MessageCircle, Pencil, Plus, Send, Tag, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, MessageCircle, Pencil, Plus, Send, Tag, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/auth/AuthProvider";
 import type { MessageTemplate, PriceListItem, QuoteTemplate, QuoteTemplateItem, Tutor } from "@/types/vetvax";
@@ -399,9 +399,10 @@ export default function PriceList() {
                     <Button
                       variant="outline"
                       size="icon"
+                      title={quote.is_active ? "Arquivar orçamento" : "Reativar orçamento"}
                       onClick={() => setQuoteActive.mutate({ id: quote.id, is_active: !quote.is_active })}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {quote.is_active ? <Archive className="h-4 w-4" /> : <ArchiveRestore className="h-4 w-4" />}
                     </Button>
                     <Button
                       onClick={() => {

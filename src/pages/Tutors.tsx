@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import TutorUpsertDialog from "@/components/tutors/TutorUpsertDialog";
 import DuplicateTutorsDialog from "@/components/tutors/DuplicateTutorsDialog";
+import PaginationBar from "@/components/vetvax/PaginationBar";
 import { buildWhatsAppLink, formatBrPhoneForDisplay } from "@/lib/phone";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "@/components/layout/PageHeader";
@@ -367,15 +368,7 @@ export default function Tutors() {
             <Building2 className="h-3.5 w-3.5" />
             Mostrando {(page - 1) * pageSize + (rows.length ? 1 : 0)}-{(page - 1) * pageSize + rows.length} de {total} clientes
           </p>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-              Anterior
-            </Button>
-            <span className="text-xs font-semibold text-vetvax-text-secondary">Página {page} de {totalPages}</span>
-            <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-              Próxima
-            </Button>
-          </div>
+          <PaginationBar page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       </Card>
 

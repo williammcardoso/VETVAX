@@ -11,6 +11,7 @@ import DeleteRecordDialog from "@/components/reports/DeleteRecordDialog";
 import PageHeader from "@/components/layout/PageHeader";
 import DataToolbar from "@/components/vetvax/DataToolbar";
 import StatusBadge from "@/components/vetvax/StatusBadge";
+import PaginationBar from "@/components/vetvax/PaginationBar";
 
 type FiltersState = {
   from: string;
@@ -282,15 +283,7 @@ export default function Reports() {
             <p className="text-xs text-vetvax-text-tertiary">
               Mostrando {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, count)} de {count}
             </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                Anterior
-              </Button>
-              <span className="text-xs font-semibold text-vetvax-text-secondary">Página {page} de {totalPages}</span>
-              <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-                Próxima
-              </Button>
-            </div>
+            <PaginationBar page={page} totalPages={totalPages} onPageChange={setPage} />
           </div>
         ) : null}
       </section>

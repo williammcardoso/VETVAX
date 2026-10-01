@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dayjs, daysDiffFromToday } from "@/lib/datetime";
 import { getReminderUrgency, URGENCY_BADGE_TONE, URGENCY_STRIPE_CLASS } from "@/lib/reminderUrgency";
+import { formatTutorAddressLine } from "@/lib/address";
 import PageHeader from "@/components/layout/PageHeader";
 import DataToolbar from "@/components/vetvax/DataToolbar";
 import StatusBadge from "@/components/vetvax/StatusBadge";
 import RichListItem from "@/components/vetvax/RichListItem";
+import PaginationBar from "@/components/vetvax/PaginationBar";
 import EmptyState from "@/components/vetvax/EmptyState";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { buildWhatsAppLink } from "@/lib/phone";
@@ -66,11 +68,15 @@ function getErrorMessage(error: unknown) {
 }
 
 function formatTutorAddress(row: DueReminderRow) {
-  const line1 = [row.tutor_street, row.tutor_number].filter(Boolean).join(", ");
-  const line2 = [row.tutor_neighborhood, row.tutor_city && row.tutor_uf ? `${row.tutor_city}/${row.tutor_uf}` : row.tutor_city || row.tutor_uf]
-    .filter(Boolean)
-    .join(" • ");
-  return [line1, row.tutor_complement, line2].filter(Boolean).join(" • ") || null;
+  return (
+    formatTutorAddressLine({
+      street: row.tutor_street,
+      number: row.tutor_number,
+      city: row.tutor_city,
+      neighborhood: row.tutor_neighborhood,
+      uf: row.tutor_uf,
+    }) || null
+  );
 }
 
 export default function Reminders() {
@@ -519,13 +525,7 @@ export default function Reminders() {
                 <SelectItem value="50">50</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-              Anterior
-            </Button>
-            <span className="text-xs font-semibold text-vetvax-text-secondary">Página {page} de {totalPages}</span>
-            <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-              Próxima
-            </Button>
+            <PaginationBar page={page} totalPages={totalPages} onPageChange={setPage} />
           </div>
         </div>
       ) : null}
