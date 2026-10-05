@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Clock3, MoreHorizontal, Syringe, UserPlus, Users } from "lucide-react";
+import { Bell, Clock3, MoreHorizontal, Pencil, Syringe, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { DashboardKpis, DueReminderRow, VaccinationRecordRow } from "@/types/vetvax";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import RichListItem from "@/components/vetvax/RichListItem";
 import EmptyState from "@/components/vetvax/EmptyState";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import EditReminderDialog from "@/components/reminders/EditReminderDialog";
 import { useWhatsReminderSend } from "@/components/reminders/useWhatsReminderSend";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -74,6 +75,7 @@ const DASHBOARD_PREVIEW_SIZE = 6;
 export default function Dashboard() {
   const qc = useQueryClient();
   const nav = useNavigate();
+  const [editRow, setEditRow] = useState<DueReminderRow | null>(null);
   const { openWhats, whatsDialog } = useWhatsReminderSend(() => onRefetch());
 
   const kpis = useQuery({ queryKey: ["dashboard", "kpis"], queryFn: fetchKpis });
@@ -151,6 +153,14 @@ export default function Dashboard() {
   return (
     <div className="space-y-7 overflow-x-hidden">
       {whatsDialog}
+
+      <EditReminderDialog
+        row={editRow}
+        onOpenChange={(v) => {
+          if (!v) setEditRow(null);
+        }}
+        onSaved={() => onRefetch()}
+      />
       <PageHeader
         badge="Operação"
         title="Central de vacinação"
@@ -302,6 +312,9 @@ export default function Dashboard() {
                       onClick={() => openWhats(row)}
                     >
                       <WhatsAppIcon className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" title="Editar lembrete" onClick={() => setEditRow(row)}>
+                      <Pencil className="h-4 w-4" />
                     </Button>
                     <Button onClick={() => nav(`/vaccinations/new?tutor=${row.tutor_id}&resolveReminder=${row.id}`)}>Registrar aplicação</Button>
                     <DropdownMenu>

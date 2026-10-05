@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CalendarClock, Search, TriangleAlert } from "lucide-react";
+import { Bell, CalendarClock, Pencil, Search, TriangleAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Branch, DueReminderRow } from "@/types/vetvax";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import RichListItem from "@/components/vetvax/RichListItem";
 import PaginationBar from "@/components/vetvax/PaginationBar";
 import EmptyState from "@/components/vetvax/EmptyState";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import EditReminderDialog from "@/components/reminders/EditReminderDialog";
 import { useWhatsReminderSend } from "@/components/reminders/useWhatsReminderSend";
 import ResolveReminderDialog from "@/components/reminders/ResolveReminderDialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -88,6 +89,7 @@ export default function Reminders() {
   const [searchParams] = useSearchParams();
   const [resolveOpen, setResolveOpen] = useState(false);
   const [resolveRow, setResolveRow] = useState<DueReminderRow | null>(null);
+  const [editRow, setEditRow] = useState<DueReminderRow | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<10 | 20 | 30 | 50>(10);
 
@@ -482,6 +484,9 @@ export default function Reminders() {
                     >
                       <WhatsAppIcon className="h-4 w-4" />
                     </Button>
+                    <Button variant="outline" size="icon" title="Editar lembrete" onClick={() => setEditRow(row)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button
                       className="shadow-vetvax-button"
                       disabled={row.status !== "ATIVO" || setStatus.isPending}
@@ -526,6 +531,20 @@ export default function Reminders() {
       ) : null}
 
       {whatsDialog}
+
+      <EditReminderDialog
+        row={editRow}
+        onOpenChange={(v) => {
+          if (!v) setEditRow(null);
+        }}
+        onSaved={async () => {
+          await Promise.all([
+            qc.invalidateQueries({ queryKey: ["reminders", "list"] }),
+            qc.invalidateQueries({ queryKey: ["dashboard", "reminders"] }),
+            qc.invalidateQueries({ queryKey: ["topbar", "reminders"] }),
+          ]);
+        }}
+      />
 
       <ResolveReminderDialog
         open={resolveOpen}
