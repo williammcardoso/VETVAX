@@ -116,6 +116,12 @@ export default function Dashboard() {
       .slice(0, DASHBOARD_PREVIEW_SIZE);
   }, [reminders.data]);
 
+  const dueToday = useMemo(() => {
+    const today = dayjs().format("YYYY-MM-DD");
+    const list = (reminders.data ?? []).filter((row) => row.due_date === today);
+    return { total: list.length, contacted: list.filter((row) => (row.send_count ?? 0) > 0).length };
+  }, [reminders.data]);
+
   const onRefetch = async () => {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["dashboard", "reminders"] }),
@@ -182,6 +188,11 @@ export default function Dashboard() {
             <div>
               <h2 className="vetvax-section-title">Lembretes por vencer</h2>
               <p className="mt-1 text-xs text-vetvax-text-tertiary">Os {upcomingPreview.length} mais próximos. Use "Ver todos" para a fila completa.</p>
+              {dueToday.total > 0 ? (
+                <p className="mt-1 text-xs font-semibold text-vetvax-warning">
+                  Vencem hoje: {dueToday.total} • já contatados por WhatsApp: {dueToday.contacted}
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
               {overdueReminders > 0 ? (
@@ -229,6 +240,9 @@ export default function Dashboard() {
                   <div>
                     <p className="text-[13px] font-bold text-vetvax-primary">{dayjs(row.due_date).format("DD/MM/YYYY")}</p>
                     <StatusBadge tone={URGENCY_BADGE_TONE[urgency]} className="mt-1">{dueLabel}</StatusBadge>
+                    <StatusBadge tone={(row.send_count ?? 0) > 0 ? "success" : "default"} className="mt-1">
+                      {(row.send_count ?? 0) > 0 ? "✓ contatado" : "sem contato"}
+                    </StatusBadge>
                   </div>
 
                   <div className="flex items-start gap-3">
@@ -265,6 +279,19 @@ export default function Dashboard() {
                       {displayReminderNotes(row.notes) ? (
                         <p className="mt-1 line-clamp-2 text-xs text-vetvax-text-secondary">{displayReminderNotes(row.notes)}</p>
                       ) : null}
+                      <p className="mt-1 text-[11px] font-medium text-vetvax-text-tertiary">
+                        {(row.send_count ?? 0) > 0
+                          ? `📤 Contatado por WhatsApp ${row.send_count}x${
+                              row.last_sent_at
+                                ? ` • último ${
+                                    dayjs().startOf("day").diff(dayjs(row.last_sent_at).startOf("day"), "day") === 0
+                                      ? "hoje"
+                                      : `há ${dayjs().startOf("day").diff(dayjs(row.last_sent_at).startOf("day"), "day")}d`
+                                  }`
+                                : ""
+                            }`
+                          : "Ainda não contatado por WhatsApp"}
+                      </p>
                     </div>
                   </div>
 
