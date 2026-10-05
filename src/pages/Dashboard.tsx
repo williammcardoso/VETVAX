@@ -16,8 +16,7 @@ import RichListItem from "@/components/vetvax/RichListItem";
 import EmptyState from "@/components/vetvax/EmptyState";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
-import { buildWhatsAppLink } from "@/lib/phone";
-import { useWhatsMessage } from "@/components/dashboard/useWhatsMessage";
+import { useWhatsReminderSend } from "@/components/reminders/useWhatsReminderSend";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
@@ -75,7 +74,7 @@ const DASHBOARD_PREVIEW_SIZE = 6;
 export default function Dashboard() {
   const qc = useQueryClient();
   const nav = useNavigate();
-  const { buildReminderMessage, pickPhone } = useWhatsMessage();
+  const { openWhats, whatsDialog } = useWhatsReminderSend(() => onRefetch());
 
   const kpis = useQuery({ queryKey: ["dashboard", "kpis"], queryFn: fetchKpis });
   const businessKpis = useQuery({ queryKey: ["dashboard", "business-kpis"], queryFn: fetchBusinessKpis });
@@ -151,6 +150,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-7 overflow-x-hidden">
+      {whatsDialog}
       <PageHeader
         badge="Operação"
         title="Central de vacinação"
@@ -299,23 +299,7 @@ export default function Dashboard() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={async () => {
-                        const phone = pickPhone(row.tutor_phone1, row.tutor_phone2);
-                        if (!phone) {
-                          toast({ title: "Tutor sem telefone", variant: "destructive" });
-                          return;
-                        }
-                        const msg = await buildReminderMessage(row);
-                        const { error } = await supabase
-                          .from("reminders")
-                          .update({
-                            last_sent_at: new Date().toISOString(),
-                            send_count: Math.max(0, row.send_count ?? 0) + 1,
-                          })
-                          .eq("id", row.id);
-                        if (!error) await onRefetch();
-                        window.open(buildWhatsAppLink(phone, msg), "_blank", "noopener,noreferrer");
-                      }}
+                      onClick={() => openWhats(row)}
                     >
                       <WhatsAppIcon className="h-4 w-4" />
                     </Button>

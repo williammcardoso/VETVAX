@@ -18,8 +18,7 @@ import RichListItem from "@/components/vetvax/RichListItem";
 import PaginationBar from "@/components/vetvax/PaginationBar";
 import EmptyState from "@/components/vetvax/EmptyState";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
-import { buildWhatsAppLink } from "@/lib/phone";
-import { useWhatsMessage } from "@/components/dashboard/useWhatsMessage";
+import { useWhatsReminderSend } from "@/components/reminders/useWhatsReminderSend";
 import ResolveReminderDialog from "@/components/reminders/ResolveReminderDialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,7 +84,6 @@ function formatTutorAddress(row: DueReminderRow) {
 
 export default function Reminders() {
   const qc = useQueryClient();
-  const { buildReminderMessage, pickPhone } = useWhatsMessage();
   const nav = useNavigate();
   const [searchParams] = useSearchParams();
   const [resolveOpen, setResolveOpen] = useState(false);
@@ -292,27 +290,12 @@ export default function Reminders() {
     return list.slice(start, start + pageSize);
   }, [list, page, pageSize]);
 
-  const sendWhatsReminder = async (row: DueReminderRow) => {
-    const phone = pickPhone(row.tutor_phone1, row.tutor_phone2);
-    if (!phone) {
-      toast({ title: "Tutor sem telefone", variant: "destructive" });
-      return;
-    }
-    const msg = await buildReminderMessage(row);
-    const { error } = await supabase
-      .from("reminders")
-      .update({
-        last_sent_at: new Date().toISOString(),
-        send_count: Math.max(0, row.send_count ?? 0) + 1,
-      })
-      .eq("id", row.id);
-    if (error) {
-      toast({ title: "Falha ao registrar envio", description: getErrorMessage(error), variant: "destructive" });
-    } else {
-      await qc.invalidateQueries({ queryKey: ["reminders", "list"] });
-    }
-    window.open(buildWhatsAppLink(phone, msg), "_blank", "noopener,noreferrer");
-  };
+  const { openWhats: sendWhatsReminder, whatsDialog } = useWhatsReminderSend(async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["reminders", "list"] }),
+      qc.invalidateQueries({ queryKey: ["dashboard", "reminders"] }),
+    ]);
+  });
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -541,6 +524,8 @@ export default function Reminders() {
           </div>
         </div>
       ) : null}
+
+      {whatsDialog}
 
       <ResolveReminderDialog
         open={resolveOpen}
