@@ -23,6 +23,7 @@ type FiltersState = {
 
 type RecordItem = {
   quantity: number | null;
+  pet: { name: string | null } | null;
   catalog_item: {
     name: string | null;
     category: string | null;
@@ -128,7 +129,7 @@ async function fetchReport(filters: FiltersState) {
   const { data, error } = await supabase
     .from("vaccination_records")
     .select(
-      "id, applied_date, next_due_date, tutor_id, tutor:tutors(id, name, phone1, phone2), created_by, items:vaccination_record_items(quantity, catalog_item:catalog_items(name, category))",
+      "id, applied_date, next_due_date, tutor_id, tutor:tutors(id, name, phone1, phone2), created_by, items:vaccination_record_items(quantity, pet:pets(name), catalog_item:catalog_items(name, category))",
     )
     .eq("is_active", true)
     .gte("applied_date", filters.from)
@@ -148,6 +149,9 @@ async function fetchReport(filters: FiltersState) {
     tutor_phone1: r.tutor?.phone1 ?? null,
     tutor_phone2: r.tutor?.phone2 ?? null,
     vaccines: buildVaccinesLabel(r.items),
+    items: (r.items ?? [])
+      .filter((it) => (it.catalog_item?.category ?? "") === "vaccine")
+      .map((it) => ({ name: String(it.catalog_item?.name ?? "").trim(), pet_name: it.pet?.name ?? null })),
     created_by: r.created_by,
     responsible_name: null,
   }));

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateBr } from "@/lib/datetime";
+import PetBadge from "@/components/vetvax/PetBadge";
 
 export type VaccinationReportRow = {
   record_id: string;
@@ -15,35 +16,10 @@ export type VaccinationReportRow = {
   tutor_phone1: string | null;
   tutor_phone2: string | null;
   vaccines: string;
+  items?: Array<{ name: string; pet_name: string | null }>;
   created_by: string | null;
   responsible_name: string | null;
 };
-
-type CsvValue = string | number | boolean | null | undefined;
-
-function toCsv(rows: Array<Record<string, CsvValue>>) {
-  if (!rows.length) return "";
-  const headers = Object.keys(rows[0]);
-  const escape = (v: CsvValue) => {
-    const s = v === null || v === undefined ? "" : String(v);
-    const needs = /[",\n]/.test(s);
-    const escaped = s.replace(/"/g, '""');
-    return needs ? `"${escaped}"` : escaped;
-  };
-  return [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\n");
-}
-
-function downloadText(filename: string, text: string) {
-  const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
 
 export default function VaccinationsReportTable({
   rows,
@@ -65,17 +41,6 @@ export default function VaccinationsReportTable({
   const exportCsv = async () => {
     setExporting(true);
     try {
-      const flat = rows.map((r) => ({
-        data_aplicacao: r.applied_date,
-        proxima_dose: r.next_due_date ?? "",
-        tutor: r.tutor_name,
-        vacinas: r.vaccines,
-        responsavel: r.responsible_name ?? "",
-        record_id: r.record_id,
-      }));
-      const csv = toCsv(flat);
-      const filename = `vetvax_vacinacoes_${new Date().toISOString().slice(0, 10)}.csv`;
-      downloadText(filename, csv);
       onExport(rows);
     } finally {
       setExporting(false);
@@ -139,7 +104,18 @@ export default function VaccinationsReportTable({
                 <div className="text-sm text-vetvax-text-secondary">{r.responsible_name ?? "—"}</div>
               </TableCell>
               <TableCell className="align-top">
-                <div className="line-clamp-2 text-sm text-vetvax-text-secondary">{r.vaccines || "—"}</div>
+                {r.items && r.items.length > 0 ? (
+                  <div className="flex flex-col gap-1.5">
+                    {r.items.map((it, i) => (
+                      <div key={i} className="flex flex-wrap items-center gap-2 text-sm text-vetvax-text-secondary">
+                        {it.pet_name ? <PetBadge name={it.pet_name} /> : null}
+                        <span>{it.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="line-clamp-2 text-sm text-vetvax-text-secondary">{r.vaccines || "—"}</div>
+                )}
               </TableCell>
               <TableCell className="align-top">
                 {r.next_due_date ? (

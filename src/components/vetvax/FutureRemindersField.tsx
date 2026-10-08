@@ -50,9 +50,9 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-pill border px-3 py-1.5 text-xs font-semibold transition-colors",
+        "rounded-pill border px-2.5 py-1 text-xs font-medium transition-colors",
         active
-          ? "border-vetvax-primary bg-vetvax-primary text-white shadow-sm"
+          ? "border-vetvax-primary bg-vetvax-primary text-white"
           : "border-vetvax-border-medium bg-white text-vetvax-text-secondary hover:border-vetvax-primary-border hover:bg-vetvax-primary-soft hover:text-vetvax-primary",
       )}
     >
@@ -109,9 +109,9 @@ export default function FutureRemindersField({
         return (
           <div
             key={idx}
-            className="overflow-hidden rounded-[16px] border-2 border-vetvax-border-medium bg-white shadow-md"
+            className="overflow-hidden rounded-[14px] border border-vetvax-border-medium bg-white shadow-sm"
           >
-            <div className="flex items-center gap-3 border-b-2 border-vetvax-primary-border bg-vetvax-primary-soft px-4 py-3">
+            <div className="flex items-center gap-3 border-b border-vetvax-primary-border bg-vetvax-primary-soft px-4 py-3">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-vetvax-primary text-sm font-bold text-white">
                 {idx + 1}
               </span>

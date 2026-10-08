@@ -434,7 +434,7 @@ export default function TutorDetail() {
                             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                               {r.items.map((it: any, idx: number) => (
                                 <span key={idx} className="inline-flex items-center gap-1.5">
-                                  {it.pet_name ? <PetBadge name={it.pet_name} size="sm" /> : null}
+                                  {it.pet_name ? <PetBadge name={it.pet_name} /> : null}
                                   <span
                                     className={`inline-flex items-center rounded-pill border px-2.5 py-1 text-[11px] font-bold leading-none ${getItemTone(it.item)}`}
                                   >

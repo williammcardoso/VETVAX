@@ -371,7 +371,7 @@ export default function Dashboard() {
                       <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1">
                         {(row.items ?? []).slice(0, 2).map((it, idx) => (
                           <span key={idx} className="inline-flex max-w-full flex-wrap items-center gap-1">
-                            {it.pet_name ? <PetBadge name={it.pet_name} size="sm" /> : null}
+                            {it.pet_name ? <PetBadge name={it.pet_name} /> : null}
                             <span
                               className={`inline-flex max-w-full items-center truncate rounded-pill border px-2 py-0.5 text-[10px] font-bold leading-none ${getItemTone(it.item)}`}
                             >
