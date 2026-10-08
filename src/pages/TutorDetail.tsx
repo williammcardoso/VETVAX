@@ -431,14 +431,15 @@ export default function TutorDetail() {
                             ) : null}
                           </div>
                           {r.items?.length ? (
-                            <div className="mt-2 flex flex-wrap gap-1.5">
+                            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                               {r.items.map((it: any, idx: number) => (
-                                <span
-                                  key={idx}
-                                  className={`inline-flex items-center rounded-pill border px-2.5 py-1 text-[11px] font-bold leading-none ${getItemTone(it.item)}`}
-                                >
-                                  {it.quantity}x {it.item}
-                                  {it.pet_name ? ` • ${it.pet_name}` : ""}
+                                <span key={idx} className="inline-flex items-center gap-1.5">
+                                  {it.pet_name ? <PetBadge name={it.pet_name} size="sm" /> : null}
+                                  <span
+                                    className={`inline-flex items-center rounded-pill border px-2.5 py-1 text-[11px] font-bold leading-none ${getItemTone(it.item)}`}
+                                  >
+                                    {it.quantity}x {it.item}
+                                  </span>
                                 </span>
                               ))}
                             </div>

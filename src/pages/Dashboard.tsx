@@ -368,14 +368,15 @@ export default function Dashboard() {
                     <div className="min-w-0 flex-1">
                       <p className="text-[11px] font-semibold text-vetvax-success">{dayjs(row.applied_date).format("DD/MM/YYYY")}</p>
                       <p className="break-words text-sm font-extrabold leading-tight text-vetvax-text-main">{row.tutor_name}</p>
-                      <div className="mt-1 flex flex-wrap gap-1">
+                      <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1">
                         {(row.items ?? []).slice(0, 2).map((it, idx) => (
-                          <span
-                            key={idx}
-                            className={`inline-flex max-w-full items-center truncate rounded-pill border px-2 py-0.5 text-[10px] font-bold leading-none ${getItemTone(it.item)}`}
-                          >
-                            {it.quantity}x {it.item}
-                            {it.pet_name ? ` • ${it.pet_name}` : ""}
+                          <span key={idx} className="inline-flex max-w-full flex-wrap items-center gap-1">
+                            {it.pet_name ? <PetBadge name={it.pet_name} size="sm" /> : null}
+                            <span
+                              className={`inline-flex max-w-full items-center truncate rounded-pill border px-2 py-0.5 text-[10px] font-bold leading-none ${getItemTone(it.item)}`}
+                            >
+                              {it.quantity}x {it.item}
+                            </span>
                           </span>
                         ))}
                       </div>
