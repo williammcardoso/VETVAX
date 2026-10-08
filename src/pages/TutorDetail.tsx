@@ -17,6 +17,7 @@ import TutorUpsertDialog from "@/components/tutors/TutorUpsertDialog";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { formatTutorAddressLine, buildGoogleMapsUrl } from "@/lib/address";
 import { getItemTone } from "@/lib/itemTone";
+import PetBadge from "@/components/vetvax/PetBadge";
 import { displayReminderNotes } from "@/lib/reminderNotes";
 import StatusBadge from "@/components/vetvax/StatusBadge";
 import RichListItem from "@/components/vetvax/RichListItem";
@@ -468,12 +469,14 @@ export default function TutorDetail() {
                             {r.status === "ATIVO" ? "ativo" : r.status === "FEITO" ? "resolvido" : "arquivado"}
                           </StatusBadge>
                         </div>
-                        <span
-                          className={`mt-1.5 inline-flex items-center rounded-pill border px-2.5 py-1 text-[11px] font-bold leading-none ${getItemTone(r.item_name ?? r.reminder_type)}`}
-                        >
-                          {r.pet?.name ? `${r.pet.name} • ` : ""}
-                          {r.item_name ?? r.reminder_type}
-                        </span>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          {r.pet?.name ? <PetBadge name={r.pet.name} /> : null}
+                          <span
+                            className={`inline-flex items-center rounded-pill border px-2.5 py-1 text-[11px] font-bold leading-none ${getItemTone(r.item_name ?? r.reminder_type)}`}
+                          >
+                            {r.item_name ?? r.reminder_type}
+                          </span>
+                        </div>
                         {displayReminderNotes(r.notes) ? (
                           <p className="mt-2 text-xs italic text-vetvax-text-tertiary">{displayReminderNotes(r.notes)}</p>
                         ) : null}

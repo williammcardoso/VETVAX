@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Clock3, MoreHorizontal, PawPrint, Pencil, Syringe, UserPlus, Users } from "lucide-react";
+import { Bell, Clock3, MoreHorizontal, Pencil, Syringe, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { DashboardKpis, DueReminderRow, VaccinationRecordRow } from "@/types/vetvax";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import PageHeader from "@/components/layout/PageHeader";
 import MetricTile from "@/components/vetvax/MetricTile";
 import StatusBadge from "@/components/vetvax/StatusBadge";
 import RichListItem from "@/components/vetvax/RichListItem";
+import PetBadge from "@/components/vetvax/PetBadge";
 import EmptyState from "@/components/vetvax/EmptyState";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
@@ -271,10 +272,7 @@ export default function Dashboard() {
                       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
                         <p className="truncate text-sm font-bold text-vetvax-text-main">{row.tutor_name}</p>
                         {row.pet_name ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-pill border border-vetvax-primary-border bg-vetvax-primary-soft px-3 py-1 text-base font-extrabold leading-none text-vetvax-primary">
-                            <PawPrint className="h-4 w-4 text-black" />
-                            {row.pet_name}
-                          </span>
+                          <PetBadge name={row.pet_name} />
                         ) : null}
                       </div>
                       <p className="text-xs text-vetvax-text-tertiary">{row.tutor_phone1 ?? row.tutor_phone2 ?? "Sem telefone"}</p>
