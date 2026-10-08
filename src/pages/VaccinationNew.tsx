@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import TutorCombobox from "@/components/tutors/TutorCombobox";
 import TutorUpsertDialog from "@/components/tutors/TutorUpsertDialog";
+import PetUpsertDialog from "@/components/tutors/PetUpsertDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,7 @@ export default function VaccinationNew() {
   const resolveReminderParam = useQueryParam("resolveReminder");
 
   const [openNewTutor, setOpenNewTutor] = useState(false);
+  const [newPetForItem, setNewPetForItem] = useState<number | null>(null);
 
   const catalog = useQuery({
     queryKey: ["catalog", "active"],
@@ -277,7 +279,14 @@ export default function VaccinationNew() {
                         <Label className="vetvax-label">Pet (opcional)</Label>
                         <Select
                           value={(form.watch(`items.${idx}.pet_id`) ?? "") || ""}
-                          onValueChange={(v) => form.setValue(`items.${idx}.pet_id`, v === "_none" ? null : v, { shouldValidate: true })}
+                          onValueChange={(v) => {
+                            if (!v) return;
+                            if (v === "_new") {
+                              setNewPetForItem(idx);
+                              return;
+                            }
+                            form.setValue(`items.${idx}.pet_id`, v === "_none" ? null : v, { shouldValidate: true });
+                          }}
                           disabled={!separateByPet || !tutorId}
                         >
                           <SelectTrigger>
@@ -290,6 +299,9 @@ export default function VaccinationNew() {
                                 {p.name}
                               </SelectItem>
                             ))}
+                            <SelectItem value="_new" className="font-semibold text-vetvax-primary">
+                              + Cadastrar novo pet
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -370,6 +382,24 @@ export default function VaccinationNew() {
           </div>
         </SummaryCard>
       </form>
+
+      {tutorId ? (
+        <PetUpsertDialog
+          open={newPetForItem !== null}
+          onOpenChange={(v) => {
+            if (!v) setNewPetForItem(null);
+          }}
+          tutorId={tutorId}
+          initial={null}
+          onSaved={async (petId) => {
+            await pets.refetch();
+            if (petId && newPetForItem !== null) {
+              form.setValue(`items.${newPetForItem}.pet_id`, petId, { shouldValidate: true });
+            }
+            setNewPetForItem(null);
+          }}
+        />
+      ) : null}
 
       <TutorUpsertDialog
         open={openNewTutor}

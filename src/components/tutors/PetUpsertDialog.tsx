@@ -41,7 +41,7 @@ export default function PetUpsertDialog({
   onOpenChange: (v: boolean) => void;
   tutorId: string;
   initial: Pet | null;
-  onSaved: () => void;
+  onSaved: (petId?: string) => void;
 }) {
   const { profile } = useAuth();
 
@@ -95,12 +95,13 @@ export default function PetUpsertDialog({
         return;
       }
 
-      const { error } = await supabase.from("pets").insert(payload);
+      const { data, error } = await supabase.from("pets").insert(payload).select("id").single();
       if (error) throw error;
+      return data.id as string;
     },
-    onSuccess: () => {
+    onSuccess: (newId) => {
       toast({ title: initial?.id ? "Pet atualizado" : "Pet criado" });
-      onSaved();
+      onSaved(newId);
     },
     onError: (e: unknown) => {
       toast({ title: "Falha ao salvar pet", description: getErrorMessage(e), variant: "destructive" });
