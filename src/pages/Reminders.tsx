@@ -442,16 +442,13 @@ export default function Reminders() {
                       {row.status === "ARQUIVADO" ? <StatusBadge>arquivado</StatusBadge> : null}
                     </div>
                     <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                      <p className="text-sm font-semibold text-vetvax-text-main">{row.tutor_name}</p>
                       {row.pet_name ? (
                         <span className="inline-flex items-center gap-1.5 rounded-pill border border-vetvax-primary-border bg-vetvax-primary-soft px-3 py-1 text-base font-extrabold leading-none text-vetvax-primary">
-                          <PawPrint className="h-4 w-4" />
+                          <PawPrint className="h-4 w-4 text-black" />
                           {row.pet_name}
                         </span>
                       ) : null}
-                      <p className="text-sm font-semibold text-vetvax-text-main">
-                        {row.pet_name ? <span className="font-normal text-vetvax-text-tertiary">tutor: </span> : null}
-                        {row.tutor_name}
-                      </p>
                     </div>
                     <p className="text-xs text-vetvax-text-secondary">
                       {[row.tutor_phone1, row.tutor_phone2].filter(Boolean).join(" • ") || "Sem contato"} • {row.item_name ?? row.reminder_type}

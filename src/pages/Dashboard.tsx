@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Clock3, MoreHorizontal, Pencil, Syringe, UserPlus, Users } from "lucide-react";
+import { Bell, Clock3, MoreHorizontal, PawPrint, Pencil, Syringe, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { DashboardKpis, DueReminderRow, VaccinationRecordRow } from "@/types/vetvax";
 import { Button } from "@/components/ui/button";
@@ -268,10 +268,17 @@ export default function Dashboard() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-vetvax-text-main">{row.tutor_name}</p>
+                      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                        <p className="truncate text-sm font-bold text-vetvax-text-main">{row.tutor_name}</p>
+                        {row.pet_name ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-pill border border-vetvax-primary-border bg-vetvax-primary-soft px-3 py-1 text-base font-extrabold leading-none text-vetvax-primary">
+                            <PawPrint className="h-4 w-4 text-black" />
+                            {row.pet_name}
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="text-xs text-vetvax-text-tertiary">{row.tutor_phone1 ?? row.tutor_phone2 ?? "Sem telefone"}</p>
                       <span className={`mt-1 inline-flex max-w-full min-h-[22px] items-center truncate rounded-pill border px-2 py-0.5 text-[11px] font-bold leading-none ${getItemTone(row.item_name ?? row.reminder_type)}`}>
-                        {row.pet_name ? `${row.pet_name} • ` : ""}
                         {row.item_name ?? row.reminder_type}
                         {" • "}
                         {row.quantity} {row.quantity === 1 ? "dose" : "doses"}
