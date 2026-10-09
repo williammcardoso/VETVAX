@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Calendar as CalendarIcon, Plus, Trash2 } from "lucide-react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, type FieldErrors } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
@@ -21,6 +21,7 @@ import PetUpsertDialog from "@/components/tutors/PetUpsertDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { flashField, useShake } from "@/lib/formFeedback";
 import PageHeader from "@/components/layout/PageHeader";
 import FormSection from "@/components/vetvax/FormSection";
 import SummaryCard from "@/components/vetvax/SummaryCard";
@@ -55,6 +56,7 @@ export default function VaccinationNew() {
   const resolveReminderParam = useQueryParam("resolveReminder");
 
   const [openNewTutor, setOpenNewTutor] = useState(false);
+  const { shakeClass, trigger: shakeSubmit } = useShake();
   const [newPetForItem, setNewPetForItem] = useState<number | null>(null);
 
   const catalog = useQuery({
@@ -111,9 +113,11 @@ export default function VaccinationNew() {
   const save = useMutation({
     mutationFn: async (values: Values) => {
       const catalogMap = new Map((catalog.data ?? []).map((c) => [c.id, c] as const));
-      for (const it of values.items) {
+      for (const [i, it] of values.items.entries()) {
         const ci = catalogMap.get(it.catalog_item_id);
         if (ci?.requires_description && !it.free_description?.trim()) {
+          shakeSubmit();
+          flashField(`item-${i}`);
           throw new Error(`O item “${ci.name}” exige descrição.`);
         }
       }
@@ -154,6 +158,28 @@ export default function VaccinationNew() {
     },
   });
 
+  const onInvalid = (errors: FieldErrors<Values>) => {
+    let field = "tutor_id";
+    let message = "Selecione o tutor.";
+    if (errors.tutor_id) {
+      field = "tutor_id";
+      message = "Selecione o tutor antes de registrar.";
+    } else if (errors.applied_date) {
+      field = "applied_date";
+      message = "Informe a data da aplicação.";
+    } else if (Array.isArray(errors.items)) {
+      const idx = errors.items.findIndex((it) => !!it);
+      field = `item-${Math.max(idx, 0)}`;
+      message = "Selecione o item aplicado.";
+    } else if (errors.items) {
+      field = "item-0";
+      message = "Adicione ao menos 1 item aplicado.";
+    }
+    shakeSubmit();
+    toast({ title: "Falta preencher um campo", description: message, variant: "destructive" });
+    flashField(field);
+  };
+
   const separateByPet = form.watch("separate_by_pet");
   const selectedTutor = useQuery({
     queryKey: ["tutor", "summary", tutorId],
@@ -177,21 +203,21 @@ export default function VaccinationNew() {
         }
       />
 
-      <form className="vetvax-fade-in grid gap-6 lg:grid-cols-[minmax(0,2fr)_320px]" onSubmit={form.handleSubmit((v) => save.mutate(v))}>
+      <form className="vetvax-fade-in grid gap-6 lg:grid-cols-[minmax(0,2fr)_320px]" onSubmit={form.handleSubmit((v) => save.mutate(v), onInvalid)}>
         <div className="space-y-5">
           <FormSection step="1" title="Tutor e data" description="Defina o tutor e a data em que a aplicação aconteceu.">
             <div className="grid gap-4">
-              <div className="grid gap-2">
+              <div className="grid gap-2" data-field="tutor_id">
                 <Label className="vetvax-label">Tutor</Label>
                 <TutorCombobox
                   value={form.watch("tutor_id")}
                   onChange={(id) => form.setValue("tutor_id", id, { shouldValidate: true })}
                   onCreateNew={() => setOpenNewTutor(true)}
                 />
-                {form.formState.errors.tutor_id && <p className="text-xs text-destructive">{form.formState.errors.tutor_id.message}</p>}
+                {form.formState.errors.tutor_id && <p className="text-sm font-semibold text-destructive">⚠ {form.formState.errors.tutor_id.message}</p>}
               </div>
 
-              <div className="grid gap-2 sm:w-[240px]">
+              <div className="grid gap-2 sm:w-[240px]" data-field="applied_date">
                 <Label className="vetvax-label">Data da aplicação</Label>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -252,7 +278,7 @@ export default function VaccinationNew() {
                 const needsDesc = !!cat?.requires_description;
 
                 return (
-                  <div key={f.id} className="rounded-[14px] border border-vetvax-border-soft bg-vetvax-surface-panel/80 p-4 shadow-sm">
+                  <div key={f.id} data-field={`item-${idx}`} className="rounded-[14px] border border-vetvax-border-soft bg-vetvax-surface-panel/80 p-4 shadow-sm">
                     <div className="grid gap-3 sm:grid-cols-12 sm:items-end">
                       <div className="grid gap-2 sm:col-span-5">
                         <Label className="vetvax-label">Item</Label>
@@ -268,6 +294,9 @@ export default function VaccinationNew() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {form.formState.errors.items?.[idx]?.catalog_item_id && (
+                          <p className="text-sm font-semibold text-destructive">⚠ Selecione o item aplicado</p>
+                        )}
                       </div>
 
                       <div className="grid gap-2 sm:col-span-2">
@@ -355,7 +384,7 @@ export default function VaccinationNew() {
           title="Resumo"
           footer={
             <>
-              <ActionButton type="submit" emphasis="primary" className="h-11 w-full" disabled={save.isPending}>
+              <ActionButton type="submit" emphasis="primary" className={cn("h-11 w-full", shakeClass)} disabled={save.isPending}>
                 {save.isPending ? "Registrando..." : "Registrar aplicação"}
               </ActionButton>
               <ActionButton asChild type="button" emphasis="secondary" className="w-full">

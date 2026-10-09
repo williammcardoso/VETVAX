@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldErrors } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
@@ -19,6 +19,8 @@ import SummaryCard from "@/components/vetvax/SummaryCard";
 import ActionButton from "@/components/vetvax/ActionButton";
 import FutureRemindersField, { emptyFutureReminderRow, type FutureReminderRow } from "@/components/vetvax/FutureRemindersField";
 import { dayjs } from "@/lib/datetime";
+import { cn } from "@/lib/utils";
+import { flashField, useShake } from "@/lib/formFeedback";
 
 const schema = z.object({
   tutor_id: z.string().uuid("Selecione um tutor"),
@@ -63,6 +65,18 @@ export default function ScheduleReturn() {
     },
   });
 
+  const { shakeClass, trigger: shakeSubmit } = useShake();
+
+  const onInvalid = (errors: FieldErrors<Values>) => {
+    shakeSubmit();
+    toast({
+      title: "Falta preencher um campo",
+      description: errors.tutor_id ? "Selecione o tutor antes de agendar." : "Revise os campos do formulário.",
+      variant: "destructive",
+    });
+    flashField("tutor_id");
+  };
+
   useEffect(() => {
     if (tutorParam) form.setValue("tutor_id", tutorParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -89,6 +103,8 @@ export default function ScheduleReturn() {
     mutationFn: async (values: Values) => {
       const validRows = reminders.filter((r) => r.catalog_item_id && r.due_date);
       if (validRows.length === 0) {
+        shakeSubmit();
+        flashField("reminders");
         throw new Error("Adicione ao menos um retorno com vacina e data.");
       }
 
@@ -138,18 +154,18 @@ export default function ScheduleReturn() {
         }
       />
 
-      <form className="vetvax-fade-in grid gap-6 lg:grid-cols-[minmax(0,2fr)_320px]" onSubmit={form.handleSubmit((v) => save.mutate(v))}>
+      <form className="vetvax-fade-in grid gap-6 lg:grid-cols-[minmax(0,2fr)_320px]" onSubmit={form.handleSubmit((v) => save.mutate(v), onInvalid)}>
         <div className="space-y-5">
           <FormSection step="1" title="Tutor" description="Quem vai receber a vacina.">
             <div className="grid gap-4">
-              <div className="grid gap-2">
+              <div className="grid gap-2" data-field="tutor_id">
                 <Label className="vetvax-label">Tutor</Label>
                 <TutorCombobox
                   value={form.watch("tutor_id")}
                   onChange={(id) => form.setValue("tutor_id", id, { shouldValidate: true })}
                   onCreateNew={() => setOpenNewTutor(true)}
                 />
-                {form.formState.errors.tutor_id && <p className="text-xs text-destructive">{form.formState.errors.tutor_id.message}</p>}
+                {form.formState.errors.tutor_id && <p className="text-sm font-semibold text-destructive">⚠ {form.formState.errors.tutor_id.message}</p>}
               </div>
 
               <div className="flex items-center justify-between rounded-[14px] border border-vetvax-border-soft bg-gradient-to-r from-vetvax-surface-panel to-vetvax-surface-alt px-4 py-3.5">
@@ -167,6 +183,7 @@ export default function ScheduleReturn() {
             title="Vacinações agendadas"
             description="Cada linha vira um lembrete — pode agendar quantas precisar, cada uma com sua própria vacina e data."
           >
+            <div data-field="reminders">
             <FutureRemindersField
               rows={reminders}
               onChange={setReminders}
@@ -175,6 +192,7 @@ export default function ScheduleReturn() {
               pets={pets.data ?? []}
               showPetSelect={separateByPet}
             />
+            </div>
           </FormSection>
 
           <FormSection step="3" title="Observações">
@@ -187,7 +205,7 @@ export default function ScheduleReturn() {
           title="Resumo"
           footer={
             <>
-              <ActionButton type="submit" emphasis="primary" className="h-11 w-full" disabled={save.isPending}>
+              <ActionButton type="submit" emphasis="primary" className={cn("h-11 w-full", shakeClass)} disabled={save.isPending}>
                 {save.isPending ? "Agendando..." : "Agendar vacinação"}
               </ActionButton>
               <ActionButton asChild type="button" emphasis="secondary" className="w-full">
