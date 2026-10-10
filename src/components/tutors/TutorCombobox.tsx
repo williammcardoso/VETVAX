@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { matchesSearchAny } from "@/lib/search";
+import { useTutorPets } from "@/lib/useTutorPets";
+import PetBadge from "@/components/vetvax/PetBadge";
 
 type TutorLite = {
   id: string;
@@ -44,14 +46,16 @@ export default function TutorCombobox({
     },
   });
 
+  const { petNamesOf, matchingPets } = useTutorPets();
+
   const filteredTutors = useMemo(() => {
     const term = q.trim();
     const all = tutors.data ?? [];
     const matched = !term
       ? all
-      : all.filter((t) => matchesSearchAny([t.name, t.phone1, t.phone2, t.street, t.number, t.neighborhood], term));
+      : all.filter((t) => matchesSearchAny([t.name, t.phone1, t.phone2, t.street, t.number, t.neighborhood, ...petNamesOf(t.id)], term));
     return matched.slice(0, 50);
-  }, [tutors.data, q]);
+  }, [tutors.data, q, petNamesOf]);
 
   const selected = useMemo(() => tutors.data?.find((t) => t.id === value) ?? null, [tutors.data, value]);
 
@@ -99,7 +103,12 @@ export default function TutorCombobox({
                 >
                   <Check className={cn("mr-2 h-4 w-4", value === t.id ? "opacity-100" : "opacity-0")} />
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">{t.name}</div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="truncate text-sm font-medium">{t.name}</span>
+                      {matchingPets(t.id, q).map((pet) => (
+                        <PetBadge key={pet} name={pet} />
+                      ))}
+                    </div>
                     <div className="truncate text-xs text-muted-foreground">
                       {[t.street, t.number, t.neighborhood].filter(Boolean).join(", ") || "endereço não informado"}
                     </div>

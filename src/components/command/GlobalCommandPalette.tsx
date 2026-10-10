@@ -16,6 +16,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { matchesSearchAny } from "@/lib/search";
+import { useTutorPets } from "@/lib/useTutorPets";
+import PetBadge from "@/components/vetvax/PetBadge";
 
 type TutorLite = { id: string; name: string; phone1: string | null; phone2: string | null };
 
@@ -57,11 +59,13 @@ export default function GlobalCommandPalette({ className, placeholder = "Buscar 
     },
   });
 
+  const { petNamesOf, matchingPets } = useTutorPets(open);
+
   const filteredTutors = useMemo(() => {
     const term = q.trim();
     if (!term) return [] as TutorLite[];
-    return (tutors.data ?? []).filter((t) => matchesSearchAny([t.name, t.phone1, t.phone2], term)).slice(0, 10);
-  }, [tutors.data, q]);
+    return (tutors.data ?? []).filter((t) => matchesSearchAny([t.name, t.phone1, t.phone2, ...petNamesOf(t.id)], term)).slice(0, 10);
+  }, [tutors.data, q, petNamesOf]);
 
   const quickActions = useMemo(
     () => [
@@ -151,7 +155,12 @@ export default function GlobalCommandPalette({ className, placeholder = "Buscar 
                   >
                     <Users className="mr-2 h-4 w-4" />
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{t.name}</div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="truncate text-sm font-medium">{t.name}</span>
+                        {matchingPets(t.id, q).map((pet) => (
+                          <PetBadge key={pet} name={pet} />
+                        ))}
+                      </div>
                       <div className="truncate text-xs text-muted-foreground">
                         {[t.phone1, t.phone2].filter(Boolean).join(" • ") || "sem telefone"}
                       </div>

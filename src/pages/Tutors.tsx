@@ -15,6 +15,8 @@ import PaginationBar from "@/components/vetvax/PaginationBar";
 import { buildWhatsAppLink, formatBrPhoneForDisplay } from "@/lib/phone";
 import { buildGoogleMapsUrl } from "@/lib/address";
 import { matchesSearch, matchesSearchAny } from "@/lib/search";
+import { useTutorPets } from "@/lib/useTutorPets";
+import PetBadge from "@/components/vetvax/PetBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "@/components/layout/PageHeader";
 import EmptyState from "@/components/vetvax/EmptyState";
@@ -79,16 +81,18 @@ export default function Tutors() {
     },
   });
 
+  const { petNamesOf, matchingPets } = useTutorPets();
+
   const filteredSorted = useMemo(() => {
     const all = tutors.data ?? [];
     const term = q.trim();
     const filtered = !term
       ? all
       : all.filter((t) => {
-          if (filterBy === "name") return matchesSearch(t.name, term);
+          if (filterBy === "name") return matchesSearch(t.name, term) || matchesSearchAny(petNamesOf(t.id), term);
           if (filterBy === "phone") return matchesSearchAny([t.phone1, t.phone2], term);
           if (filterBy === "address") return matchesSearchAny([t.city, t.neighborhood, t.street, t.uf], term);
-          return matchesSearchAny([t.name, t.phone1, t.phone2, t.city, t.neighborhood], term);
+          return matchesSearchAny([t.name, t.phone1, t.phone2, t.city, t.neighborhood, ...petNamesOf(t.id)], term);
         });
 
     const sorted = [...filtered];
@@ -107,7 +111,7 @@ export default function Tutors() {
       sorted.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.name.localeCompare(b.name));
     }
     return sorted;
-  }, [tutors.data, q, filterBy, sortBy]);
+  }, [tutors.data, q, filterBy, sortBy, petNamesOf]);
 
   const total = filteredSorted.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -192,7 +196,7 @@ export default function Tutors() {
                       ? "Digite o telefone..."
                       : filterBy === "address"
                         ? "Digite cidade, bairro ou rua..."
-                        : "Buscar por nome, telefone ou região..."
+                        : "Buscar por cliente, pet, telefone ou região..."
                 }
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
@@ -269,6 +273,9 @@ export default function Tutors() {
                         {phoneLabel(t)}
                       </span>
                     )}
+                    {matchingPets(t.id, q).map((pet) => (
+                      <PetBadge key={pet} name={pet} />
+                    ))}
                     {t.tags?.slice(0, 2).map((tag) => (
                       <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>
                     ))}
