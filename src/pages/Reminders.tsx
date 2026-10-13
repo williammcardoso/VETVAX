@@ -95,13 +95,13 @@ export default function Reminders() {
   const [pageSize, setPageSize] = useState<10 | 20 | 30 | 50>(10);
 
   const [filters, setFilters] = useState<Filters>(() => {
-    let base: Filters;
+    // Filters are intentionally not remembered between visits: a forgotten search used to hide reminders.
     try {
-      const raw = localStorage.getItem(LS_KEY);
-      base = raw ? { ...defaults(), ...(JSON.parse(raw) as Partial<Filters>) } : defaults();
+      localStorage.removeItem(LS_KEY);
     } catch {
-      base = defaults();
+      // ignore
     }
+    let base: Filters = defaults();
     const dueParam = searchParams.get("due");
     if (dueParam && ["overdue", "7d", "30d", "60d", "all"].includes(dueParam)) {
       base = { ...base, due: dueParam as DuePreset };
@@ -111,12 +111,12 @@ export default function Reminders() {
 
   const persist = (next: Filters) => {
     setFilters(next);
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(next));
-    } catch {
-      // ignore
-    }
   };
+
+  const hasActiveFilters = useMemo(() => {
+    const d = defaults();
+    return (Object.keys(d) as Array<keyof Filters>).some((k) => filters[k] !== d[k]);
+  }, [filters]);
 
   const branches = useQuery({
     queryKey: ["branches", "active"],
@@ -406,6 +406,15 @@ export default function Reminders() {
           </>
         }
       />
+
+      {hasActiveFilters ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-[14px] border border-vetvax-warning/40 bg-vetvax-warning-soft px-4 py-2.5">
+          <p className="text-sm font-semibold text-vetvax-warning">Filtros ativos — a lista pode estar mostrando só parte dos lembretes.</p>
+          <Button size="sm" variant="outline" onClick={() => persist(defaults())}>
+            Limpar filtros
+          </Button>
+        </div>
+      ) : null}
 
       <section className="vetvax-card-polish rounded-[18px] border border-vetvax-border-soft bg-white p-5 shadow-vetvax-card ring-1 ring-black/[0.02]">
         <div className="space-y-3">
