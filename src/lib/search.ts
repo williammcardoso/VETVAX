@@ -1,9 +1,10 @@
-/** Lowercases and strips diacritics so "vitoria" matches "Vitória". */
+/** Lowercases, strips diacritics and collapses repeated spaces so "vitoria" matches "Vitória" and "ana  helena" matches "Ana Helena". */
 export function normalizeSearchText(value: string | null | undefined): string {
   return (value ?? "")
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
+    .replace(/\s+/g, " ")
     .trim();
 }
 
