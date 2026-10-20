@@ -40,6 +40,7 @@ export function buildReminderVars(row: ReminderLike, storeName: string) {
     store_name: storeName,
     due_date: formatDateBr(row.due_date),
     pet_name: row.pet_name?.trim() ? row.pet_name : "seu animalzinho",
+    de_pet: row.pet_name?.trim() ? `de ${row.pet_name.trim()}` : "do seu animalzinho",
     vacina: row.item_name?.trim() || row.reminder_type,
     saudacao: greetingForNow(),
     situacao: dueSituation(row.due_date),

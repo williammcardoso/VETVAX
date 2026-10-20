@@ -3,6 +3,7 @@ import type { DueReminderRow, MessageTemplate, OrgSettings } from "@/types/vetva
 import { supabase } from "@/lib/supabase";
 import { renderTemplate } from "@/lib/template";
 import { buildReminderVars } from "@/lib/reminderMessageVars";
+import { pickActiveTemplate } from "@/lib/whatsTemplates";
 import { dayjs } from "@/lib/datetime";
 
 async function fetchOrgSettings() {
@@ -13,9 +14,6 @@ async function fetchOrgSettings() {
   if (error) throw error;
   return (data?.[0] ?? null) as OrgSettings | null;
 }
-
-const REMINDER_TEMPLATE_NAME = "Lembrete - padrão";
-const OVERDUE_REMINDER_TEMPLATE_NAME = "Lembrete - vencida";
 
 async function fetchWhatsTemplates() {
   const { data, error } = await supabase
@@ -40,10 +38,10 @@ export function useWhatsMessage() {
   const buildReminderMessage = async (row: DueReminderRow) => {
     const storeName = org.data?.store_name ?? "VetVAX";
     const isOverdue = row.due_date < dayjs().format("YYYY-MM-DD");
-    const preferredName = isOverdue ? OVERDUE_REMINDER_TEMPLATE_NAME : REMINDER_TEMPLATE_NAME;
+    const kind = isOverdue ? "overdue" : "upcoming";
     const reminderTemplate =
-      templates.data?.find((t) => t.name === preferredName) ??
-      templates.data?.find((t) => t.name === REMINDER_TEMPLATE_NAME) ??
+      pickActiveTemplate(templates.data, kind) ??
+      pickActiveTemplate(templates.data, "upcoming") ??
       templates.data?.find((t) => t.name.toLowerCase().includes("lembrete")) ??
       templates.data?.[0] ??
       null;

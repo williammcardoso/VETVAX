@@ -14,36 +14,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import PageHeader from "@/components/layout/PageHeader";
 import StatusBadge from "@/components/vetvax/StatusBadge";
-
-type ReminderKind = "upcoming" | "overdue";
-
-const REMINDER_TEMPLATES: Record<ReminderKind, { name: string; label: string; fallback: string; helper: string }> = {
-  upcoming: {
-    name: "Lembrete - padrão",
-    label: "A vencer",
-    fallback:
-      "🐾 Olá, {{tutor_name}}! Aqui é da {{store_name}}.\nPassando para lembrar que a vacina de {{pet_name}} está prevista para {{due_date}}. Quer já deixar agendado? Responda aqui com o melhor dia! 📅",
-    helper: "Enviada para lembretes que ainda não venceram — tom tranquilo, sem pressa.",
-  },
-  overdue: {
-    name: "Lembrete - vencida",
-    label: "Vencida",
-    fallback:
-      "⚠️ Olá, {{tutor_name}}! Aqui é da {{store_name}}.\nA vacina de {{pet_name}} está *atrasada* desde {{due_date}}. Vacina em atraso deixa o pet mais exposto a doenças sérias, e alguns protocolos precisam reiniciar a série se o atraso for grande. 🐾💉\nPra resolver rápido, responda aqui com o melhor dia *esta semana* que já deixamos reservado pra você.",
-    helper: "Enviada para lembretes já vencidos — mais direta, com urgência e um pedido de resposta claro.",
-  },
-};
-
-const WHATS_VARIABLES = [
-  { key: "saudacao", label: "Bom dia / Boa tarde / Boa noite (automático)" },
-  { key: "primeiro_nome", label: "Primeiro nome do tutor" },
-  { key: "tutor_name", label: "Nome completo do tutor" },
-  { key: "pet_name", label: "Nome do pet" },
-  { key: "vacina", label: "Vacina do lembrete" },
-  { key: "situacao", label: "Situação: está em atraso / vence no dia..." },
-  { key: "due_date", label: "Data do lembrete" },
-  { key: "store_name", label: "Nome da clínica" },
-] as const;
+import {
+  OPTION_PRESETS,
+  REMINDER_KINDS,
+  WHATS_VARIABLES,
+  optionNameOf,
+  optionsForKind,
+  type ReminderKind,
+} from "@/lib/whatsTemplates";
 
 const schema = z.object({
   store_name: z.string().min(2, "Informe o nome"),
@@ -61,7 +39,9 @@ export default function Settings() {
   const qc = useQueryClient();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [activeKind, setActiveKind] = useState<ReminderKind>("upcoming");
-  const [whatsBody, setWhatsBody] = useState(REMINDER_TEMPLATES.upcoming.fallback);
+  const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
+  const [whatsBody, setWhatsBody] = useState(REMINDER_KINDS.upcoming.fallback);
+  const [showPresets, setShowPresets] = useState(false);
 
   const settings = useQuery({
     queryKey: ["org", "settings"],
@@ -75,29 +55,29 @@ export default function Settings() {
     },
   });
 
-  const whatsTemplate = useQuery({
-    queryKey: ["org", "whats-template", activeKind],
+  const whatsTemplates = useQuery({
+    queryKey: ["org", "whats-template", "all"],
     enabled: !!settings.data?.org_id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("message_templates")
         .select("id, org_id, name, channel, body, is_active, created_at, updated_at")
         .eq("channel", "whatsapp")
-        .eq("name", REMINDER_TEMPLATES[activeKind].name)
         .order("created_at", { ascending: true })
-        .limit(1);
+        .limit(100);
       if (error) throw error;
-      return (data?.[0] ?? null) as MessageTemplate | null;
+      return (data ?? []) as MessageTemplate[];
     },
   });
 
+  const options = optionsForKind(whatsTemplates.data, activeKind);
+  const activeOption = options.find((o) => o.template.is_active) ?? null;
+  const currentNumber = selectedNumber ?? activeOption?.number ?? options[0]?.number ?? 1;
+  const currentOption = options.find((o) => o.number === currentNumber) ?? null;
+
   useEffect(() => {
-    if (whatsTemplate.data?.body) {
-      setWhatsBody(whatsTemplate.data.body);
-      return;
-    }
-    setWhatsBody(REMINDER_TEMPLATES[activeKind].fallback);
-  }, [whatsTemplate.data?.body, activeKind]);
+    setWhatsBody(currentOption?.template.body ?? REMINDER_KINDS[activeKind].fallback);
+  }, [currentOption?.template.id, currentOption?.template.body, activeKind, currentNumber]);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -148,36 +128,81 @@ export default function Settings() {
     });
   };
 
+  const refreshTemplates = async () => {
+    await qc.invalidateQueries({ queryKey: ["org", "whats-template"] });
+  };
+
   const saveWhatsTemplate = useMutation({
     mutationFn: async () => {
       if (!settings.data?.org_id) throw new Error("Configuração da organização não encontrada.");
-      const body = whatsBody.trim() || REMINDER_TEMPLATES[activeKind].fallback;
-      if (whatsTemplate.data?.id) {
-        const { error } = await supabase
-          .from("message_templates")
-          .update({ body, is_active: true })
-          .eq("id", whatsTemplate.data.id);
+      const body = whatsBody.trim() || REMINDER_KINDS[activeKind].fallback;
+      if (currentOption) {
+        const { error } = await supabase.from("message_templates").update({ body }).eq("id", currentOption.template.id);
         if (error) throw error;
         return;
       }
       const { error } = await supabase.from("message_templates").insert({
         org_id: settings.data.org_id,
-        name: REMINDER_TEMPLATES[activeKind].name,
+        name: optionNameOf(activeKind, currentNumber),
         channel: "whatsapp",
         body,
-        is_active: true,
+        is_active: options.length === 0,
       });
       if (error) throw error;
     },
     onSuccess: async () => {
-      toast({ title: "Mensagem do WhatsApp salva" });
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["org", "whats-template", activeKind] }),
-        qc.invalidateQueries({ queryKey: ["org", "whats-template"] }),
-      ]);
+      toast({ title: `Opção ${currentNumber} salva` });
+      await refreshTemplates();
     },
     onError: (e: unknown) => {
       toast({ title: "Falha ao salvar mensagem", description: getErrorMessage(e), variant: "destructive" });
+    },
+  });
+
+  const useOption = useMutation({
+    mutationFn: async () => {
+      if (!currentOption) throw new Error("Salve a opção antes de usá-la.");
+      const others = options.filter((o) => o.template.id !== currentOption.template.id && o.template.is_active);
+      for (const o of others) {
+        const { error } = await supabase.from("message_templates").update({ is_active: false }).eq("id", o.template.id);
+        if (error) throw error;
+      }
+      const { error } = await supabase.from("message_templates").update({ is_active: true }).eq("id", currentOption.template.id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      toast({ title: `Opção ${currentNumber} agora é a mensagem "${REMINDER_KINDS[activeKind].label}"` });
+      await refreshTemplates();
+    },
+    onError: (e: unknown) => {
+      toast({ title: "Falha ao trocar a opção em uso", description: getErrorMessage(e), variant: "destructive" });
+    },
+  });
+
+  const createOption = useMutation({
+    mutationFn: async (presetId: string) => {
+      if (!settings.data?.org_id) throw new Error("Configuração da organização não encontrada.");
+      const preset = OPTION_PRESETS.find((p) => p.id === presetId);
+      if (!preset) throw new Error("Modelo inválido.");
+      const nextNumber = Math.max(1, ...options.map((o) => o.number)) + 1;
+      const { error } = await supabase.from("message_templates").insert({
+        org_id: settings.data.org_id,
+        name: optionNameOf(activeKind, nextNumber),
+        channel: "whatsapp",
+        body: preset.bodies[activeKind] || REMINDER_KINDS[activeKind].fallback,
+        is_active: false,
+      });
+      if (error) throw error;
+      return nextNumber;
+    },
+    onSuccess: async (nextNumber) => {
+      setShowPresets(false);
+      setSelectedNumber(nextNumber);
+      toast({ title: `Opção ${nextNumber} criada`, description: "Edite se quiser e clique em Usar esta opção." });
+      await refreshTemplates();
+    },
+    onError: (e: unknown) => {
+      toast({ title: "Falha ao criar opção", description: getErrorMessage(e), variant: "destructive" });
     },
   });
 
@@ -245,26 +270,74 @@ export default function Settings() {
               <h2 className="vetvax-section-title">Mensagem WhatsApp</h2>
             </div>
             <p className="mt-1 text-sm text-vetvax-text-tertiary">
-              O sistema usa uma mensagem diferente conforme o lembrete já venceu ou não — escolha abaixo qual editar.
+              O sistema usa uma mensagem para lembretes a vencer e outra para vencidos. Cada uma pode ter várias opções: escolha qual delas fica em uso.
             </p>
 
             <div className="mt-4 inline-flex rounded-control border border-vetvax-border-soft bg-vetvax-surface-panel/60 p-1">
-              {(Object.keys(REMINDER_TEMPLATES) as ReminderKind[]).map((kind) => (
+              {(Object.keys(REMINDER_KINDS) as ReminderKind[]).map((kind) => (
                 <button
                   key={kind}
                   type="button"
-                  onClick={() => setActiveKind(kind)}
+                  onClick={() => {
+                    setActiveKind(kind);
+                    setSelectedNumber(null);
+                    setShowPresets(false);
+                  }}
                   className={`rounded-[8px] px-3.5 py-1.5 text-sm font-semibold transition-colors ${
                     activeKind === kind
                       ? "bg-white text-vetvax-text-main shadow-sm"
                       : "text-vetvax-text-tertiary hover:text-vetvax-text-main"
                   }`}
                 >
-                  {REMINDER_TEMPLATES[kind].label}
+                  {REMINDER_KINDS[kind].label}
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-xs text-vetvax-text-tertiary">{REMINDER_TEMPLATES[activeKind].helper}</p>
+            <p className="mt-2 text-xs text-vetvax-text-tertiary">{REMINDER_KINDS[activeKind].helper}</p>
+
+            <div className="mt-4 grid gap-2">
+              <Label className="vetvax-label">Opções de mensagem — escolha qual editar e qual usar</Label>
+              <div className="flex flex-wrap items-center gap-2">
+                {(options.length > 0 ? options.map((o) => o.number) : [1]).map((n) => {
+                  const inUse = options.find((o) => o.number === n)?.template.is_active;
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setSelectedNumber(n)}
+                      className={`inline-flex items-center gap-1.5 rounded-pill border px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+                        currentNumber === n
+                          ? "border-vetvax-primary bg-vetvax-primary-soft text-vetvax-primary"
+                          : "border-vetvax-border-medium bg-white text-vetvax-text-secondary hover:bg-vetvax-surface-panel"
+                      }`}
+                    >
+                      Opção {n}
+                      {inUse ? <span className="rounded-pill bg-vetvax-success px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">em uso</span> : null}
+                    </button>
+                  );
+                })}
+                <Button type="button" variant="outline" className="h-9 rounded-pill px-3.5 text-sm" onClick={() => setShowPresets((v) => !v)}>
+                  + Nova opção
+                </Button>
+              </div>
+
+              {showPresets ? (
+                <div className="grid gap-2 rounded-[14px] border border-vetvax-border-soft bg-vetvax-surface-panel/60 p-3 sm:grid-cols-3">
+                  {OPTION_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      disabled={createOption.isPending}
+                      onClick={() => createOption.mutate(preset.id)}
+                      className="rounded-[12px] border border-vetvax-border-medium bg-white p-3 text-left transition-colors hover:border-vetvax-primary-border hover:bg-vetvax-primary-soft"
+                    >
+                      <p className="text-sm font-bold text-vetvax-text-main">{preset.label}</p>
+                      <p className="mt-1 text-xs text-vetvax-text-tertiary">{preset.description}</p>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
 
             <div className="mt-4 space-y-3">
               <div className="grid gap-2">
@@ -284,25 +357,36 @@ export default function Settings() {
                   ))}
                 </div>
                 <p className="text-xs text-vetvax-text-tertiary">
-                  Dica: monte a mensagem com as variáveis acima para preencher automaticamente os dados do lembrete.
+                  Formatação do WhatsApp: *negrito*, _itálico_, ~riscado~, ```fonte diferente``` e &gt; citação no início da linha.
                 </p>
               </div>
 
               <div className="grid gap-2">
-                <Label className="vetvax-label">Editor da mensagem</Label>
+                <Label className="vetvax-label">
+                  Editor — Opção {currentNumber} ({REMINDER_KINDS[activeKind].label})
+                </Label>
                 <Textarea
                   ref={textareaRef}
-                  rows={8}
+                  rows={10}
                   value={whatsBody}
                   onChange={(e) => setWhatsBody(e.target.value)}
-                  placeholder="Digite a mensagem padrão do WhatsApp..."
+                  placeholder="Digite a mensagem do WhatsApp..."
                 />
               </div>
 
-              <div className="flex justify-end">
-                <Button type="button" className="min-w-[220px]" disabled={saveWhatsTemplate.isPending} onClick={() => saveWhatsTemplate.mutate()}>
-                  {saveWhatsTemplate.isPending ? "Salvando mensagem..." : `Salvar mensagem "${REMINDER_TEMPLATES[activeKind].label}"`}
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" disabled={saveWhatsTemplate.isPending} onClick={() => saveWhatsTemplate.mutate()}>
+                  {saveWhatsTemplate.isPending ? "Salvando..." : `Salvar texto da Opção ${currentNumber}`}
                 </Button>
+                {currentOption?.template.is_active ? (
+                  <Button type="button" disabled>
+                    Opção {currentNumber} em uso
+                  </Button>
+                ) : (
+                  <Button type="button" disabled={!currentOption || useOption.isPending} onClick={() => useOption.mutate()}>
+                    {useOption.isPending ? "Trocando..." : `Usar a Opção ${currentNumber}`}
+                  </Button>
+                )}
               </div>
             </div>
           </Card>
