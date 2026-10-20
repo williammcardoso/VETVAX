@@ -35,10 +35,14 @@ const REMINDER_TEMPLATES: Record<ReminderKind, { name: string; label: string; fa
 };
 
 const WHATS_VARIABLES = [
-  { key: "tutor_name", label: "Nome do tutor" },
-  { key: "store_name", label: "Nome da clínica" },
-  { key: "due_date", label: "Data do lembrete" },
+  { key: "saudacao", label: "Bom dia / Boa tarde / Boa noite (automático)" },
+  { key: "primeiro_nome", label: "Primeiro nome do tutor" },
+  { key: "tutor_name", label: "Nome completo do tutor" },
   { key: "pet_name", label: "Nome do pet" },
+  { key: "vacina", label: "Vacina do lembrete" },
+  { key: "situacao", label: "Situação: está em atraso / vence no dia..." },
+  { key: "due_date", label: "Data do lembrete" },
+  { key: "store_name", label: "Nome da clínica" },
 ] as const;
 
 const schema = z.object({

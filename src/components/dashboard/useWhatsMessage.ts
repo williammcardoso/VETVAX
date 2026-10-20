@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { DueReminderRow, MessageTemplate, OrgSettings } from "@/types/vetvax";
 import { supabase } from "@/lib/supabase";
 import { renderTemplate } from "@/lib/template";
-import { dayjs, formatDateBr } from "@/lib/datetime";
+import { buildReminderVars } from "@/lib/reminderMessageVars";
+import { dayjs } from "@/lib/datetime";
 
 async function fetchOrgSettings() {
   const { data, error } = await supabase
@@ -51,12 +52,7 @@ export function useWhatsMessage() {
       : "Olá {{tutor_name}}! Aqui é da {{store_name}}. Passando para lembrar da próxima aplicação em {{due_date}}.";
     const body = reminderTemplate?.body ?? fallbackBody;
 
-    return renderTemplate(body, {
-      tutor_name: row.tutor_name,
-      store_name: storeName,
-      due_date: formatDateBr(row.due_date),
-      pet_name: row.pet_name?.trim() ? row.pet_name : "seu animalzinho",
-    });
+    return renderTemplate(body, buildReminderVars(row, storeName));
   };
 
   return { pickPhone, buildReminderMessage, loading: org.isLoading || templates.isLoading };
