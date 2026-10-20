@@ -92,7 +92,7 @@ export default function Reminders() {
   const [resolveRow, setResolveRow] = useState<DueReminderRow | null>(null);
   const [editRow, setEditRow] = useState<DueReminderRow | null>(null);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<10 | 20 | 30 | 50>(10);
+  const [pageSize, setPageSize] = useState<10 | 25 | 50 | 100>(25);
 
   const [filters, setFilters] = useState<Filters>(() => {
     // Filters are intentionally not remembered between visits: a forgotten search used to hide reminders.
@@ -400,6 +400,26 @@ export default function Reminders() {
                 onChange={(e) => persist({ ...filters, q: e.target.value })}
               />
             </div>
+            <div className="flex items-center gap-2">
+              <span className="whitespace-nowrap text-xs font-medium text-vetvax-text-secondary">Exibir</span>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(v) => {
+                  setPage(1);
+                  setPageSize(Number(v) as 10 | 25 | 50 | 100);
+                }}
+              >
+                <SelectTrigger className="w-[84px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-control">
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button variant="outline" onClick={refetchAll}>
               Atualizar
             </Button>
@@ -525,20 +545,7 @@ export default function Reminders() {
           <p className="text-xs text-vetvax-text-tertiary">
             Mostrando {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, list.length)} de {list.length}
           </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select value={String(pageSize)} onValueChange={(v) => { setPage(1); setPageSize(Number(v) as 10 | 20 | 30 | 50); }}>
-              <SelectTrigger className="h-9 w-[100px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-control">
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="30">30</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-            <PaginationBar page={page} totalPages={totalPages} onPageChange={setPage} />
-          </div>
+          <PaginationBar page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       ) : null}
 
