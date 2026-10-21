@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Calendar as CalendarIcon, Plus, Trash2 } from "lucide-react";
@@ -22,6 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { flashField, useShake } from "@/lib/formFeedback";
+import { normalizeSearchText } from "@/lib/search";
 import PageHeader from "@/components/layout/PageHeader";
 import FormSection from "@/components/vetvax/FormSection";
 import SummaryCard from "@/components/vetvax/SummaryCard";
@@ -33,6 +34,7 @@ const itemSchema = z.object({
   quantity: z.coerce.number().int().min(1, "Qtd. > 0"),
   pet_id: z.string().optional().nullable(),
   free_description: z.string().optional().nullable(),
+  reminder_id: z.string().optional().nullable(),
 });
 
 const schema = z.object({
@@ -108,7 +110,71 @@ export default function VaccinationNew() {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({ control: form.control, name: "items" });
+  const { fields, append, remove, replace } = useFieldArray({ control: form.control, name: "items" });
+
+  type PrefillReminder = { id: string; tutor_id: string; due_date: string; item_name: string | null; quantity: number | null; pet_id: string | null; pet: { name: string } | null };
+  const reminderPrefill = useQuery({
+    queryKey: ["vaccination", "prefill", resolveReminderParam],
+    enabled: !!resolveReminderParam,
+    queryFn: async () => {
+      const cols = "id, tutor_id, due_date, item_name, quantity, pet_id, pet:pets(name)";
+      const { data: main, error } = await supabase.from("reminders").select(cols).eq("id", resolveReminderParam!).maybeSingle();
+      if (error) throw error;
+      if (!main) return [] as PrefillReminder[];
+      const m = main as unknown as PrefillReminder;
+      const { data: sameDay, error: err2 } = await supabase
+        .from("reminders")
+        .select(cols)
+        .eq("tutor_id", m.tutor_id)
+        .eq("due_date", m.due_date)
+        .eq("status", "ATIVO")
+        .eq("is_active", true)
+        .order("created_at", { ascending: true });
+      if (err2) throw err2;
+      const others = ((sameDay ?? []) as unknown as PrefillReminder[]).filter((r) => r.id !== m.id);
+      return [m, ...others];
+    },
+  });
+
+  const prefilledRef = useRef(false);
+  const [prefillNotes, setPrefillNotes] = useState<{ label: string; matched: boolean }[]>([]);
+
+  useEffect(() => {
+    if (prefilledRef.current) return;
+    const reminders = reminderPrefill.data;
+    if (!reminders || reminders.length === 0 || !catalog.data) return;
+    prefilledRef.current = true;
+
+    const findCatalog = (name: string | null) => {
+      const target = normalizeSearchText(name);
+      if (!target) return undefined;
+      const list = catalog.data ?? [];
+      return (
+        list.find((c) => normalizeSearchText(c.name) === target) ??
+        list.find((c) => normalizeSearchText(c.name).includes(target) || target.includes(normalizeSearchText(c.name)))
+      );
+    };
+
+    const items = reminders.map((r) => ({
+      catalog_item_id: findCatalog(r.item_name)?.id ?? "",
+      quantity: r.quantity ?? 1,
+      pet_id: r.pet_id,
+      free_description: null,
+      reminder_id: r.id,
+    }));
+
+    form.setValue("tutor_id", reminders[0].tutor_id, { shouldValidate: true });
+    form.setValue("separate_by_pet", reminders.some((r) => r.pet_id));
+    replace(items);
+    setPrefillNotes(
+      reminders.map((r, i) => ({
+        label: [r.pet?.name, r.item_name].filter(Boolean).join(" — ") || "Lembrete",
+        matched: !!items[i].catalog_item_id,
+      })),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reminderPrefill.data, catalog.data]);
+
 
   const save = useMutation({
     mutationFn: async (values: Values) => {
@@ -127,7 +193,7 @@ export default function VaccinationNew() {
           tutor_id: values.tutor_id,
           applied_date: values.applied_date,
           notes: values.notes,
-          reference_reminder_id: resolveReminderParam || null,
+          reference_reminder_id: values.items.find((it) => it.reminder_id)?.reminder_id ?? null,
           items: values.items.map((it) => ({
             catalog_item_id: it.catalog_item_id,
             quantity: it.quantity,
@@ -149,7 +215,12 @@ export default function VaccinationNew() {
       if (error) throw error;
       return data as string;
     },
-    onSuccess: () => {
+    onSuccess: async (_id, values) => {
+      const resolvedIds = values.items.map((it) => it.reminder_id).filter((id): id is string => !!id);
+      const extra = resolvedIds.slice(1);
+      if (extra.length > 0) {
+        await supabase.from("reminders").update({ status: "FEITO", last_applied_at: values.applied_date }).in("id", extra);
+      }
       toast({ title: "Aplicação registrada" });
       nav("/dashboard");
     },
@@ -205,6 +276,22 @@ export default function VaccinationNew() {
 
       <form className="vetvax-fade-in grid gap-6 lg:grid-cols-[minmax(0,2fr)_320px]" onSubmit={form.handleSubmit((v) => save.mutate(v), onInvalid)}>
         <div className="space-y-5">
+          {prefillNotes.length > 0 ? (
+            <div className="rounded-[14px] border border-vetvax-primary-border bg-vetvax-primary-soft px-4 py-3">
+              <p className="text-sm font-bold text-vetvax-primary">
+                Preenchido a partir {prefillNotes.length === 1 ? "do lembrete" : `de ${prefillNotes.length} lembretes do mesmo dia`} — confira e registre.
+              </p>
+              <ul className="mt-1 space-y-0.5 text-xs text-vetvax-text-secondary">
+                {prefillNotes.map((n, i) => (
+                  <li key={i}>
+                    • {n.label}
+                    {n.matched ? "" : " — vacina não encontrada no catálogo, selecione abaixo"}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-[11px] text-vetvax-text-tertiary">Para não registrar algum, remova o item na etapa 2 — o lembrete dele continua ativo.</p>
+            </div>
+          ) : null}
           <FormSection step="1" title="Tutor e data" description="Defina o tutor e a data em que a aplicação aconteceu.">
             <div className="grid gap-4">
               <div className="grid gap-2" data-field="tutor_id">
