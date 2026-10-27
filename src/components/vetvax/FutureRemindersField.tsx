@@ -1,4 +1,5 @@
-import { CalendarDays, Plus, StickyNote, Syringe, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { CalendarDays, ChevronDown, Plus, StickyNote, Syringe, Trash2 } from "lucide-react";
 import type { CatalogItem, Pet } from "@/types/vetvax";
 import { dayjs } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
@@ -79,18 +80,40 @@ export default function FutureRemindersField({
   /** Applied when the very first row is added (e.g. duplicate the just-applied vaccine + quantity). */
   firstRowDefaults?: Partial<FutureReminderRow>;
 }) {
+  // With more than one return, cards can be collapsed to a one-line summary.
+  const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
+
   const updateRow = (idx: number, patch: Partial<FutureReminderRow>) => {
     onChange(rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
   };
 
   const removeRow = (idx: number) => {
     onChange(rows.filter((_, i) => i !== idx));
+    setCollapsed((prev) => {
+      const next = new Set<number>();
+      prev.forEach((i) => {
+        if (i < idx) next.add(i);
+        else if (i > idx) next.add(i - 1);
+      });
+      return next;
+    });
   };
 
   const addRow = () => {
     const base = emptyFutureReminderRow();
     const next = rows.length === 0 && firstRowDefaults ? { ...base, ...firstRowDefaults } : base;
     onChange([...rows, next]);
+    // keep the new card open and fold the previous ones
+    setCollapsed(new Set(rows.map((_, i) => i)));
+  };
+
+  const toggle = (idx: number) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
   };
 
   const shortcutBase = baseDate || dayjs().format("YYYY-MM-DD");
@@ -106,12 +129,22 @@ export default function FutureRemindersField({
           dueLabel ?? "sem data",
         ].join("  •  ");
 
+        const isCollapsed = rows.length > 1 && collapsed.has(idx);
+        const incomplete = !row.catalog_item_id || !row.due_date;
+
         return (
           <div
             key={idx}
             className="overflow-hidden rounded-[14px] border border-vetvax-border-medium bg-white shadow-sm"
           >
-            <div className="flex items-center gap-3 border-b border-vetvax-primary-border bg-vetvax-primary-soft px-4 py-3">
+            <div
+              className={cn(
+                "flex items-center gap-3 bg-vetvax-primary-soft px-4 py-3",
+                isCollapsed ? "" : "border-b border-vetvax-primary-border",
+                rows.length > 1 ? "cursor-pointer" : "",
+              )}
+              onClick={rows.length > 1 ? () => toggle(idx) : undefined}
+            >
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-vetvax-primary text-sm font-bold text-white">
                 {idx + 1}
               </span>
@@ -119,19 +152,28 @@ export default function FutureRemindersField({
                 <p className="text-sm font-bold text-vetvax-text-main">Retorno {idx + 1}</p>
                 <p className="truncate text-xs font-medium text-vetvax-text-secondary">{summary}</p>
               </div>
+              {incomplete && isCollapsed ? (
+                <span className="shrink-0 rounded-pill bg-vetvax-warning-soft px-2 py-0.5 text-[11px] font-bold text-vetvax-warning">faltam dados</span>
+              ) : null}
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 className="shrink-0 text-vetvax-danger hover:bg-vetvax-danger-soft hover:text-vetvax-danger"
-                onClick={() => removeRow(idx)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeRow(idx);
+                }}
               >
                 <Trash2 className="mr-1.5 h-4 w-4" />
                 Remover
               </Button>
+              {rows.length > 1 ? (
+                <ChevronDown className={cn("h-5 w-5 shrink-0 text-vetvax-text-secondary transition-transform", isCollapsed ? "" : "rotate-180")} />
+              ) : null}
             </div>
 
-            <div className="space-y-6 p-4 sm:p-5">
+            <div className={cn("space-y-6 p-4 sm:p-5", isCollapsed ? "hidden" : "")}>
               <section>
                 <BlockTitle icon={Syringe}>Vacina e quantidade</BlockTitle>
                 <div className="grid gap-4">
