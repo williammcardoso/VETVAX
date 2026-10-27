@@ -195,7 +195,7 @@ export default function Reminders() {
         pet: { name: string | null } | null;
       };
 
-      const mapped = ((data ?? []) as ReminderJoinRow[]).map((r) => ({
+      const mapped = ((data ?? []) as unknown as ReminderJoinRow[]).map((r) => ({
         id: r.id,
         org_id: r.org_id,
         branch_id: r.branch_id,
