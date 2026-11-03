@@ -54,6 +54,9 @@ function useQueryParam(name: string) {
 
 export default function VaccinationNew() {
   const nav = useNavigate();
+  // Screen that opened this form (e.g. the filtered reminders list): saving or cancelling returns there.
+  const returnTo = (useLocation().state as { returnTo?: unknown } | null)?.returnTo;
+  const backTo = typeof returnTo === "string" && returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/dashboard";
   const tutorParam = useQueryParam("tutor");
   const resolveReminderParam = useQueryParam("resolveReminder");
 
@@ -149,10 +152,25 @@ export default function VaccinationNew() {
       const target = normalizeSearchText(name);
       if (!target) return undefined;
       const list = catalog.data ?? [];
-      return (
-        list.find((c) => normalizeSearchText(c.name) === target) ??
-        list.find((c) => normalizeSearchText(c.name).includes(target) || target.includes(normalizeSearchText(c.name)))
-      );
+      const exact = list.find((c) => normalizeSearchText(c.name) === target);
+      if (exact) return exact;
+
+      // Old imported reminders use another spelling ("V8 - IMPORTADA" vs "Vacina V8 (IMPORTADA)"):
+      // compare word by word and take the catalog item that has all the words with the fewest extras.
+      const words = (s: string | null) => normalizeSearchText(s).split(/[^a-z0-9]+/).filter(Boolean);
+      const targetWords = words(name);
+      let best: (typeof list)[number] | undefined;
+      let bestExtra = Infinity;
+      for (const c of list) {
+        const cWords = words(c.name);
+        if (!targetWords.every((w) => cWords.includes(w))) continue;
+        const extra = cWords.length - targetWords.length;
+        if (extra < bestExtra) {
+          best = c;
+          bestExtra = extra;
+        }
+      }
+      return best ?? list.find((c) => normalizeSearchText(c.name).includes(target) || target.includes(normalizeSearchText(c.name)));
     };
 
     const items = reminders.map((r) => ({
@@ -222,7 +240,7 @@ export default function VaccinationNew() {
         await supabase.from("reminders").update({ status: "FEITO", last_applied_at: values.applied_date }).in("id", extra);
       }
       toast({ title: "Aplicação registrada" });
-      nav("/dashboard");
+      nav(backTo);
     },
     onError: (e: unknown) => {
       toast({ title: "Falha ao registrar", description: e instanceof Error ? e.message : "Tente novamente.", variant: "destructive" });
@@ -269,7 +287,7 @@ export default function VaccinationNew() {
         description="Cadastre a vacina aplicada agora. O sistema cuida do lembrete da próxima dose."
         actions={
           <Button asChild variant="outline">
-            <Link to="/dashboard">Voltar</Link>
+            <Link to={backTo}>Voltar</Link>
           </Button>
         }
       />
@@ -475,7 +493,7 @@ export default function VaccinationNew() {
                 {save.isPending ? "Registrando..." : "Registrar aplicação"}
               </ActionButton>
               <ActionButton asChild type="button" emphasis="secondary" className="w-full">
-                <Link to="/dashboard">Voltar</Link>
+                <Link to={backTo}>Voltar</Link>
               </ActionButton>
             </>
           }

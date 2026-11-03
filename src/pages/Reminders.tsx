@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, CalendarClock, Pencil, Search, TriangleAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -22,7 +22,7 @@ import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import EditReminderDialog from "@/components/reminders/EditReminderDialog";
 import { useWhatsReminderSend } from "@/components/reminders/useWhatsReminderSend";
 import ResolveReminderDialog from "@/components/reminders/ResolveReminderDialog";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 
@@ -57,6 +57,52 @@ function defaults(): Filters {
   };
 }
 
+const PAGE_SIZES = [10, 25, 50, 100] as const;
+type PageSize = (typeof PAGE_SIZES)[number];
+
+/**
+ * The list state (filters, page, page size) lives in the URL so that leaving for "Registrar aplicação"
+ * and coming back lands on the exact same spot. A fresh visit (sidebar) has no params, so it starts clean.
+ */
+function readListState(params: URLSearchParams) {
+  const base = defaults();
+  const pick = <T extends string>(key: string, allowed: readonly T[], fallback: T) => {
+    const v = params.get(key);
+    return v && (allowed as readonly string[]).includes(v) ? (v as T) : fallback;
+  };
+  const filters: Filters = {
+    q: params.get("q") ?? base.q,
+    due: pick<DuePreset>("due", ["overdue", "7d", "30d", "60d", "all"], base.due),
+    status: pick<StatusFilter>("status", ["all", "ATIVO", "FEITO", "ARQUIVADO"], base.status),
+    reminderType: pick("tipo", ["all", "vacina", "medicação", "outro"], base.reminderType),
+    pet: pick("pet", ["all", "with_pet", "without_pet"], base.pet),
+    branchId: params.get("filial") ?? base.branchId,
+    contact: pick<ContactFilter>("contato", ["all", "not_contacted", "no_response"], base.contact),
+  };
+  const size = Number(params.get("exibir"));
+  const page = Number(params.get("pagina"));
+  return {
+    filters,
+    pageSize: (PAGE_SIZES as readonly number[]).includes(size) ? (size as PageSize) : 25,
+    page: Number.isInteger(page) && page > 0 ? page : 1,
+  };
+}
+
+function writeListState(filters: Filters, page: number, pageSize: PageSize) {
+  const d = defaults();
+  const params = new URLSearchParams();
+  if (filters.q) params.set("q", filters.q);
+  if (filters.due !== d.due) params.set("due", filters.due);
+  if (filters.status !== d.status) params.set("status", filters.status);
+  if (filters.reminderType !== d.reminderType) params.set("tipo", filters.reminderType);
+  if (filters.pet !== d.pet) params.set("pet", filters.pet);
+  if (filters.branchId !== d.branchId) params.set("filial", filters.branchId);
+  if (filters.contact !== d.contact) params.set("contato", filters.contact);
+  if (pageSize !== 25) params.set("exibir", String(pageSize));
+  if (page > 1) params.set("pagina", String(page));
+  return params;
+}
+
 function dueRange(due: DuePreset) {
   const today = dayjs().startOf("day");
   if (due === "overdue") return { from: null as string | null, to: today.subtract(1, "day").format("YYYY-MM-DD") };
@@ -87,12 +133,14 @@ function formatTutorAddress(row: DueReminderRow) {
 export default function Reminders() {
   const qc = useQueryClient();
   const nav = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [resolveOpen, setResolveOpen] = useState(false);
   const [resolveRow, setResolveRow] = useState<DueReminderRow | null>(null);
   const [editRow, setEditRow] = useState<DueReminderRow | null>(null);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<10 | 25 | 50 | 100>(25);
+  const initial = useMemo(() => readListState(searchParams), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const [page, setPage] = useState(initial.page);
+  const [pageSize, setPageSize] = useState<PageSize>(initial.pageSize);
 
   const [filters, setFilters] = useState<Filters>(() => {
     // Filters are intentionally not remembered between visits: a forgotten search used to hide reminders.
@@ -101,13 +149,12 @@ export default function Reminders() {
     } catch {
       // ignore
     }
-    let base: Filters = defaults();
-    const dueParam = searchParams.get("due");
-    if (dueParam && ["overdue", "7d", "30d", "60d", "all"].includes(dueParam)) {
-      base = { ...base, due: dueParam as DuePreset };
-    }
-    return base;
+    return initial.filters;
   });
+
+  useEffect(() => {
+    setSearchParams(writeListState(filters, page, pageSize), { replace: true });
+  }, [filters, page, pageSize, setSearchParams]);
 
   const persist = (next: Filters) => {
     setFilters(next);
@@ -301,11 +348,16 @@ export default function Reminders() {
   });
 
   useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+    // Only clamp once the list is loaded, otherwise a page restored from the URL would collapse to 1 while loading.
+    if (rows.isSuccess && page > totalPages) setPage(totalPages);
+  }, [rows.isSuccess, page, totalPages]);
 
+  // Changing a filter or the page size goes back to page 1, except for the initial render (page restored from the URL).
+  const listStateRef = useRef({ filters, pageSize });
   useEffect(() => {
-    setPage(1);
+    const prev = listStateRef.current;
+    if (prev.filters !== filters || prev.pageSize !== pageSize) setPage(1);
+    listStateRef.current = { filters, pageSize };
   }, [filters, pageSize]);
 
   return (
@@ -580,7 +632,9 @@ export default function Reminders() {
         onScheduleNow={(row) => {
           setResolveOpen(false);
           setResolveRow(null);
-          nav(`/vaccinations/new?tutor=${encodeURIComponent(row.tutor_id)}&resolveReminder=${encodeURIComponent(row.id)}`);
+          nav(`/vaccinations/new?tutor=${encodeURIComponent(row.tutor_id)}&resolveReminder=${encodeURIComponent(row.id)}`, {
+            state: { returnTo: `${location.pathname}${location.search}` },
+          });
         }}
       />
     </div>
