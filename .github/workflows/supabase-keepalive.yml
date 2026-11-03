@@ -16,17 +16,27 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Consulta o banco
+        shell: bash
         run: |
+          set +e
           URL=$(grep -oE 'https://[a-z0-9]+\.supabase\.co' src/lib/supabase.ts | head -n1)
           KEY=$(grep -oE 'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+' src/lib/supabase.ts | head -n1)
+          echo "URL encontrada: ${URL:-nenhuma}"
+          echo "Tamanho da chave: ${#KEY}"
           if [ -z "$URL" ] || [ -z "$KEY" ]; then
             echo "Não achei a URL/chave do Supabase em src/lib/supabase.ts"
             exit 1
           fi
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
-            "$URL/rest/v1/org_settings?select=org_id&limit=1")
-          echo "Resposta do Supabase: $STATUS"
-          if [ "$STATUS" != "200" ]; then
-            exit 1
-          fi
+          for i in 1 2 3; do
+            STATUS=$(curl -sS --max-time 30 -o resposta.txt -w "%{http_code}" \
+              -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+              "$URL/rest/v1/org_settings?select=org_id&limit=1")
+            echo "Tentativa $i - resposta do Supabase: $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Banco ativo."
+              exit 0
+            fi
+            head -c 300 resposta.txt; echo
+            sleep 10
+          done
+          exit 1
