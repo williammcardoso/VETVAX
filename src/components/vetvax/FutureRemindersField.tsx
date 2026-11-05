@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarDays, ChevronDown, Plus, StickyNote, Syringe, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import type { CatalogItem, Pet } from "@/types/vetvax";
 import { dayjs } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
@@ -33,17 +33,6 @@ export function emptyFutureReminderRow(): FutureReminderRow {
 }
 
 const inputClass = "h-11 border-vetvax-border-medium bg-white text-[15px] shadow-sm";
-
-function BlockTitle({ icon: Icon, children }: { icon: typeof Syringe; children: string }) {
-  return (
-    <div className="mb-3 flex items-center gap-2 border-b border-vetvax-border-soft pb-2">
-      <span className="grid h-6 w-6 place-items-center rounded-[8px] bg-vetvax-primary-soft text-vetvax-primary">
-        <Icon className="h-3.5 w-3.5" />
-      </span>
-      <p className="text-xs font-bold uppercase tracking-wider text-vetvax-text-secondary">{children}</p>
-    </div>
-  );
-}
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: string }) {
   return (
@@ -173,66 +162,61 @@ export default function FutureRemindersField({
               ) : null}
             </div>
 
-            <div className={cn("space-y-6 p-4 sm:p-5", isCollapsed ? "hidden" : "")}>
-              <section>
-                <BlockTitle icon={Syringe}>Vacina e quantidade</BlockTitle>
-                <div className="grid gap-4">
-                  <div className="grid gap-1.5">
-                    <Label className="text-sm font-semibold text-vetvax-text-main">Vacina</Label>
-                    <Select value={row.catalog_item_id} onValueChange={(v) => updateRow(idx, { catalog_item_id: v })}>
-                      <SelectTrigger className={inputClass}>
-                        <SelectValue placeholder="Selecione a vacina..." />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-control">
-                        {catalog.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-4">
-                  <div className="grid gap-1.5">
-                    <Label className="text-sm font-semibold text-vetvax-text-main">Qtd.</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      className={cn(inputClass, "text-center font-semibold")}
-                      value={row.quantity}
-                      onChange={(e) => updateRow(idx, { quantity: Math.max(1, Number(e.target.value) || 1) })}
-                    />
-                  </div>
-
-                  <div className="grid gap-1.5">
-                    <Label className="text-sm font-semibold text-vetvax-text-main">Pet (opcional)</Label>
-                    <Select
-                      value={row.pet_id ?? "_none"}
-                      onValueChange={(v) => updateRow(idx, { pet_id: v === "_none" ? null : v })}
-                      disabled={!showPetSelect}
-                    >
-                      <SelectTrigger className={inputClass}>
-                        <SelectValue placeholder={showPetSelect ? "Selecione..." : "Desligado"} />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-control">
-                        <SelectItem value="_none">Sem pet</SelectItem>
-                        {pets.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  </div>
+            <div className={cn("space-y-4 p-4 sm:p-5", isCollapsed ? "hidden" : "")}>
+              {/* Wide screens: vacina + qtd + pet on one line, data + observação on the next. Small screens stack. */}
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_96px] lg:grid-cols-[minmax(0,1.6fr)_96px_minmax(0,1fr)]">
+                <div className="grid content-start gap-1.5 md:col-span-2 lg:col-span-1">
+                  <Label className="text-sm font-semibold text-vetvax-text-main">Vacina</Label>
+                  <Select value={row.catalog_item_id} onValueChange={(v) => updateRow(idx, { catalog_item_id: v })}>
+                    <SelectTrigger className={inputClass}>
+                      <SelectValue placeholder="Selecione a vacina..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-control">
+                      {catalog.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </section>
 
-              <section>
-                <BlockTitle icon={CalendarDays}>Quando voltar</BlockTitle>
-                <div className="grid gap-4">
-                  <div className="grid max-w-[240px] gap-1.5">
+                <div className="grid content-start gap-1.5">
+                  <Label className="text-sm font-semibold text-vetvax-text-main">Qtd.</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    className={cn(inputClass, "text-center font-semibold")}
+                    value={row.quantity}
+                    onChange={(e) => updateRow(idx, { quantity: Math.max(1, Number(e.target.value) || 1) })}
+                  />
+                </div>
+
+                <div className="grid content-start gap-1.5">
+                  <Label className="text-sm font-semibold text-vetvax-text-main">Pet (opcional)</Label>
+                  <Select
+                    value={row.pet_id ?? "_none"}
+                    onValueChange={(v) => updateRow(idx, { pet_id: v === "_none" ? null : v })}
+                    disabled={!showPetSelect}
+                  >
+                    <SelectTrigger className={inputClass}>
+                      <SelectValue placeholder={showPetSelect ? "Selecione..." : "Desligado"} />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-control">
+                      <SelectItem value="_none">Sem pet</SelectItem>
+                      {pets.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid gap-4 border-t border-vetvax-border-soft pt-4 md:grid-cols-[200px_minmax(0,1fr)]">
+                <div className="grid content-start gap-2">
+                  <div className="grid gap-1.5">
                     <Label className="text-sm font-semibold text-vetvax-text-main">Data prevista</Label>
                     <Input
                       type="date"
@@ -241,32 +225,29 @@ export default function FutureRemindersField({
                       onChange={(e) => updateRow(idx, { due_date: e.target.value })}
                     />
                   </div>
-                  <div>
-                    <p className="mb-1.5 text-xs font-medium text-vetvax-text-tertiary">Ou escolha um prazo a partir da data da aplicação:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {DAY_SHORTCUTS.map((opt) => {
-                        const target = dayjs(shortcutBase).add(opt.days, "day").format("YYYY-MM-DD");
-                        return (
-                          <Chip key={opt.days} active={row.due_date === target} onClick={() => updateRow(idx, { due_date: target })}>
-                            {opt.label}
-                          </Chip>
-                        );
-                      })}
-                    </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {DAY_SHORTCUTS.map((opt) => {
+                      const target = dayjs(shortcutBase).add(opt.days, "day").format("YYYY-MM-DD");
+                      return (
+                        <Chip key={opt.days} active={row.due_date === target} onClick={() => updateRow(idx, { due_date: target })}>
+                          {opt.label}
+                        </Chip>
+                      );
+                    })}
                   </div>
                 </div>
-              </section>
 
-              <section>
-                <BlockTitle icon={StickyNote}>Observação</BlockTitle>
-                <div className="grid gap-3">
-                  <Input
-                    className={inputClass}
-                    placeholder={NOTES_PLACEHOLDER}
-                    value={row.notes}
-                    onChange={(e) => updateRow(idx, { notes: e.target.value })}
-                  />
-                  <div className="flex flex-wrap gap-2">
+                <div className="grid content-start gap-2">
+                  <div className="grid gap-1.5">
+                    <Label className="text-sm font-semibold text-vetvax-text-main">Observação</Label>
+                    <Input
+                      className={inputClass}
+                      placeholder={NOTES_PLACEHOLDER}
+                      value={row.notes}
+                      onChange={(e) => updateRow(idx, { notes: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
                     {NOTES_SHORTCUTS.map((label) => (
                       <Chip key={label} active={row.notes === label} onClick={() => updateRow(idx, { notes: label })}>
                         {label}
@@ -274,7 +255,7 @@ export default function FutureRemindersField({
                     ))}
                   </div>
                 </div>
-              </section>
+              </div>
             </div>
           </div>
         );
