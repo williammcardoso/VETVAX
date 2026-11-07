@@ -4,7 +4,7 @@ import { Bell, Clock3, MoreHorizontal, Pencil, Syringe, UserPlus, Users } from "
 import { supabase } from "@/lib/supabase";
 import type { DashboardKpis, DueReminderRow, VaccinationRecordRow } from "@/types/vetvax";
 import { Button } from "@/components/ui/button";
-import { dayjs, daysDiffFromToday } from "@/lib/datetime";
+import { dayjs, daysDiffFromToday, formatTimeShort } from "@/lib/datetime";
 import { getReminderUrgency, URGENCY_BADGE_TONE, URGENCY_STRIPE_CLASS } from "@/lib/reminderUrgency";
 import { getItemTone } from "@/lib/itemTone";
 import { formatTutorAddressLine, buildGoogleMapsUrl } from "@/lib/address";
@@ -249,7 +249,10 @@ export default function Dashboard() {
                 <div className="grid min-h-[84px] gap-3 md:grid-cols-[5px_96px_minmax(0,1fr)_auto] md:items-center">
                   <div className={`h-full rounded-pill ${URGENCY_STRIPE_CLASS[urgency]}`} />
                   <div>
-                    <p className="text-[13px] font-bold text-vetvax-primary">{dayjs(row.due_date).format("DD/MM/YYYY")}</p>
+                    <p className="text-[13px] font-bold text-vetvax-primary">
+                      {dayjs(row.due_date).format("DD/MM/YYYY")}
+                    </p>
+                    {row.due_time ? <p className="text-[13px] font-extrabold text-amber-700">às {formatTimeShort(row.due_time)}</p> : null}
                     <StatusBadge tone={URGENCY_BADGE_TONE[urgency]} className="mt-1">{dueLabel}</StatusBadge>
                     <StatusBadge tone={(row.send_count ?? 0) > 0 ? "success" : "default"} className="mt-1">
                       {(row.send_count ?? 0) > 0 ? "✓ contatado" : "sem contato"}

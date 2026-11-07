@@ -28,6 +28,7 @@ export const WHATS_VARIABLES = [
   { key: "vacina", label: "Vacina do lembrete" },
   { key: "situacao", label: "Situação: está em atraso / vence no dia..." },
   { key: "due_date", label: "Data do lembrete" },
+  { key: "horario", label: "Horário do agendamento (\"às 14h30\"; vazio se não tiver)" },
   { key: "store_name", label: "Nome da clínica" },
 ] as const;
 

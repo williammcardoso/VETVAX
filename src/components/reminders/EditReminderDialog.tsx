@@ -29,6 +29,7 @@ export default function EditReminderDialog({
   onSaved: () => Promise<void> | void;
 }) {
   const [dueDate, setDueDate] = useState("");
+  const [dueTime, setDueTime] = useState("");
   const [catalogId, setCatalogId] = useState(KEEP_CURRENT);
   const [petId, setPetId] = useState(NO_PET);
   const [quantity, setQuantity] = useState(1);
@@ -39,6 +40,7 @@ export default function EditReminderDialog({
   useEffect(() => {
     if (!row) return;
     setDueDate(row.due_date);
+    setDueTime(row.due_time ? row.due_time.slice(0, 5) : "");
     setCatalogId(KEEP_CURRENT);
     setPetId(row.pet_id ?? NO_PET);
     setQuantity(row.quantity ?? 1);
@@ -81,6 +83,7 @@ export default function EditReminderDialog({
       if (!dueDate) throw new Error("Informe a data do lembrete.");
       const patch: Record<string, unknown> = {
         due_date: dueDate,
+        due_time: dueTime || null,
         pet_id: petId === NO_PET ? null : petId,
         quantity: Math.max(1, quantity || 1),
       };
@@ -130,11 +133,22 @@ export default function EditReminderDialog({
             </Select>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_96px]">
             <div className="grid gap-2">
               <Label className="vetvax-label">Data prevista</Label>
               <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
               {dueDate ? <p className="text-[11px] text-vetvax-text-tertiary">{dayjs(dueDate).format("DD/MM/YYYY")}</p> : null}
+            </div>
+            <div className="grid gap-2">
+              <Label className="vetvax-label">Horário (opcional)</Label>
+              <div className="flex gap-2">
+                <Input type="time" step={300} value={dueTime} onChange={(e) => setDueTime(e.target.value)} />
+                {dueTime ? (
+                  <Button type="button" variant="ghost" size="sm" className="shrink-0 px-2 text-xs" onClick={() => setDueTime("")}>
+                    Limpar
+                  </Button>
+                ) : null}
+              </div>
             </div>
             <div className="grid gap-2">
               <Label className="vetvax-label">Quantidade</Label>

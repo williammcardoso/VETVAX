@@ -25,6 +25,13 @@ export function formatTimeBr(time: string) {
   return `${hh}:${mm}`;
 }
 
+/** "14:30:00" -> "14h30"; "09:00" -> "9h". */
+export function formatTimeShort(time: string) {
+  const [hh, mm] = time.split(":");
+  const hour = String(Number(hh));
+  return mm && mm !== "00" ? `${hour}h${mm}` : `${hour}h`;
+}
+
 export function daysDiffFromToday(dateISO: string) {
   const start = dayjs().startOf("day");
   const end = dayjs(dateISO).startOf("day");

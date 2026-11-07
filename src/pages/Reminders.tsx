@@ -6,7 +6,7 @@ import type { Branch, DueReminderRow } from "@/types/vetvax";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { dayjs, daysDiffFromToday } from "@/lib/datetime";
+import { dayjs, daysDiffFromToday, formatTimeShort } from "@/lib/datetime";
 import { getReminderUrgency, URGENCY_BADGE_TONE, URGENCY_STRIPE_CLASS } from "@/lib/reminderUrgency";
 import { formatTutorAddressLine, buildGoogleMapsUrl } from "@/lib/address";
 import { matchesSearchAny } from "@/lib/search";
@@ -186,10 +186,11 @@ export default function Reminders() {
       let q = supabase
         .from("reminders")
         .select(
-          "id, org_id, branch_id, tutor_id, pet_id, due_date, reference_appointment_id, reference_record_id, last_applied_at, reminder_type, item_name, message_template_id, status, last_sent_at, send_count, notes, quantity, created_at, is_active, tutor:tutors(name, phone1, phone2, street, number, complement, neighborhood, city, uf), pet:pets(name)",
+          "id, org_id, branch_id, tutor_id, pet_id, due_date, due_time, reference_appointment_id, reference_record_id, last_applied_at, reminder_type, item_name, message_template_id, status, last_sent_at, send_count, notes, quantity, created_at, is_active, tutor:tutors(name, phone1, phone2, street, number, complement, neighborhood, city, uf), pet:pets(name)",
         )
         .eq("is_active", true)
         .order("due_date", { ascending: true })
+        .order("due_time", { ascending: true, nullsFirst: false })
         .limit(800);
 
       if (filters.status !== "all") q = q.eq("status", filters.status);
@@ -217,6 +218,7 @@ export default function Reminders() {
         tutor_id: string;
         pet_id: string | null;
         due_date: string;
+        due_time: string | null;
         reference_appointment_id: string | null;
         reference_record_id: string | null;
         last_applied_at: string | null;
@@ -249,6 +251,7 @@ export default function Reminders() {
         tutor_id: r.tutor_id,
         pet_id: r.pet_id,
         due_date: r.due_date,
+        due_time: r.due_time,
         reference_appointment_id: r.reference_appointment_id,
         reference_record_id: r.reference_record_id,
         last_applied_at: r.last_applied_at,
@@ -517,7 +520,10 @@ export default function Reminders() {
                   <div className={`h-full rounded-pill ${row.status === "ATIVO" ? URGENCY_STRIPE_CLASS[urgency] : "bg-transparent"}`} />
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-xs text-vetvax-text-tertiary">{dayjs(row.due_date).format("DD/MM/YYYY")}</p>
+                      <p className="text-xs text-vetvax-text-tertiary">
+                        {dayjs(row.due_date).format("DD/MM/YYYY")}
+                        {row.due_time ? <span className="ml-1.5 rounded-[6px] bg-amber-100 px-1.5 py-0.5 text-[11px] font-extrabold text-amber-900">{formatTimeShort(row.due_time)}</span> : null}
+                      </p>
                       <StatusBadge tone={URGENCY_BADGE_TONE[urgency]}>{dueLabel}</StatusBadge>
                       {row.status === "ATIVO" ? <StatusBadge tone="warning">ativo</StatusBadge> : null}
                       {row.status === "FEITO" ? <StatusBadge tone="success">resolvido</StatusBadge> : null}

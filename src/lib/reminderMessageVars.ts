@@ -1,9 +1,10 @@
-import { dayjs, formatDateBr } from "@/lib/datetime";
+import { dayjs, formatDateBr, formatTimeShort } from "@/lib/datetime";
 
 type ReminderLike = {
   tutor_name: string;
   pet_name: string | null;
   due_date: string;
+  due_time?: string | null;
   item_name: string | null;
   reminder_type: string;
 };
@@ -24,13 +25,14 @@ export function firstNameOf(fullName: string) {
 }
 
 /** Text that follows "a vacina do Boris ..." — works for both overdue and upcoming reminders. */
-export function dueSituation(dueDate: string, now = dayjs()) {
+export function dueSituation(dueDate: string, now = dayjs(), dueTime?: string | null) {
   const days = dayjs(dueDate).startOf("day").diff(now.startOf("day"), "day");
   const formatted = formatDateBr(dueDate);
+  const at = dueTime ? ` às *${formatTimeShort(dueTime)}*` : "";
   if (days < 0) return `está *em atraso* (venceu em ${formatted})`;
-  if (days === 0) return "vence *hoje*";
-  if (days === 1) return `vence *amanhã* (${formatted})`;
-  return `vence no dia *${formatted}*`;
+  if (days === 0) return `vence *hoje*${at}`;
+  if (days === 1) return `vence *amanhã*${at} (${formatted})`;
+  return `vence no dia *${formatted}*${at}`;
 }
 
 export function buildReminderVars(row: ReminderLike, storeName: string) {
@@ -39,10 +41,11 @@ export function buildReminderVars(row: ReminderLike, storeName: string) {
     primeiro_nome: firstNameOf(row.tutor_name),
     store_name: storeName,
     due_date: formatDateBr(row.due_date),
+    horario: row.due_time ? `às ${formatTimeShort(row.due_time)}` : "",
     pet_name: row.pet_name?.trim() ? row.pet_name : "seu animalzinho",
     de_pet: row.pet_name?.trim() ? `de ${row.pet_name.trim()}` : "do seu animalzinho",
     vacina: row.item_name?.trim() || row.reminder_type,
     saudacao: greetingForNow(),
-    situacao: dueSituation(row.due_date),
+    situacao: dueSituation(row.due_date, dayjs(), row.due_time),
   };
 }

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import type { CatalogItem, Pet } from "@/types/vetvax";
-import { dayjs } from "@/lib/datetime";
+import { dayjs, formatTimeShort } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ const NOTES_PLACEHOLDER = "Ex: segunda dose, vacina anual, reforço...";
 export type FutureReminderRow = {
   catalog_item_id: string;
   due_date: string;
+  /** Optional time of day, "HH:mm" (empty = only the date). */
+  due_time: string;
   pet_id: string | null;
   notes: string;
   quantity: number;
@@ -29,7 +31,7 @@ const DAY_SHORTCUTS = [
 const NOTES_SHORTCUTS = ["1ª dose", "2ª dose", "3ª dose", "4ª dose", "Dose anual"];
 
 export function emptyFutureReminderRow(): FutureReminderRow {
-  return { catalog_item_id: "", due_date: "", pet_id: null, notes: "", quantity: 1 };
+  return { catalog_item_id: "", due_date: "", due_time: "", pet_id: null, notes: "", quantity: 1 };
 }
 
 const inputClass = "h-11 border-vetvax-border-medium bg-white text-[15px] shadow-sm";
@@ -115,7 +117,7 @@ export default function FutureRemindersField({
         const summary = [
           vaccineName ?? "Vacina não escolhida",
           `${row.quantity} ${row.quantity === 1 ? "dose" : "doses"}`,
-          dueLabel ?? "sem data",
+          dueLabel ? (row.due_time ? `${dueLabel} às ${formatTimeShort(row.due_time)}` : dueLabel) : "sem data",
         ].join("  •  ");
 
         const isCollapsed = rows.length > 1 && collapsed.has(idx);
@@ -214,16 +216,28 @@ export default function FutureRemindersField({
                 </div>
               </div>
 
-              <div className="grid gap-4 border-t border-vetvax-border-soft pt-4 md:grid-cols-[200px_minmax(0,1fr)]">
+              <div className="grid gap-4 border-t border-vetvax-border-soft pt-4 md:grid-cols-[300px_minmax(0,1fr)]">
                 <div className="grid content-start gap-2">
-                  <div className="grid gap-1.5">
-                    <Label className="text-sm font-semibold text-vetvax-text-main">Data prevista</Label>
-                    <Input
-                      type="date"
-                      className={inputClass}
-                      value={row.due_date}
-                      onChange={(e) => updateRow(idx, { due_date: e.target.value })}
-                    />
+                  <div className="grid grid-cols-[minmax(0,1fr)_112px] gap-3">
+                    <div className="grid gap-1.5">
+                      <Label className="text-sm font-semibold text-vetvax-text-main">Data prevista</Label>
+                      <Input
+                        type="date"
+                        className={inputClass}
+                        value={row.due_date}
+                        onChange={(e) => updateRow(idx, { due_date: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label className="text-sm font-semibold text-vetvax-text-main">Hora (opc.)</Label>
+                      <Input
+                        type="time"
+                        step={300}
+                        className={inputClass}
+                        value={row.due_time}
+                        onChange={(e) => updateRow(idx, { due_time: e.target.value })}
+                      />
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {DAY_SHORTCUTS.map((opt) => {

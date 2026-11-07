@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarCheck, Pin, RefreshCw, TriangleAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { DueReminderRow } from "@/types/vetvax";
-import { dayjs, formatTimeBr } from "@/lib/datetime";
+import { dayjs, formatTimeShort } from "@/lib/datetime";
 import { formatBrPhoneForDisplay } from "@/lib/phone";
 import { canPinMiniAgenda, openMiniAgenda } from "@/lib/pinMiniAgenda";
 import { useWhatsReminderSend } from "@/components/reminders/useWhatsReminderSend";
@@ -23,7 +23,7 @@ function dayTitle(date: string, today: string) {
 
 function Row({ row, onWhats }: { row: DueReminderRow; onWhats: (row: DueReminderRow) => void }) {
   const phone = [row.tutor_phone1, row.tutor_phone2].filter(Boolean).map((p) => formatBrPhoneForDisplay(p))[0];
-  const time = (row as { due_time?: string | null }).due_time;
+  const time = row.due_time;
   const what = [row.pet_name, `${row.quantity ?? 1}x ${row.item_name ?? row.reminder_type}`].filter(Boolean).join(" • ");
 
   return (
@@ -36,7 +36,7 @@ function Row({ row, onWhats }: { row: DueReminderRow; onWhats: (row: DueReminder
           title="Registrar aplicação (abre o sistema)"
           className="block truncate text-[13px] font-bold text-slate-900 hover:underline"
         >
-          {time ? <span className="mr-1.5 rounded-[6px] bg-amber-300/80 px-1.5 py-0.5 text-[11px] font-extrabold">{formatTimeBr(time)}</span> : null}
+          {time ? <span className="mr-1.5 rounded-[6px] bg-amber-300/80 px-1.5 py-0.5 text-[11px] font-extrabold">{formatTimeShort(time)}</span> : null}
           {row.tutor_name}
         </a>
         <p className="truncate text-[12px] text-slate-700">{what}</p>
@@ -92,7 +92,7 @@ export default function MiniAgenda() {
     const all = reminders.data ?? [];
     const limit = now.add(DAYS_AHEAD, "day").format("YYYY-MM-DD");
     const byTime = (a: DueReminderRow, b: DueReminderRow) =>
-      ((a as { due_time?: string | null }).due_time ?? "99:99").localeCompare((b as { due_time?: string | null }).due_time ?? "99:99") ||
+      (a.due_time ?? "99:99").localeCompare(b.due_time ?? "99:99") ||
       a.tutor_name.localeCompare(b.tutor_name);
 
     const upcoming = all.filter((r) => r.due_date >= today && r.due_date <= limit).sort((a, b) => a.due_date.localeCompare(b.due_date) || byTime(a, b));

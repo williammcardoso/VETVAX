@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Bell, ClipboardList, FileDown, MapPin, Phone, Trash2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { dayjs, formatDateBr } from "@/lib/datetime";
+import { dayjs, formatDateBr, formatTimeShort } from "@/lib/datetime";
 import { formatBrPhoneForDisplay } from "@/lib/phone";
 import { displayReminderNotes } from "@/lib/reminderNotes";
 import { getItemTone } from "@/lib/itemTone";
@@ -25,6 +25,7 @@ export type ReportItem = {
 export type ReportReminder = {
   id: string;
   due_date: string;
+  due_time: string | null;
   item_name: string | null;
   quantity: number | null;
   status: string;
@@ -221,7 +222,10 @@ export default function VaccinationsReportTable({
                       return (
                         <li key={rem.id} className="rounded-[12px] border border-vetvax-border-soft bg-vetvax-surface-panel/50 p-2.5">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-sm font-extrabold text-vetvax-text-main">{formatDateBr(rem.due_date)}</p>
+                            <p className="text-sm font-extrabold text-vetvax-text-main">
+                              {formatDateBr(rem.due_date)}
+                              {rem.due_time ? <span className="ml-1.5 text-vetvax-primary">às {formatTimeShort(rem.due_time)}</span> : null}
+                            </p>
                             <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-vetvax-text-secondary">

@@ -162,6 +162,8 @@ export type DueReminderRow = {
   tutor_id: string;
   pet_id: string | null;
   due_date: string;
+  /** Optional time of day ("HH:mm:ss"), null when the return has only a date. */
+  due_time: string | null;
   reference_appointment_id: string | null;
   reference_record_id: string | null;
   last_applied_at: string | null;

@@ -42,6 +42,7 @@ type RecordItem = {
 type RecordReminder = {
   id: string;
   due_date: string;
+  due_time: string | null;
   item_name: string | null;
   quantity: number | null;
   status: string;
@@ -78,7 +79,7 @@ const SELECT =
   "id, applied_date, next_due_date, notes, created_at, tutor_id, created_by, " +
   "tutor:tutors(id, name, phone1, phone2, street, number, neighborhood, city, uf), " +
   "items:vaccination_record_items(quantity, free_description, price_cents, brand, lot, expires_on, pet:pets(name), catalog_item:catalog_items(name, category)), " +
-  "next_reminders:reminders!reference_record_id(id, due_date, item_name, quantity, status, notes, is_active, pet:pets(name)), " +
+  "next_reminders:reminders!reference_record_id(id, due_date, due_time, item_name, quantity, status, notes, is_active, pet:pets(name)), " +
   "resolved:reminders!reference_reminder_id(due_date, item_name)";
 
 const CATEGORY_LABEL: Record<string, string> = { vaccine: "Vacina", medication: "Medicação", other: "Outro" };
@@ -115,7 +116,7 @@ function exportReportCsv(rows: VaccinationReportRow[]) {
   for (const r of rows) {
     const returns = r.reminders
       .filter((rem) => rem.status !== "ARQUIVADO")
-      .map((rem) => `${br(rem.due_date)} - ${rem.quantity ?? 1}x ${rem.item_name ?? ""}${rem.pet_name ? ` (${rem.pet_name})` : ""}`)
+      .map((rem) => `${br(rem.due_date)}${rem.due_time ? ` ${rem.due_time.slice(0, 5)}` : ""} - ${rem.quantity ?? 1}x ${rem.item_name ?? ""}${rem.pet_name ? ` (${rem.pet_name})` : ""}`)
       .join(" | ");
     const common = {
       tutor: r.tutor_name,
@@ -253,6 +254,7 @@ async function fetchReport(range: { from: string; to: string }) {
         .map((rem) => ({
           id: rem.id,
           due_date: rem.due_date,
+          due_time: rem.due_time,
           item_name: rem.item_name,
           quantity: rem.quantity,
           status: rem.status,

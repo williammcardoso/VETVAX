@@ -114,6 +114,7 @@ export default function ScheduleReturn() {
           reminders: validRows.map((r) => ({
             catalog_item_id: r.catalog_item_id,
             due_date: r.due_date,
+            due_time: r.due_time || null,
             pet_id: values.separate_by_pet ? r.pet_id : null,
             notes: r.notes || values.notes || null,
             quantity: r.quantity || 1,
