@@ -1,4 +1,5 @@
-import { Bell, Menu, Plus } from "lucide-react";
+import { Bell, Menu, Pin, Plus } from "lucide-react";
+import { openMiniAgenda } from "@/lib/pinMiniAgenda";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -65,6 +66,15 @@ export default function Topbar({
             />
           </form>
           <GlobalCommandPalette className="hidden lg:flex lg:w-[150px]" placeholder="Busca avançada..." />
+          <Button
+            variant="outline"
+            className="hidden h-10 gap-1.5 px-3 text-sm font-semibold lg:inline-flex"
+            title="Abre a agenda numa janelinha que fica por cima das outras, como um post-it"
+            onClick={() => void openMiniAgenda()}
+          >
+            <Pin className="h-4 w-4" />
+            Fixar agenda
+          </Button>
           <Popover open={openNotifications} onOpenChange={setOpenNotifications}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="icon" className="relative h-10 w-10">

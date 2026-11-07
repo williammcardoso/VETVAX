@@ -318,8 +318,8 @@ export default function Dashboard() {
                     >
                       <WhatsAppIcon className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="icon" title="Editar lembrete" onClick={() => setEditRow(row)}>
-                      <Pencil className="h-4 w-4" />
+                    <Button variant="outline" title="Mudar data, vacina ou observação deste agendamento" onClick={() => setEditRow(row)}>
+                      <Pencil className="mr-1.5 h-4 w-4" />Editar
                     </Button>
                     <Button onClick={() => nav(`/vaccinations/new?tutor=${row.tutor_id}&resolveReminder=${row.id}`)}>Registrar aplicação</Button>
                     <DropdownMenu>

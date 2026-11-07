@@ -21,6 +21,7 @@ import Settings from "@/pages/Settings";
 import Access from "@/pages/Access";
 import Reminders from "@/pages/Reminders";
 import Profile from "@/pages/Profile";
+import MiniAgenda from "@/pages/MiniAgenda";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,18 @@ const App = () => (
               <Route path="access" element={<Access />} />
               <Route path="profile" element={<Profile />} />
             </Route>
+
+            {/* Compact agenda for a small always-visible window; no sidebar/topbar. */}
+            <Route
+              path="/mini"
+              element={
+                <RequireAuth>
+                  <RequireOnboarding>
+                    <MiniAgenda />
+                  </RequireOnboarding>
+                </RequireAuth>
+              }
+            />
 
             <Route path="/home" element={<Navigate to="/" replace />} />
 
